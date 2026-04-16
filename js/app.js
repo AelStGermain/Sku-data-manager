@@ -208,8 +208,17 @@ const App = {
   },
 
   // ── init ──────────────────────────────────
-  init() {
-    DB.init();
+  async init() {
+    // Wait for Firebase download into memory
+    await DB.init();
+    
+    // Hide global loader overlay
+    const loader = document.getElementById('global-loader');
+    if (loader) {
+      loader.style.opacity = '0';
+      loader.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => loader.remove(), 500);
+    }
     this.applyTheme();
     this.renderSidebar();
 

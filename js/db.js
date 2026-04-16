@@ -42,13 +42,15 @@ window.MASTER_TAXONOMY = [
 ];
 
 // ──────────────────────────────────────────────
-//  DATABASE  (localStorage)
+//  DATABASE  (Firebase RTDB + Local Memory Cache)
 // ──────────────────────────────────────────────
 const DB = (() => {
-  const PRODUCTS_KEY  = 'ss_products';
-  const RETAILERS_KEY = 'ss_retailers';
   const UNDO_KEY      = 'ss_undo';
-  const DATA_VERSION  = 'v4'; // kept at v4 to preserve existing imported data
+  const DATA_VERSION  = 'v4';
+
+  let _memoryProducts = {};
+  let _memoryRetailers = [];
+  let _dbRef = null;
 
   // ── EAN-13 validator ────────────────────────
   function validateEAN13(ean) {
@@ -111,7 +113,7 @@ const DB = (() => {
     if (product.history.length > 20) product.history = product.history.slice(0, 20);
   }
 
-  // ── undo stack (single level) ──────────────
+  // ── undo stack (single level via localStorage) 
   function saveUndo(label = '') {
     try { localStorage.setItem(UNDO_KEY, JSON.stringify({ snapshot: getProducts(), label, at: new Date().toISOString() })); }
     catch { /* silent */ }
@@ -121,7 +123,8 @@ const DB = (() => {
   function applyUndo() {
     const u = getUndo();
     if (!u) return false;
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(u.snapshot));
+    _memoryProducts = u.snapshot;
+    if (_dbRef) _dbRef.child('products').set(_memoryProducts);
     clearUndo();
     return true;
   }
@@ -141,8 +144,15 @@ const DB = (() => {
     if (!data._type || data._type !== 'smart-shelf-backup') throw new Error('Archivo no reconocido como backup de Smart Shelf.');
     if (!data.products) throw new Error('El backup no contiene productos.');
     saveUndo('antes de restaurar backup');
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(data.products));
-    if (data.retailers) localStorage.setItem(RETAILERS_KEY, JSON.stringify(data.retailers));
+    _memoryProducts = data.products;
+    if (data.retailers) _memoryRetailers = data.retailers;
+    
+    if (_dbRef) {
+      _dbRef.update({
+        products: _memoryProducts,
+        retailers: _memoryRetailers
+      });
+    }
     return { products: Object.keys(data.products).length };
   }
 
@@ -162,27 +172,68 @@ const DB = (() => {
     return [headers, example].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
   }
 
-  // ── init ───────────────────────────────────
-  function init() {
-    if (localStorage.getItem('ss_version') !== DATA_VERSION) {
-      localStorage.removeItem(PRODUCTS_KEY);
-      localStorage.removeItem(RETAILERS_KEY);
-      localStorage.setItem('ss_version', DATA_VERSION);
+  // ── init (ASYNC FIREBASE) ──────────────────
+  async function init() {
+    const firebaseConfig = {
+      apiKey: "AIzaSyAzODwhcIZ1S_32pM13SuYGqCrEWV_Xkb0",
+      authDomain: "master-data-followup.firebaseapp.com",
+      projectId: "master-data-followup",
+      storageBucket: "master-data-followup.firebasestorage.app",
+      messagingSenderId: "127801209638",
+      appId: "1:127801209638:web:db5cf2561d22bb636507e7",
+      databaseURL: "https://master-data-followup-default-rtdb.firebaseio.com"
+    };
+
+    if (!window.firebase) {
+        console.error("Firebase no ha cargado en el documento.");
+        return;
     }
-    if (!localStorage.getItem(RETAILERS_KEY)) localStorage.setItem(RETAILERS_KEY, JSON.stringify(DEFAULT_RETAILERS));
-    if (!localStorage.getItem(PRODUCTS_KEY))  localStorage.setItem(PRODUCTS_KEY,  JSON.stringify(SAMPLE_PRODUCTS));
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    _dbRef = firebase.database().ref();
+
+    try {
+      const snapshot = await _dbRef.once('value');
+      const data = snapshot.val();
+      
+      if (!data || !data.products || !data.retailers) {
+        // Seed Database
+        _memoryRetailers = DEFAULT_RETAILERS;
+        _memoryProducts = SAMPLE_PRODUCTS;
+        await _dbRef.set({
+          retailers: _memoryRetailers,
+          products: _memoryProducts
+        });
+      } else {
+        // Load to Memory
+        _memoryRetailers = data.retailers;
+        _memoryProducts = data.products;
+      }
+      _startListening();
+    } catch (e) {
+      console.error("Firebase init failed:", e);
+      _memoryRetailers = DEFAULT_RETAILERS;
+      _memoryProducts = SAMPLE_PRODUCTS;
+    }
   }
 
   function resetToDefaults() {
-    localStorage.setItem(RETAILERS_KEY, JSON.stringify(DEFAULT_RETAILERS));
-    localStorage.setItem(PRODUCTS_KEY,  JSON.stringify(SAMPLE_PRODUCTS));
+    _memoryRetailers = DEFAULT_RETAILERS;
+    _memoryProducts = SAMPLE_PRODUCTS;
+    if (_dbRef) {
+      _dbRef.set({
+        retailers: _memoryRetailers,
+        products: _memoryProducts
+      });
+    }
     clearUndo();
   }
 
   // ── retailers ──────────────────────────────
   function getRetailers() {
-    const raw = JSON.parse(localStorage.getItem(RETAILERS_KEY) || '[]');
-    let retailers = raw.length ? raw : DEFAULT_RETAILERS;
+    let retailers = _memoryRetailers.length ? _memoryRetailers : DEFAULT_RETAILERS;
     
     const products = getProductsArray();
     retailers.forEach(r => {
@@ -200,44 +251,51 @@ const DB = (() => {
     });
     return retailers;
   }
-  function saveRetailers(r)     { localStorage.setItem(RETAILERS_KEY, JSON.stringify(r)); }
+  function saveRetailers(r)     { _memoryRetailers = r; if (_dbRef) _dbRef.child('retailers').set(r); }
   function addRetailer(retailer){ const l=getRetailers(); l.push(retailer); saveRetailers(l); }
   function updateRetailer(id, u){ const l=getRetailers(), i=l.findIndex(r=>r.id===id); if(i!==-1){l[i]={...l[i],...u};saveRetailers(l);return l[i];} return null; }
   function deleteRetailer(id)   { saveRetailers(getRetailers().filter(r=>r.id!==id)); }
 
   // ── products ───────────────────────────────
-  function getProducts()  { return JSON.parse(localStorage.getItem(PRODUCTS_KEY) || '{}'); }
-  function getProduct(ean){ return getProducts()[ean] || null; }
+  function getProducts()  { return _memoryProducts || {}; }
+  function getProduct(ean){ return _memoryProducts[ean] || null; }
   function saveProduct(product) {
-    const all = getProducts();
     product.updatedAt = new Date().toISOString();
     if (!product.createdAt) product.createdAt = product.updatedAt;
-    all[product.ean] = product;
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(all));
+    _memoryProducts[product.ean] = product;
+    if (_dbRef) _dbRef.child(`products/${product.ean}`).set(product);
     return product;
   }
   function saveProducts(productsArray) {
-    const all = getProducts();
     const now = new Date().toISOString();
+    const updates = {};
     productsArray.forEach(p => {
       p.updatedAt = now;
       if (!p.createdAt) p.createdAt = now;
-      all[p.ean] = p;
+      _memoryProducts[p.ean] = p;
+      updates[p.ean] = p;
     });
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(all));
+    if (_dbRef && Object.keys(updates).length > 0) {
+      _dbRef.child('products').update(updates);
+    }
   }
   function deleteProduct(ean) {
     saveUndo(`eliminar ${ean}`);
-    const all = getProducts(); delete all[ean];
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(all));
+    delete _memoryProducts[ean];
+    if (_dbRef) _dbRef.child(`products/${ean}`).remove();
   }
   function deleteProducts(eans) {
     saveUndo(`eliminar ${eans.length} productos`);
-    const all = getProducts();
-    eans.forEach(e => delete all[e]);
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(all));
+    const updates = {};
+    eans.forEach(e => {
+      delete _memoryProducts[e];
+      updates[e] = null;
+    });
+    if (_dbRef && Object.keys(updates).length > 0) {
+      _dbRef.child('products').update(updates);
+    }
   }
-  function getProductsArray() { return Object.values(getProducts()); }
+  function getProductsArray() { return Object.values(_memoryProducts); }
 
   // ── completeness score (0-100) ─────────────
   function computeCompleteness(product) {
@@ -252,6 +310,24 @@ const DB = (() => {
     if (product.width_cm && product.height_cm && product.depth_cm) score += 13;
     if (Object.keys(product.retailers || {}).length > 0) score += 22;
     return Math.min(score, 100);
+  }
+
+  // Realtime Sync Listener 
+  function _startListening() {
+    if (!_dbRef) return;
+    _dbRef.child('products').on('child_changed', snap => {
+      _memoryProducts[snap.key] = snap.val();
+      // Optional: trigger re-renders 
+      if (typeof window.UICatalog !== 'undefined' && document.getElementById('view-catalog').classList.contains('active')) {
+          // re-render silently if needed
+      }
+    });
+    _dbRef.child('products').on('child_added', snap => {
+      _memoryProducts[snap.key] = snap.val();
+    });
+    _dbRef.child('products').on('child_removed', snap => {
+      delete _memoryProducts[snap.key];
+    });
   }
 
   return {
