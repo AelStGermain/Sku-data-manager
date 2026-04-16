@@ -32,6 +32,11 @@ const App = {
 
   // ── routing ────────────────────────────────
   navigateTo(view) {
+    if (window.location.hash !== `#${view}`) {
+      window.location.hash = view; 
+      return; // hashchange listener will trigger the actual render
+    }
+    
     // hide all views
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const target = document.getElementById(`view-${view}`);
@@ -250,8 +255,17 @@ const App = {
       }
     });
 
-    // Start on catalog
-    this.navigateTo('catalog');
+    // Hash tracking for F5 refreshes
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '');
+      const validViews = ['catalog', 'import', 'retailers'];
+      this.navigateTo(validViews.includes(hash) ? hash : 'catalog');
+    });
+
+    // Start on requested hash or default to catalog
+    const startHash = window.location.hash.replace('#', '');
+    const validViews = ['catalog', 'import', 'retailers'];
+    this.navigateTo(validViews.includes(startHash) ? startHash : 'catalog');
   }
 };
 
