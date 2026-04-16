@@ -24,8 +24,8 @@ const UICatalog = (() => {
 
   // ── helpers ─────────────────────────────────
   function srcBadge(src) {
-    if (src === 'open_food_facts')     return `<span class="source-badge off">OFF</span>`;
-    if (src === 'open_products_facts') return `<span class="source-badge opf">OPF</span>`;
+    if (src === 'open_food_facts')     return `<span class="source-badge off">API</span>`;
+    if (src === 'open_products_facts') return `<span class="source-badge opf">API_OPF</span>`;
     return '';
   }
   function completenessColor(pct) {
@@ -58,7 +58,7 @@ const UICatalog = (() => {
     if (_imagePref === 'off') return p.offImageUrl || p.imageUrl || '';
     if (_imagePref.startsWith('retailer_')) {
       const rid = _imagePref.split('_')[1];
-      return p.retailers?.[rid]?.imageUrl || p.imageUrl || '';
+      return p.retailers?.[rid]?.imageUrl || ''; // Sin fallback
     }
     return p.imageUrl || '';
   }
@@ -340,14 +340,14 @@ const UICatalog = (() => {
   </select>
   <select class="filter-sel" onchange="UICatalog.setSource(this.value)">
     <option value="all" ${_source==='all'?'selected':''}>Todas las fuentes</option>
-    <option value="open_food_facts" ${_source==='open_food_facts'?'selected':''}>Open Food Facts</option>
-    <option value="open_products_facts" ${_source==='open_products_facts'?'selected':''}>Open Products Facts</option>
+    <option value="open_food_facts" ${_source==='open_food_facts'?'selected':''}>API Rest (Auto)</option>
+    <option value="open_products_facts" ${_source==='open_products_facts'?'selected':''}>API OPF</option>
     <option value="manual" ${_source==='manual'?'selected':''}>Manual</option>
   </select>
   <div style="border-left:1px solid var(--border); margin:0 8px; height:24px;"></div>
   <select class="filter-sel" style="background-color: var(--card-bg); font-weight: 500;" onchange="UICatalog.setImagePref(this.value)">
     <option value="main" ${_imagePref==='main'?'selected':''}>👁️ Imagen: Principal</option>
-    <option value="off" ${_imagePref==='off'?'selected':''}>👁️ Imagen: OFF</option>
+    <option value="off" ${_imagePref==='off'?'selected':''}>👁️ Imagen: API</option>
     ${retailers.map(r=>`<option value="retailer_${esc(r.id)}" ${_imagePref===`retailer_${r.id}`?'selected':''}>👁️ Imagen: ${esc(r.name)}</option>`).join('')}
   </select>
   ${(_search||_retailer!=='all'||_category!=='all'||_source!=='all') ? '<button class="btn-clear" onclick="UICatalog.clearFilters()">Limpiar ×</button>' : ''}
@@ -515,7 +515,7 @@ ${renderBulkBar(filtered, retailers)}`;
       }
 
       _enriching = false;
-      if (found > 0) App.showToast(`${found} productos actualizados (OFF)`, 'success');
+      if (found > 0) App.showToast(`${found} productos actualizados usando API`, 'success');
       
       // Rearmar la vista si el usuario está en el catálogo actual
       if (document.getElementById('view-catalog')) {

@@ -19,9 +19,15 @@ const UISheet = (() => {
     _data     = JSON.parse(JSON.stringify(p));
     _dirty    = false;
     _isCreate = false;
-    _activeImageIndex = 0;
+    _activeImageIndex = -1; // special flag for auto-select
     const retailers = DB.getRetailers();
-    _retailer = retailers.length > 0 ? retailers[0].id : null;
+    const pref = localStorage.getItem('ss_imagePref');
+    let defRetailer = retailers.length > 0 ? retailers[0].id : null;
+    if (pref && pref.startsWith('retailer_')) {
+      const rid = pref.split('_')[1];
+      if (retailers.find(r => r.id === rid)) defRetailer = rid;
+    }
+    _retailer = defRetailer;
     _render();
     _showModal();
   }
@@ -152,12 +158,12 @@ const UISheet = (() => {
   async function syncOFF() {
     const btn = document.getElementById('sync-btn');
     if (btn) { btn.classList.add('spinning'); btn.disabled = true; }
-    App.showToast('Consultando Open Food Facts…', 'info');
+    App.showToast('Consultando a la API…', 'info');
 
     try {
       const apiData = await API.enrichProduct(_data.ean);
       if (!apiData) {
-        App.showToast('No se encontró este EAN en Open Food Facts', 'error');
+        App.showToast('No se encontró este EAN en la API', 'error');
       } else {
         const before = JSON.parse(JSON.stringify(_data));
         _data = API.mergeEnriched(_data, apiData);
@@ -177,7 +183,7 @@ const UISheet = (() => {
         }
       }
     } catch (e) {
-      App.showToast('Error conectando con Open Food Facts', 'error');
+      App.showToast('Error conectando con la API', 'error');
     }
 
     if (btn) { btn.classList.remove('spinning'); btn.disabled = false; }
@@ -226,8 +232,20 @@ const UISheet = (() => {
     const rImg = rData?.imageUrl;
     
     imageTabs.push({ id: 'main', label: 'Principal', src: mainImg || null });
-    if (offImg && offImg !== mainImg) imageTabs.push({ id: 'off', label: 'Open Food Facts', src: offImg });
+    if (offImg && offImg !== mainImg) imageTabs.push({ id: 'off', label: 'API (OFF)', src: offImg });
     if (rImg && rImg !== mainImg && rImg !== offImg) imageTabs.push({ id: 'retailer', label: rInfo?.name || 'Retailer', src: rImg });
+    
+    if (_activeImageIndex === -1) {
+      _activeImageIndex = 0;
+      const pref = localStorage.getItem('ss_imagePref') || 'main';
+      if (pref === 'off') {
+        const idx = imageTabs.findIndex(t => t.id === 'off');
+        if (idx !== -1) _activeImageIndex = idx;
+      } else if (pref.startsWith('retailer_')) {
+        const idx = imageTabs.findIndex(t => t.id === 'retailer');
+        if (idx !== -1) _activeImageIndex = idx;
+      }
+    }
     
     if (_activeImageIndex >= imageTabs.length) _activeImageIndex = 0;
     const activeTab = imageTabs[_activeImageIndex];
@@ -248,7 +266,7 @@ const UISheet = (() => {
       Fijar como principal
     </button>` : '';
 
-    const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Crect fill='%231A1D27' width='280' height='280'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%234F6EF7' font-size='22' font-family='sans-serif'%3ESin imagen%3C/text%3E%3C/svg%3E`;
+    const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Crect fill='transparent' width='280' height='280'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239CA3AF' font-size='22' font-family='sans-serif'%3ESin imagen%3C/text%3E%3C/svg%3E`;
     const pkgOpts = PACKAGE_TYPES.map(pt =>
       `<option value="${pt.value}" ${_data.packageType===pt.value?'selected':''}>${esc(pt.label)}</option>`
     ).join('');
@@ -275,7 +293,7 @@ const UISheet = (() => {
         <span class="badge-master">MASTER DATA</span>
         <button class="btn-sync" id="sync-btn" onclick="UISheet.syncOFF()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-          Sync con Open Food Facts
+          Consultar a la API
         </button>
       </div>
       <button class="btn-close-sheet" onclick="UISheet.close()">

@@ -212,7 +212,7 @@ const UIImport = (() => {
         <div class="toggle-knob"></div>
       </div>
       <div>
-        <span class="enrich-label">Enriquecer con Open Food Facts</span>
+        <span class="enrich-label">Enriquecer usando API</span>
         <p class="form-hint">Completa datos faltantes vía API automáticamente</p>
       </div>
     </div>
