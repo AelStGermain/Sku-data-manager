@@ -245,6 +245,12 @@ const UISheet = (() => {
         const idx = imageTabs.findIndex(t => t.id === 'retailer');
         if (idx !== -1) _activeImageIndex = idx;
       }
+      
+      // Auto-derivar si la opción seleccionada no tiene foto
+      if (!imageTabs[_activeImageIndex].src) {
+        const fallbackIdx = imageTabs.findIndex(t => t.src);
+        if (fallbackIdx !== -1) _activeImageIndex = fallbackIdx;
+      }
     }
     
     if (_activeImageIndex >= imageTabs.length) _activeImageIndex = 0;
@@ -374,7 +380,6 @@ const UISheet = (() => {
     <div class="sheet-meta-row">
       <span class="meta-chip">Fuente: <strong>${esc(sourceLabel)}</strong></span>
       <span class="meta-chip">Completitud: <strong>${DB.computeCompleteness(_data)}%</strong></span>
-      <span class="meta-chip">Actualizado: <strong>${App.formatDate(_data.updatedAt)}</strong></span>
     </div>
   </div>
 
@@ -421,10 +426,6 @@ const UISheet = (() => {
           </div>
           <span id="stock-label">${inStock ? 'Disponible en tienda' : 'Sin stock'}</span>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Última actualización</label>
-        <div class="readonly-date">${App.formatDate(rData.updatedAt)}</div>
       </div>
       <button class="btn-danger-sm" onclick="UISheet.removeFromRetailer('${esc(_retailer)}')">
         Quitar de ${esc(rInfo?.name || _retailer)} ×

@@ -440,7 +440,25 @@ ${renderBulkBar(filtered, retailers)}`;
   }
 
   // ── filter / sort / quick-filter setters ────
-  function setSearch(v)        { _search       = v;   _page = 0; render(); }
+  let _searchTimer = null;
+  function setSearch(v) {
+    _search = v; // Update state immediately
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(() => {
+      _page = 0;
+      const wasFocused = document.activeElement && document.activeElement.id === 'cat-search';
+      const caret = wasFocused ? document.activeElement.selectionStart : 0;
+      render();
+      if (wasFocused) {
+        const inp = document.getElementById('cat-search');
+        if (inp) {
+          inp.focus();
+          inp.setSelectionRange(caret, caret);
+        }
+      }
+    }, 250);
+  }
+
   function setRetailer(v)      { _retailer      = v;   _page = 0; render(); }
   function setCategory(v)      { _category      = v;   _page = 0; render(); }
   function setSource(v)        { _source        = v;   _page = 0; render(); }
