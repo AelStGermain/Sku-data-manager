@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Plataforma de Master Data para gestión centralizada de SKUs en supermercados con tecnología Smart Shelf.">
+  <title>Smart Shelf — Master Data Platform</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- CSV Parser -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- Excel parser -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="logo.png">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     APP SHELL
+     ═══════════════════════════════════════════ -->
+<div class="app-shell">
+
+  <!-- ── SIDEBAR ─────────────────────────────── -->
+  <aside class="sidebar">
+
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <img src="logo.png" alt="FollowUP" class="brand-logo" onerror="this.style.display='none';document.getElementById('brand-icon-fallback').style.display='flex'">
+      <div class="brand-icon" id="brand-icon-fallback" style="display:none">SS</div>
+      <div class="brand-text">
+        <span class="brand-name">Smart Shelf</span>
+        <span class="brand-sub">Master Data</span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <button class="nav-item" data-view="catalog" id="nav-catalog">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        <span>Catálogo</span>
+      </button>
+      <button class="nav-item" data-view="import" id="nav-import">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>Importar</span>
+      </button>
+      <button class="nav-item" data-view="retailers" id="nav-retailers">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Retailers</span>
+      </button>
+    </nav>
+
+    <!-- Retailer filters -->
+    <div class="sidebar-filter">
+      <p class="filter-label">Filtrar por retailer</p>
+      <div id="sidebar-retailer-filters"><!-- Rendered by App.renderSidebar() --></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      <!-- Backup / Restore -->
+      <div class="sidebar-backup-btns">
+        <button class="sidebar-action-btn" onclick="App.exportBackup()" title="Descargar backup JSON">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Backup
+        </button>
+        <button class="sidebar-action-btn" onclick="App.importBackup()" title="Restaurar desde backup JSON">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Restaurar
+        </button>
+        <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="App.handleBackupFile(this.files[0])">
+      </div>
+      <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="App.toggleTheme()">
+        <span class="theme-icon">🌙</span> Modo oscuro
+      </button>
+      <button class="reset-btn-small" id="reset-btn">↺ Resetear demo</button>
+      <div class="dev-credit">
+        <span>Elaborado por</span>
+        <a href="https://github.com/AelStGermain/" target="_blank" rel="noopener" class="dev-credit-link">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          Sofía Gómez
+        </a>
+      </div>
+    </div>
+
+  </aside><!-- /sidebar -->
+
+  <!-- ── MAIN CONTENT ──────────────────────────── -->
+  <main class="main-content">
+
+    <!-- CATALOG VIEW -->
+    <section id="view-catalog" class="view">
+      <!-- Rendered by UICatalog.render() -->
+    </section>
+
+    <!-- IMPORT VIEW -->
+    <section id="view-import" class="view">
+      <!-- Rendered by UIImport.render() -->
+    </section>
+
+    <!-- RETAILERS VIEW -->
+    <section id="view-retailers" class="view">
+      <!-- Rendered by UIRetailers.render() -->
+    </section>
+
+  </main><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<!-- ═══════════════════════════════════════════
+     TECHNICAL SHEET MODAL
+     ═══════════════════════════════════════════ -->
+<div id="sheet-overlay" class="sheet-overlay hidden">
+  <div class="sheet-modal" id="sheet-modal">
+    <div id="sheet-content"><!-- Rendered by UISheet._render() --></div>
+  </div>
+</div>
+
+<!-- Toast notifications -->
+<div id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════
+     SCRIPTS  (dependency order)
+     ═══════════════════════════════════════════ -->
+<script src="js/db.js?v=2"></script>
+<script src="js/api.js?v=2"></script>
+<script src="js/importer.js?v=2"></script>
+<script src="js/ui-catalog.js?v=2"></script>
+<script src="js/ui-sheet.js?v=2"></script>
+<script src="js/ui-import.js?v=2"></script>
+<script src="js/ui-retailers.js?v=2"></script>
+<script src="js/app.js?v=2"></script>
+
+</body>
+</html>
