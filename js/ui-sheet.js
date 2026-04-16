@@ -9,6 +9,7 @@ const UISheet = (() => {
   let _retailer = null;   // active retailer tab id
   let _dirty    = false;
   let _isCreate = false;
+  let _activeImageIndex = 0;
 
   function open(ean) {
     const p = DB.getProduct(ean);
@@ -18,6 +19,7 @@ const UISheet = (() => {
     _data     = JSON.parse(JSON.stringify(p));
     _dirty    = false;
     _isCreate = false;
+    _activeImageIndex = 0;
     const retailers = DB.getRetailers();
     _retailer = retailers.length > 0 ? retailers[0].id : null;
     _render();
@@ -186,7 +188,21 @@ const UISheet = (() => {
     const url = prompt('URL de la imagen del producto:', _data.imageUrl || '');
     if (url === null) return;
     updateField('imageUrl', url.trim() || null);
+    _activeImageIndex = 0; // reset to main image tab
     _render();
+  }
+
+  function setActiveImage(idx) {
+    _activeImageIndex = idx;
+    _render();
+  }
+
+  function setAsMainImage(url) {
+    if (!url) return;
+    updateField('imageUrl', url);
+    _activeImageIndex = 0;
+    _render();
+    App.showToast('Imagen guardada como principal', 'success');
   }
 
   // ── main render ────────────────────────────
@@ -203,7 +219,35 @@ const UISheet = (() => {
     const rData = _retailer ? (_data.retailers?.[_retailer] || null) : null;
     const inStock = rData?.stockStatus ?? true;
 
-    const imgSrc = esc(_data.imageUrl || '');
+    // -- IMAGE TABS LOGIC --
+    const imageTabs = [];
+    const mainImg = _data.imageUrl;
+    const offImg = _data.offImageUrl;
+    const rImg = rData?.imageUrl;
+    
+    imageTabs.push({ id: 'main', label: 'Principal', src: mainImg || null });
+    if (offImg && offImg !== mainImg) imageTabs.push({ id: 'off', label: 'Open Food Facts', src: offImg });
+    if (rImg && rImg !== mainImg && rImg !== offImg) imageTabs.push({ id: 'retailer', label: rInfo?.name || 'Retailer', src: rImg });
+    
+    if (_activeImageIndex >= imageTabs.length) _activeImageIndex = 0;
+    const activeTab = imageTabs[_activeImageIndex];
+    const imgSrc = activeTab.src ? esc(activeTab.src) : '';
+
+    const imgTabsHtml = imageTabs.length > 1 ? `
+    <div class="sheet-img-tabs" style="display:flex; gap:6px; margin-bottom:8px; overflow-x:auto;">
+      ${imageTabs.map((tab, idx) => `
+        <button class="badge-tab ${idx === _activeImageIndex ? 'active' : ''}" 
+                style="padding:4px 8px; border-radius:12px; border:1px solid var(--border); background:${idx === _activeImageIndex ? 'var(--accent)' : 'transparent'}; color:${idx === _activeImageIndex ? '#fff' : 'inherit'}; font-size:11px; cursor:pointer; white-space:nowrap;"
+                onclick="UISheet.setActiveImage(${idx})">${esc(tab.label)}</button>
+      `).join('')}
+    </div>` : '';
+
+    const setMainBtnHtml = (_activeImageIndex !== 0 && activeTab.src) ? `
+    <button class="btn-change-img" style="margin-top:4px;" onclick="UISheet.setAsMainImage('${esc(activeTab.src)}')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
+      Fijar como principal
+    </button>` : '';
+
     const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Crect fill='%231A1D27' width='280' height='280'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%234F6EF7' font-size='22' font-family='sans-serif'%3ESin imagen%3C/text%3E%3C/svg%3E`;
     const pkgOpts = PACKAGE_TYPES.map(pt =>
       `<option value="${pt.value}" ${_data.packageType===pt.value?'selected':''}>${esc(pt.label)}</option>`
@@ -246,14 +290,16 @@ const UISheet = (() => {
     <div class="sheet-body-row">
       <!-- Image -->
       <div class="sheet-img-col">
+        ${imgTabsHtml}
         <div class="sheet-img-wrap">
           <img id="sheet-img" src="${imgSrc || NO_IMG}" alt="${esc(_data.name || '')}"
                onerror="this.src='${NO_IMG}'">
         </div>
         <button class="btn-change-img" onclick="UISheet.changeImage()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          Cambiar imagen
+          Cambiar URL manual
         </button>
+        ${setMainBtnHtml}
       </div>
 
       <!-- Core Info -->
@@ -394,7 +440,7 @@ const UISheet = (() => {
   }
 
   return {
-    open, openCreate, close, save, discard, syncOFF, changeImage,
+    open, openCreate, close, save, discard, syncOFF, changeImage, setActiveImage, setAsMainImage,
     updateField, updateRetailerField, toggleStock,
     setRetailer, addToRetailer, removeFromRetailer
   };

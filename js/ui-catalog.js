@@ -267,9 +267,8 @@ const UICatalog = (() => {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       </button>
     </div>
-    <button class="btn-teal" id="enrich-all-btn" onclick="UICatalog.enrichAll()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-      Enriquecer catálogo
+    <button class="btn-teal" id="enrich-all-btn" onclick="UICatalog.enrichAll()" ${_enriching?'disabled':''}>
+      ${_enriching ? `<span class="spin-ico">↻</span> Enriqueciendo…` : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg> Enriquecer catálogo`}
     </button>
     <button class="btn-outline ${_selectMode?'active':''}" onclick="UICatalog.toggleSelectMode()" title="Edición masiva de productos">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -472,30 +471,38 @@ ${renderBulkBar(filtered, retailers)}`;
     if (toEnrich.length === 0) { if (!silent) App.showToast('Todos los productos ya tienen imagen', 'info'); return; }
 
     _enriching = true;
-    const btn = document.getElementById('enrich-all-btn');
-    if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spin-ico">↻</span> Enriqueciendo (0/${toEnrich.length})…`; }
-    if (!silent) App.showToast(`Consultando Open Food Facts para ${toEnrich.length} productos…`, 'info');
+    render(); // Refleja estado disabled del botón de inmediato
+    if (!silent) App.showToast(`Enriqueciendo en segundo plano ${toEnrich.length} productos…`, 'info');
 
-    let done = 0, found = 0;
-    for (const product of toEnrich) {
-      const apiData = await API.enrichProduct(product.ean);
-      if (apiData) {
-        const merged = API.mergeEnriched(product, apiData);
-        DB.saveProduct(merged);
-        found++;
-        const imgEl = document.querySelector(`[data-ean="${product.ean}"] .card-img`);
-        if (imgEl && merged.imageUrl) imgEl.src = merged.imageUrl;
+    // Desacoplar la ejecución para que sobreviva la navegación de vistas
+    (async () => {
+      let done = 0, found = 0;
+      for (const product of toEnrich) {
+        const apiData = await API.enrichProduct(product.ean);
+        if (apiData) {
+          const merged = API.mergeEnriched(product, apiData);
+          DB.saveProduct(merged);
+          found++;
+          const imgEl = document.querySelector(`[data-ean="${product.ean}"] .card-img`);
+          if (imgEl && merged.imageUrl) imgEl.src = merged.imageUrl;
+        }
+        done++;
+        
+        // Actualizar botón si existe en el DOM (si el usuario sigue en Catalog)
+        const btn = document.getElementById('enrich-all-btn');
+        if (btn) btn.innerHTML = `<span class="spin-ico">↻</span> Enriqueciendo (${done}/${toEnrich.length})…`;
+        
+        await new Promise(r => setTimeout(r, 600)); // Intervalo generoso para no saturar API
       }
-    // also update bulk bar if we changed enriched product image
-    done++;
-    if (btn) btn.innerHTML = `<span class="spin-ico">↻</span> Enriqueciendo (${done}/${toEnrich.length})…`;
-    await new Promise(r => setTimeout(r, 300)); // polite delay
-  }
 
-  _enriching = false;
-  if (found > 0) App.showToast(`${found} productos actualizados con Open Food Facts`, 'success');
-  if (btn) { btn.disabled = false; btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg> Enriquecer catálogo`; }
-  render();
+      _enriching = false;
+      if (found > 0) App.showToast(`${found} productos actualizados (OFF)`, 'success');
+      
+      // Rearmar la vista si el usuario está en el catálogo actual
+      if (document.getElementById('view-catalog')) {
+        render();
+      }
+    })();
   }
 
   return {

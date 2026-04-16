@@ -125,6 +125,10 @@ const API = (() => {
     // Track name source: only upgrade to 'off' if name was previously empty/import
     if (apiData.name && !product.name && merged.nameSource !== 'manual') merged.nameSource = 'off';
     if (apiData.dataSource && merged.dataSource === 'manual') merged.dataSource = apiData.dataSource;
+    
+    // Almacenar imagen explícita de OFF para la pestaña de fotos independiente
+    if (apiData.imageUrl) merged.offImageUrl = apiData.imageUrl;
+    
     merged.offAttempted = true;
     return merged;
   }

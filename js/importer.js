@@ -121,12 +121,23 @@ const Importer = (() => {
 
         if (retailerId) {
           const rName = get(row, mapping.retailerName) || product.name;
+          const custId = get(row, mapping.customerId) || null;
+          let rImgUrl = get(row, mapping.retailerImage) || null;
+
+          // -- TOTTUS AUTOMATION INTERCEPTOR --
+          const retailers = typeof DB !== 'undefined' ? DB.getRetailers() : [];
+          const rInfo = retailers.find(r => r.id === retailerId);
+          const isTottus = rInfo && (rInfo.name || '').toLowerCase().includes('tottus');
+          if (isTottus && custId && !rImgUrl) {
+             rImgUrl = `https://media.falabella.com/tottusCL/${custId}_1`;
+          }
+
           product.retailers[retailerId] = {
-            customerId:  get(row, mapping.customerId)    || null,
+            customerId:  custId,
             name:        rName,
             category:    get(row, mapping.category)      || null,
             stockStatus: true,
-            imageUrl:    get(row, mapping.retailerImage) || null,
+            imageUrl:    rImgUrl,
             updatedAt:   new Date().toISOString()
           };
         }
