@@ -12,6 +12,7 @@ const UICatalog = (() => {
   let _showIncomplete= false;
   let _sortBy        = 'name';   // name | brand | completeness | updatedAt
   let _sortDir       = 'asc';
+  let _imagePref     = localStorage.getItem('ss_imagePref') || 'main';
   let _enriching     = false;
   let _viewMode      = localStorage.getItem('ss_viewMode') || 'grid';
   let _page          = 0;
@@ -53,11 +54,20 @@ const UICatalog = (() => {
     });
   }
 
+  function getPreferredImage(p) {
+    if (_imagePref === 'off') return p.offImageUrl || p.imageUrl || '';
+    if (_imagePref.startsWith('retailer_')) {
+      const rid = _imagePref.split('_')[1];
+      return p.retailers?.[rid]?.imageUrl || p.imageUrl || '';
+    }
+    return p.imageUrl || '';
+  }
+
   // ── card ─────────────────────────────────────
   function renderCard(p, retailers) {
     const pct   = DB.computeCompleteness(p);
     const col   = completenessColor(pct);
-    const img   = esc(p.imageUrl || '');
+    const img   = esc(getPreferredImage(p));
     const name  = esc(p.name || 'Sin nombre');
     const brand = esc(p.brand || '—');
     const ean   = esc(p.ean);
@@ -107,12 +117,13 @@ const UICatalog = (() => {
   function renderListRow(p, retailers) {
     const pct     = DB.computeCompleteness(p);
     const col     = completenessColor(pct);
-    const img     = esc(p.imageUrl || '');
+    const rawImg  = getPreferredImage(p);
+    const img     = esc(rawImg);
     const name    = esc(p.name || 'Sin nombre');
     const brand   = esc(p.brand || '—');
     const ean     = esc(p.ean);
     const checked = _selected.has(p.ean);
-    const noImg   = !p.imageUrl;
+    const noImg   = !rawImg;
 
     const retailerBadges = retailers
       .filter(r => p.retailers?.[r.id])
@@ -332,6 +343,12 @@ const UICatalog = (() => {
     <option value="open_products_facts" ${_source==='open_products_facts'?'selected':''}>Open Products Facts</option>
     <option value="manual" ${_source==='manual'?'selected':''}>Manual</option>
   </select>
+  <div style="border-left:1px solid var(--border); margin:0 8px; height:24px;"></div>
+  <select class="filter-sel" style="background-color: var(--card-bg); font-weight: 500;" onchange="UICatalog.setImagePref(this.value)">
+    <option value="main" ${_imagePref==='main'?'selected':''}>👁️ Imagen: Principal</option>
+    <option value="off" ${_imagePref==='off'?'selected':''}>👁️ Imagen: OFF</option>
+    ${retailers.map(r=>`<option value="retailer_${esc(r.id)}" ${_imagePref===`retailer_${r.id}`?'selected':''}>👁️ Imagen: ${esc(r.name)}</option>`).join('')}
+  </select>
   ${(_search||_retailer!=='all'||_category!=='all'||_source!=='all') ? '<button class="btn-clear" onclick="UICatalog.clearFilters()">Limpiar ×</button>' : ''}
 </div>
 
@@ -428,6 +445,7 @@ ${renderBulkBar(filtered, retailers)}`;
   function setSource(v)        { _source        = v;   _page = 0; render(); }
   function setStatusFilter(v)  { _statusFilter  = v;   _page = 0; render(); }
   function setSortBy(k)        { if(_sortBy===k) _sortDir=_sortDir==='asc'?'desc':'asc'; else {_sortBy=k;_sortDir='asc';} _page=0; render(); }
+  function setImagePref(v)     { _imagePref = v; localStorage.setItem('ss_imagePref', v); render(); }
   function toggleIncomplete()  { _showIncomplete = !_showIncomplete; _page = 0; render(); }
   function setViewMode(m)      { _viewMode = m; localStorage.setItem('ss_viewMode', m); render(); }
   function goPage(n)           { _page = n; render(); document.querySelector('.main-content')?.scrollTo({top:0,behavior:'smooth'}); }
@@ -507,7 +525,7 @@ ${renderBulkBar(filtered, retailers)}`;
 
   return {
     render,
-    setSearch, setRetailer, setCategory, setSource, setStatusFilter, setSortBy, toggleIncomplete,
+    setSearch, setRetailer, setCategory, setSource, setStatusFilter, setSortBy, toggleIncomplete, setImagePref,
     clearFilters, setViewMode, goPage, enrichAll, deleteOne,
     toggleSelectMode, exitSelectMode, toggleSelect, selectAll, deselectAll, applyBulk, bulkDelete
   };
