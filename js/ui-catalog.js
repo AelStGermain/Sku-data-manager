@@ -67,12 +67,13 @@ const UICatalog = (() => {
   function renderCard(p, retailers) {
     const pct   = DB.computeCompleteness(p);
     const col   = completenessColor(pct);
-    const img   = esc(getPreferredImage(p));
+    const rawImg = getPreferredImage(p);
+    const img   = esc(rawImg);
     const name  = esc(p.name || 'Sin nombre');
     const brand = esc(p.brand || '—');
     const ean   = esc(p.ean);
     const checked = _selected.has(p.ean);
-    const noImg = !p.imageUrl;
+    const noImg = !rawImg;
 
     const retailerBadges = retailers
       .filter(r => p.retailers?.[r.id])
