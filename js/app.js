@@ -259,13 +259,13 @@ const App = {
     // Hash tracking for F5 refreshes
     window.addEventListener('hashchange', () => {
       const hash = window.location.hash.replace('#', '');
-      const validViews = ['catalog', 'import', 'retailers'];
+      const validViews = ['catalog', 'import', 'retailers', 'api'];
       this.navigateTo(validViews.includes(hash) ? hash : 'catalog');
     });
 
     // Start on requested hash or default to catalog
     const startHash = window.location.hash.replace('#', '');
-    const validViews = ['catalog', 'import', 'retailers'];
+    const validViews = ['catalog', 'import', 'retailers', 'api'];
     this.navigateTo(validViews.includes(startHash) ? startHash : 'catalog');
   }
 };
