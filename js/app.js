@@ -49,6 +49,7 @@ const App = {
     if (view === 'catalog')   UICatalog.render();
     if (view === 'import')    UIImport.render();
     if (view === 'retailers') UIRetailers.render();
+    if (view === 'api')       UIApi.render();
   },
 
   // ── Technical Sheet modal ──────────────────
