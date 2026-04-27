@@ -189,11 +189,11 @@ const UIApi = (function () {
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href = url;
-      a.download = \`data_limpia_output_\${new Date().toISOString().slice(0,10)}.json\`;
+      a.download = `data_limpia_output_${new Date().toISOString().slice(0,10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       App.showToast('Endpoint JSON emitido correctamente', 'success');
-      printLog(\`✅ Respuesta HTTP 200 OK. JSON descargado por el cliente.\`, '#0f0');
+      printLog(`✅ Respuesta HTTP 200 OK. JSON descargado por el cliente.`, '#0f0');
     }, 600);
   }
 
