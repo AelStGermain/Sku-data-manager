@@ -82,8 +82,9 @@ const DB = (() => {
         name: p.product_name,
         brand: p.brand,
         category: p.category_master,
-        // Usamos la URL de Falabella / Tottus si existe EAN
-        imageUrl: `https://media.falabella.com/tottusCL/${p.ean}_1`,
+        // Leer la URL real de la base de datos, en lugar de forzar a Falabella
+        imageUrl: p.image_url || null,
+        status: p.product_name === 'Nuevo SKU de Terreno' || p.product_name.includes('UNDEFINED') ? 'review' : 'active',
         updatedAt: p.updated_at
       };
     });
@@ -102,7 +103,8 @@ const DB = (() => {
         ean: product.ean,
         product_name: product.name,
         brand: product.brand,
-        category_master: product.category
+        category_master: product.category,
+        image_url: product.imageUrl || null
       }, { onConflict: 'ean' });
 
     if (error) console.error('Error guardando en Supabase:', error);
