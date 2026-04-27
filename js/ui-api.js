@@ -1,6 +1,6 @@
 'use strict';
 
-const UIApi = (function() {
+const UIApi = (function () {
   const MOCK_GABRIEL_JSON = `{
   "origen": "PWA Offline GABOLab",
   "dmu_session_id": "DMU-90214",
@@ -34,7 +34,7 @@ const UIApi = (function() {
     const el = document.getElementById('view-api');
     if (!el) return;
 
-    el.innerHTML = \`
+    el.innerHTML = `
       <header class="app-header">
         <div class="hdr-left">
           <h1 class="app-title">API & Integraciones (ETL)</h1>
@@ -48,7 +48,7 @@ const UIApi = (function() {
           <div style="flex:1; display:flex; flex-direction:column; gap:10px; background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border);">
             <h3>📥 Simular Entrada (Webhook de Captura)</h3>
             <p style="color:var(--text-light); font-size:13px; margin:0;">Inyecta un JSON Payload para probar el flujo de asimilación relacional hacia la Base de Datos Central.</p>
-            <textarea id="api-payload-input" style="flex:1; width:100%; border-radius:8px; border:1px solid var(--border); background:#1e1e1e; color:#d4d4d4; padding:15px; font-family:monospace; font-size:13px; resize:none;">\${MOCK_GABRIEL_JSON}</textarea>
+            <textarea id="api-payload-input" style="flex:1; width:100%; border-radius:8px; border:1px solid var(--border); background:#1e1e1e; color:#d4d4d4; padding:15px; font-family:monospace; font-size:13px; resize:none;">${MOCK_GABRIEL_JSON}</textarea>
             <div style="display:flex; justify-content:flex-end; gap:10px;">
               <button class="btn-clear" onclick="document.getElementById('api-payload-input').value=''">Limpiar</button>
               <button class="btn-teal" onclick="UIApi.simulateWebhook()">
@@ -82,7 +82,7 @@ const UIApi = (function() {
            </div>
         </div>
       </div>
-    \`;
+    `;
     _terminalElement = document.getElementById('api-terminal');
     _terminalLines = [];
     printLog('Sistema en Línea, Puerto 8080 listo.', '#aaa');
@@ -91,7 +91,7 @@ const UIApi = (function() {
   function printLog(msg, color = '#4af') {
     if (!_terminalElement) return;
     const time = new Date().toLocaleTimeString('es-CL', { hour12: false });
-    _terminalLines.push(\`<span style="color:#666">[\${time}]</span> <span style="color:\${color}">\${msg}</span>\`);
+    _terminalLines.push(`<span style="color:#666">[${time}]</span> <span style="color:${color}">${msg}</span>`);
     _terminalElement.innerHTML = _terminalLines.join('<br>');
     _terminalElement.scrollTop = _terminalElement.scrollHeight;
   }
@@ -130,44 +130,52 @@ const UIApi = (function() {
     
     for (const item of data.items) {
       if (!item.ean || item.ean.trim() === "") {
-        printLog(\`⚠️ Huerfano: Omitiendo registro de EAN nulo o malformado.\`, '#f44');
-        printLog(\`   Traspasando anomalía a log de errores de Alertas Técnicas (Fase 4).\`, '#aaa');
-        await new Promise(r => setTimeout(r, 300));
+        printLog(`⚠️ Huerfano: Omitiendo registro de EAN nulo.`, '#f44');
         continue;
       }
-      printLog(\`Consultando Master EAN [\${esc(item.ean)}]...\`, '#aaa');
-      await new Promise(r => setTimeout(r, 400));
       
-      let p = DB.getProduct(item.ean);
-      if (!p) {
-        printLog(\`  ➔ EAN no hallado. Insertando nuevo registro relacional en BD MASTER_SKU.\`, '#6f6');
-        p = {
-          ean: item.ean,
-          name: item.ocr_name || 'Nuevo SKU de Terreno',
-          createdAt: new Date().toISOString(),
-          dataSource: 'manual'
-        };
-      } else {
-        printLog(\`  ➔ EAN existe en Master Data. Validando colisiones...\`, '#aaa');
+      printLog(`Consultando Master EAN [${esc(item.ean)}] en Base Global...`, '#aaa');
+      
+      // 1. Intentar enriquecer usando la API (Open Food Facts / Open Products)
+      let enrichedData = null;
+      if (window.API && typeof window.API.enrichProduct === 'function') {
+         enrichedData = await window.API.enrichProduct(item.ean);
       }
 
-      await new Promise(r => setTimeout(r, 200));
-      const hid = (data.holding_id || 'generico').toLowerCase();
-      printLog(\`  ➔ Insertando/Actualizando relación en tabla HOLDING_SKU (Retailer = \${esc(hid)}).\`, '#4af');
-      p.retailers = p.retailers || {};
-      p.retailers[hid] = p.retailers[hid] || {};
-      p.retailers[hid].internalId = p.retailers[hid].internalId || item.ean;
-      p.retailers[hid].updatedAt = new Date().toISOString();
+      // 2. Construir Data
+      const finalName = enrichedData?.name || item.ocr_name || 'Nuevo SKU de Terreno';
+      const finalBrand = enrichedData?.brand || 'MARCA DESCONOCIDA';
+      const finalCategory = enrichedData?.category || 'Sin Categoría';
       
-      DB.saveProduct(p);
+      const p = {
+        ean: item.ean,
+        name: finalName,
+        brand: finalBrand,
+        category: finalCategory,
+        // La URL visual de Falabella se construye en la lectura de la DB, 
+        // pero podemos pasarla como estado inicial si lo requiere la UI.
+        imageUrl: enrichedData?.imageUrl || null
+      };
+
+      printLog(`  ➔ Dato encontrado: <strong style="color:white">${finalName}</strong> (${finalBrand})`, '#6f6');
+      
+      // 3. Guardar en Supabase (via db.js)
+      printLog(`  ➔ Sincronizando con Master Catalog en la Nube Hub...`, '#4af');
+      if (window.DB && typeof window.DB.saveProduct === 'function') {
+         await window.DB.saveProduct(p);
+      }
+      
       processed++;
+      // Pequeña pausa para no saturar APIs (Throttling)
+      await new Promise(r => setTimeout(r, 800));
     }
 
     printLog('────────────────────────────────────────');
-    printLog(\`✅ Tarea ETL Satisfactoria. Transacción Completada. \${processed} registros fusionados.\`, '#0f0');
+    printLog(`✅ Tarea ETL Satisfactoria. ${processed} registros guardados en Supabase.`, '#0f0');
     
     setTimeout(() => {
       App.showToast('Ingesta procesada en la base de datos central', 'success');
+      if (window.App) window.App.refreshData(); // Refrescar catálogos
     }, 500);
   }
 
