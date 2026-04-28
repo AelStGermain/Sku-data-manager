@@ -120,63 +120,43 @@ const UIApi = (function () {
       return;
     }
 
-    printLog(\`Autenticado: [\${esc(data.origen)}]\`);
-    printLog(\`Identificado Captura DMU: \${esc(data.dmu_session_id)} por Auditor: \${esc(data.auditor)}\`);
-    printLog(\`Procesando \${data.items.length} SKUs en Tienda: \${esc(data.tienda_id)} (Holding: \${esc(data.holding_id).toUpperCase()})\`);
-    
-    await new Promise(r => setTimeout(r, 800));
-
     let processed = 0;
     
-    for (const item of data.items) {
-      if (!item.ean || item.ean.trim() === "") {
-        printLog(`⚠️ Huerfano: Omitiendo registro de EAN nulo.`, '#f44');
-        continue;
-      }
+    try {
+      printLog(`Autenticado: [${esc(data.origen)}]`);
+      printLog(`Identificado Captura DMU: ${esc(data.dmu_session_id)} por Auditor: ${esc(data.auditor)}`);
+      printLog(`Enviando ${data.items.length} SKUs al Endpoint Backend Vercel...`, '#aaa');
       
-      printLog(`Consultando Master EAN [${esc(item.ean)}] en Base Global...`, '#aaa');
-      
-      // 1. Intentar enriquecer usando la API (Open Food Facts / Open Products)
-      let enrichedData = null;
-      if (window.API && typeof window.API.enrichProduct === 'function') {
-         enrichedData = await window.API.enrichProduct(item.ean);
+      const response = await fetch('/api/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        processed = result.processed;
+        printLog(`  ➔ Respuesta 200 OK recibida desde el Servidor.`, '#6f6');
+        
+        // Log detallado de los resultados retornados por el servidor
+        result.results.forEach(resItem => {
+           printLog(`  ➔ SKU ${resItem.ean} asimilado en Master Catalog & Retailer Catalog.`, '#4af');
+        });
+
+        printLog('────────────────────────────────────────');
+        printLog(`✅ Tarea ETL Satisfactoria. ${processed} registros procesados remotamente y guardados en Supabase.`, '#0f0');
+        
+        App.showToast('Ingesta procesada en la base de datos central', 'success');
+        if (window.App) window.App.refreshData(); // Refrescar catálogos
+      } else {
+        printLog(`❌ ERROR HTTP ${response.status}: ${result.error}`, '#f44');
       }
 
-      // 2. Construir Data
-      const finalName = enrichedData?.name || item.ocr_name || 'Nuevo SKU de Terreno';
-      const finalBrand = enrichedData?.brand || 'MARCA DESCONOCIDA';
-      const finalCategory = enrichedData?.category || 'Sin Categoría';
-      
-      const p = {
-        ean: item.ean,
-        name: finalName,
-        brand: finalBrand,
-        category: finalCategory,
-        // La URL visual de Falabella se construye en la lectura de la DB, 
-        // pero podemos pasarla como estado inicial si lo requiere la UI.
-        imageUrl: enrichedData?.imageUrl || null
-      };
-
-      printLog(`  ➔ Dato encontrado: <strong style="color:white">${finalName}</strong> (${finalBrand})`, '#6f6');
-      
-      // 3. Guardar en Supabase (via db.js)
-      printLog(`  ➔ Sincronizando con Master Catalog en la Nube Hub...`, '#4af');
-      if (window.DB && typeof window.DB.saveProduct === 'function') {
-         await window.DB.saveProduct(p);
-      }
-      
-      processed++;
-      // Pequeña pausa para no saturar APIs (Throttling)
-      await new Promise(r => setTimeout(r, 800));
+    } catch (err) {
+      printLog(`❌ ERROR DE RED: No se pudo contactar al endpoint /api/webhook. Verifica si estás ejecutando en Vercel o un entorno compatible.`, '#f44');
+      console.error(err);
     }
-
-    printLog('────────────────────────────────────────');
-    printLog(`✅ Tarea ETL Satisfactoria. ${processed} registros guardados en Supabase.`, '#0f0');
-    
-    setTimeout(() => {
-      App.showToast('Ingesta procesada en la base de datos central', 'success');
-      if (window.App) window.App.refreshData(); // Refrescar catálogos
-    }, 500);
   }
 
   function generateOutputJSON() {
