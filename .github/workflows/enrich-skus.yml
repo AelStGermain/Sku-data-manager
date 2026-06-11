@@ -1,0 +1,45 @@
+name: SKU Enrichment (2x/día)
+
+on:
+  # Runs at 12:00 UTC (09:00 Santiago) and 21:00 UTC (18:00 Santiago)
+  schedule:
+    - cron: '0 12 * * *'   # 09:00 AM hora Chile (UTC-3)
+    - cron: '0 21 * * *'   # 06:00 PM hora Chile (UTC-3)
+
+  # Also allow manual trigger from the GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Max products to enrich in this run (default 200)'
+        required: false
+        default: '200'
+
+jobs:
+  enrich:
+    name: Enrich unenriched SKUs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run enrichment script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/enrich-cron.js
+
+      - name: Upload run summary
+        if: always()
+        run: |
+          echo "## SKU Enrichment Run — $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "Scheduled enrichment completed. Check logs above for details." >> $GITHUB_STEP_SUMMARY
