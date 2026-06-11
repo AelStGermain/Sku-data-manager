@@ -519,45 +519,71 @@ const UIRetailers = (() => {
       const store = DB.getStore(_activeStoreId);
       const items = DB.getStorePlanogram(_activeStoreId);
 
+      // Group by DMU
+      const dmuGroups = {};
+      items.forEach(it => {
+        const dmu = it.dmu || it.officialAisle || 'Sin DMU';
+        if (!dmuGroups[dmu]) dmuGroups[dmu] = [];
+        dmuGroups[dmu].push(it);
+      });
+      // Sort items by position within each DMU
+      Object.values(dmuGroups).forEach(arr => arr.sort((a, b) => (a.position || 9999) - (b.position || 9999)));
+
+      const dmuCount = Object.keys(dmuGroups).length;
+
       html += `
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
           <div>
             <button class="btn-mini" onclick="UIRetailers.goStoresList()">← Volver a Sucursales</button>
-            <span style="font-size:15px; font-weight:700; margin-left:12px;">Planograma Oficial: ${esc(store?.branchName)}</span>
+            <span style="font-size:15px; font-weight:700; margin-left:12px;">Planograma — ${esc(store?.branchName)}</span>
           </div>
-          <span class="badge" style="background:var(--accent)">${items.length} SKUs Asignados</span>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="badge" style="background:var(--accent)">${items.length} SKUs · ${dmuCount} DMUs</span>
+            <button class="btn-mini" style="background:rgba(74,201,155,0.1); color:#4ac99b; border-color:rgba(74,201,155,0.25); padding:5px 10px;" onclick="App.exportDMUExcel('${esc(_activeRetailerId)}')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar Excel por DMU
+            </button>
+          </div>
         </div>
-        
-        <div class="preview-table-wrap" style="max-height: 400px; overflow-y:auto;">
-          <table class="preview-table">
-            <thead>
-              <tr>
-                <th>EAN</th>
-                <th>Producto</th>
-                <th>Pasillo Oficial</th>
-                <th>Repisa / Góndola</th>
-                <th>Certificado</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.length === 0 ? `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">No hay productos asignados a este retailer. Asocia productos al retailer en el Importador o en la ficha de SKU.</td></tr>` : 
-                items.map(it => `
-                <tr>
-                  <td class="mono">${esc(it.ean)}</td>
-                  <td><strong>${esc(it.productName || 'Sin Nombre')}</strong><br><span style="font-size:11px; color:var(--text-muted);">${esc(it.brand)}</span></td>
-                  <td><span class="rcat-chip">${esc(it.officialAisle)}</span></td>
-                  <td><code style="background:var(--surface-el); padding:2px 6px; border-radius:4px; font-size:11px;">${esc(it.officialShelf)}</code></td>
-                  <td>
-                    <span class="status-badge ${it.isCertified ? 'new' : 'conflict'}" style="font-size:10px;">
-                      ${it.isCertified ? '✓ Certificado' : '⚠ Pendiente'}
-                    </span>
-                  </td>
-                </tr>`).join('')
-              }
-            </tbody>
-          </table>
+
+        <div style="display:flex; flex-direction:column; gap:16px; max-height:420px; overflow-y:auto; padding-right:4px;">
+          ${Object.keys(dmuGroups).length === 0
+            ? `<p style="text-align:center; color:var(--text-muted); padding:20px;">No hay productos asignados. Importa un Excel con columna DMU o asigna productos al retailer.</p>`
+            : Object.entries(dmuGroups).map(([dmu, dmuItems]) => `
+              <div style="background:var(--surface-el); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+                <div style="padding:8px 14px; background:var(--accent-dim); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                  <strong style="font-size:13px; color:var(--accent);">📦 DMU: ${esc(dmu)}</strong>
+                  <span style="font-size:11px; color:var(--text-muted);">${dmuItems.length} producto${dmuItems.length!==1?'s':''}</span>
+                </div>
+                <table class="preview-table" style="margin:0;">
+                  <thead>
+                    <tr>
+                      <th style="width:30px;">Pos.</th>
+                      <th>EAN</th>
+                      <th>Producto</th>
+                      <th>Marca</th>
+                      <th>Certificado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${dmuItems.map(it => `
+                    <tr>
+                      <td style="text-align:center; font-weight:700; color:var(--text-muted);">${it.position || '—'}</td>
+                      <td class="mono">${esc(it.ean)}</td>
+                      <td><strong>${esc(it.productName || 'Sin Nombre')}</strong></td>
+                      <td style="font-size:11px; color:var(--text-muted);">${esc(it.brand || '—')}</td>
+                      <td>
+                        <span class="status-badge ${it.isCertified ? 'new' : 'conflict'}" style="font-size:10px;">
+                          ${it.isCertified ? '✓ Cert.' : '⚠ Pend.'}
+                        </span>
+                      </td>
+                    </tr>`).join('')}
+                  </tbody>
+                </table>
+              </div>`).join('')}
         </div>
       `;
+
     } else if (_activeStoreView === 'sessions') {
       const store = DB.getStore(_activeStoreId);
       const sessions = DB.getStoreCaptureSessions(_activeStoreId);

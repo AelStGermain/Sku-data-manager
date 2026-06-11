@@ -498,7 +498,7 @@ const DB = (() => {
       if (!p.retailers || !p.retailers[store.retailerId]) return;
       
       const rData = p.retailers[store.retailerId];
-      const aisle = rData.category || aisles[idx % aisles.length];
+      const aisle = rData.dmu || rData.category || aisles[idx % aisles.length];
       const shelf = `Góndola ${(idx % 4) + 1} - Repisa ${(idx % 3) + 1}`;
       
       planogram.push({
@@ -509,6 +509,8 @@ const DB = (() => {
         brand: p.brand || 'N/A',
         officialAisle: aisle,
         officialShelf: shelf,
+        dmu: rData.dmu || aisle,
+        position: rData.position || null,
         isCertified: true
       });
     });

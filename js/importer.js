@@ -42,6 +42,8 @@ const Importer = (() => {
       retailerName: f('nombreretailer','descripcionretailer','nombresupermercado','nombretienda','desctienda'),
       category:     f('categoria','category','departamento','department','seccion','rubro','linea','familia','sub','subcategoria','cat','depto'),
       retailerImage:f('imagen','image','foto','photo','url','imageurl','imgurl','fotoproducto','imagenproducto'),
+      dmu:          f('dmu','pasillo','aisle','gondola','gondolas','seccion','pasillo','sector','nave'),
+      position:     f('posicion','position','orden','order','lugar','pos','nro','numero','fila','columna'),
     };
   }
 
@@ -138,6 +140,8 @@ const Importer = (() => {
             customerId:  custId,
             name:        rName,
             category:    get(row, mapping.category)      || null,
+            dmu:         get(row, mapping.dmu)           || null,
+            position:    num(get(row, mapping.position)) || null,
             stockStatus: true,
             imageUrl:    rImgUrl,
             updatedAt:   new Date().toISOString()

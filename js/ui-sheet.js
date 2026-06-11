@@ -154,36 +154,48 @@ const UISheet = (() => {
     App.showToast('Cambios descartados', 'info');
   }
 
-  // ── sync with Open Food Facts ──────────────
+  // ── sync with Open Food Facts / Open Products Facts ───
   async function syncOFF() {
     const btn = document.getElementById('sync-btn');
     if (btn) { btn.classList.add('spinning'); btn.disabled = true; }
-    App.showToast('Consultando a la API…', 'info');
+    App.showToast('Consultando APIs externas…', 'info');
 
     try {
       const apiData = await API.enrichProduct(_data.ean);
       if (!apiData) {
-        App.showToast('No se encontró este EAN en la API', 'error');
+        // Mark as attempted so the badge shows
+        _data.offAttempted = true;
+        _data.enrichFailed = true;
+        DB.saveProduct(_data);
+        App.showToast('EAN no encontrado en Open Food Facts ni Open Products Facts', 'warning');
+        _render();
       } else {
         const before = JSON.parse(JSON.stringify(_data));
         _data = API.mergeEnriched(_data, apiData);
 
         // Collect what changed
         const changed = [];
-        ['name','brand','packageType','weight_g','imageUrl','width_cm','height_cm','depth_cm'].forEach(f => {
+        ['name','brand','packageType','weight_g','imageUrl','width_cm','height_cm','depth_cm','masterCategory'].forEach(f => {
           if (!before[f] && _data[f]) changed.push(f);
         });
 
+        // ── AUTO-SAVE immediately (no need to press Guardar) ──
+        _data.updatedAt = new Date().toISOString();
+        await DB.saveProduct(_data);
+        _original = JSON.parse(JSON.stringify(_data));
+        _dirty = false;
+
         if (changed.length === 0) {
-          App.showToast('No hay datos nuevos para agregar (todo ya está completo)', 'info');
+          App.showToast('Sin datos nuevos — el producto ya estaba completo', 'info');
         } else {
-          _markDirty();
-          _render();
-          App.showToast(`Datos actualizados: ${changed.join(', ')}`, 'success');
+          const src = apiData.dataSource === 'open_food_facts' ? 'Open Food Facts' : 'Open Products Facts';
+          App.showToast(`✓ Guardado automáticamente (${src}): ${changed.length} campo(s) completado(s)`, 'success');
         }
+        _render();
       }
     } catch (e) {
       App.showToast('Error conectando con la API', 'error');
+      console.error(e);
     }
 
     if (btn) { btn.classList.remove('spinning'); btn.disabled = false; }
@@ -288,6 +300,16 @@ const UISheet = (() => {
       'mixed': 'Múltiple fuentes'
     }[_data.dataSource] || _data.dataSource || '—';
 
+    // Enrichment badge logic
+    let enrichBadge = '';
+    if (_data.offAttempted && !_data.enrichFailed) {
+      enrichBadge = `<span class="enrich-badge found">✓ Enriquecido — ${sourceLabel}</span>`;
+    } else if (_data.offAttempted && _data.enrichFailed) {
+      enrichBadge = `<span class="enrich-badge not-found">✗ Sin datos en APIs externas</span>`;
+    } else {
+      enrichBadge = `<span class="enrich-badge pending">○ Sin consultar API</span>`;
+    }
+
     container.innerHTML = `
 <div class="sheet-layout">
 
@@ -378,7 +400,7 @@ const UISheet = (() => {
 
     <!-- Meta -->
     <div class="sheet-meta-row">
-      <span class="meta-chip">Fuente: <strong>${esc(sourceLabel)}</strong></span>
+      ${enrichBadge}
       <span class="meta-chip">Completitud: <strong>${DB.computeCompleteness(_data)}%</strong></span>
     </div>
   </div>

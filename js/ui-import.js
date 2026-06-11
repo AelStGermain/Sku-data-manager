@@ -11,6 +11,7 @@ const UIImport = (() => {
   let _enrich      = true;
   let _importMode  = 'fill_empty';   // 'fill_empty' | 'overwrite' | 'skip'
   let _importResults = null;         // { created, updated, skipped, conflictLog }
+  let _enrichLog   = [];             // [{ ean, name, status, source }]
 
   // Labels for each master field
   const MASTER_FIELDS = [
@@ -24,10 +25,12 @@ const UIImport = (() => {
     { key: 'depth',       label: 'Profundidad (cm)',     required: false },
   ];
   const RETAILER_FIELDS = [
-    { key: 'customerId',    label: 'ID interno del retailer' },
-    { key: 'retailerName',  label: 'Nombre en ese retailer'  },
-    { key: 'category',      label: 'Categoría'               },
-    { key: 'retailerImage', label: 'URL imagen oficial'      },
+    { key: 'customerId',    label: 'ID interno del retailer (Customer ID)' },
+    { key: 'retailerName',  label: 'Nombre en ese retailer'                },
+    { key: 'category',      label: 'Categoría'                             },
+    { key: 'dmu',           label: 'DMU / Pasillo'                         },
+    { key: 'position',      label: 'Posición en góndola'                   },
+    { key: 'retailerImage', label: 'URL imagen oficial'                    },
   ];
 
   // ── main render ────────────────────────────
@@ -121,16 +124,14 @@ const UIImport = (() => {
   }
 
   // ────────────────────────────────────────────
-  //  STEP 2 — Column mapping with detection summary
+  //  STEP 2 — Column mapping
   // ────────────────────────────────────────────
   function renderStep2() {
     const { headers } = _fileData;
     const retailers = DB.getRetailers();
 
-    // Build detection summary chips
     const allFields = [...MASTER_FIELDS, ...RETAILER_FIELDS];
     const detected  = allFields.filter(f => _mapping[f.key] && headers.includes(_mapping[f.key]));
-    const missing   = allFields.filter(f => !_mapping[f.key]);
     const requiredMissing = MASTER_FIELDS.filter(f => f.required && !_mapping[f.key]);
 
     const chips = allFields.map(f => {
@@ -187,7 +188,7 @@ const UIImport = (() => {
   <div class="map-col">
     <h3 class="map-section-title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-      Datos de retailer (opcional)
+      Datos de retailer / levantamiento
     </h3>
     <div class="map-row">
       <label class="map-label">Asignar a retailer</label>
@@ -212,8 +213,8 @@ const UIImport = (() => {
         <div class="toggle-knob"></div>
       </div>
       <div>
-        <span class="enrich-label">Enriquecer usando API</span>
-        <p class="form-hint">Completa datos faltantes vía API automáticamente</p>
+        <span class="enrich-label">Enriquecer con APIs externas</span>
+        <p class="form-hint">Completa datos faltantes en paralelo vía Open Food Facts y Open Products Facts</p>
       </div>
     </div>
   </div>
@@ -265,6 +266,12 @@ const UIImport = (() => {
     <span class="psb-v">${total}</span>
     <span class="psb-l">Total en archivo</span>
   </div>
+  ${_enrich ? `
+  <div class="psb-divider"></div>
+  <div class="psb-stat">
+    <span class="psb-v" style="color:var(--accent)">⚡</span>
+    <span class="psb-l">Enriquecimiento<br>paralelo activo</span>
+  </div>` : ''}
 </div>
 
 ${conflicts.length > 0 ? `
@@ -293,7 +300,7 @@ ${conflicts.length > 0 ? `
         <th>EAN</th>
         <th>Nombre</th>
         <th>Marca</th>
-        ${_retailer ? '<th>ID Retailer</th><th>Categoría</th>' : ''}
+        ${_retailer ? '<th>ID Retailer</th><th>DMU</th><th>Pos.</th>' : ''}
         <th>Estado</th>
         <th></th>
       </tr>
@@ -307,7 +314,7 @@ ${conflicts.length > 0 ? `
           <td class="mono">${esc(p.ean)}</td>
           <td>${esc(p.name||'—')}</td>
           <td>${esc(p.brand||'—')}</td>
-          ${_retailer ? `<td>${esc(rData?.customerId||'—')}</td><td>${esc(rData?.category||'—')}</td>` : ''}
+          ${_retailer ? `<td>${esc(rData?.customerId||'—')}</td><td>${esc(rData?.dmu||'—')}</td><td>${esc(rData?.position||'—')}</td>` : ''}
           <td><span class="status-badge ${exists?'conflict':'new'}">${exists?'⚠ Ya existe':'✚ Nuevo'}</span></td>
           <td>${exists ? `<button class="btn-mini" onclick="App.openSheet('${esc(p.ean)}')">Ver →</button>` : ''}</td>
         </tr>`;
@@ -321,7 +328,7 @@ ${extra > 0 ? `<p class="preview-more">… y ${extra} producto${extra!==1?'s':''
   <button class="btn-outline" onclick="UIImport.goStep(2)">← Volver</button>
   <button class="btn-primary" onclick="UIImport.startImport()">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-    Importar ${total} producto${total!==1?'s':''}${_enrich?' + enriquecer':''}
+    Importar ${total} producto${total!==1?'s':''}${_enrich?' + enriquecer (paralelo)':''}
   </button>
 </div>`;
   }
@@ -338,15 +345,23 @@ ${extra > 0 ? `<p class="preview-more">… y ${extra} producto${extra!==1?'s':''
     <div class="progress-bar-fill" id="import-prog-fill" style="width:0%"></div>
   </div>
   <p id="import-detail" class="import-detail">Iniciando…</p>
+  <!-- Live enrich log -->
+  <div id="enrich-live-log" style="margin-top:16px; max-height:220px; overflow-y:auto; display:none;">
+    <p style="font-size:11px; font-weight:600; color:var(--text-muted); margin:0 0 6px;">Log de enriquecimiento en tiempo real:</p>
+    <div id="enrich-log-rows" style="font-size:11px; font-family:monospace; display:flex; flex-direction:column; gap:2px;"></div>
+  </div>
 </div>`;
   }
 
   // ────────────────────────────────────────────
-  //  STEP 5 — Results with conflict report
+  //  STEP 5 — Results with conflict + enrich report
   // ────────────────────────────────────────────
   function renderStep5() {
     if (!_importResults) return '<p>Sin resultados.</p>';
     const { created, updated, skipped, conflictLog } = _importResults;
+
+    const enrichFound   = _enrichLog.filter(x => x.status === 'found').length;
+    const enrichMissed  = _enrichLog.filter(x => x.status === 'not_found').length;
 
     const conflictRows = conflictLog.map(c => `
       <tr>
@@ -377,6 +392,26 @@ ${extra > 0 ? `<p class="preview-more">… y ${extra} producto${extra!==1?'s':''
   </div>
 </div>
 
+${_enrich && _enrichLog.length > 0 ? `
+<div class="enrich-results-panel">
+  <p class="enrich-results-title">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Enriquecimiento API — ${enrichFound} encontrados · ${enrichMissed} no encontrados
+  </p>
+  <details>
+    <summary style="cursor:pointer; font-size:12px; color:var(--text-muted); margin-bottom:6px;">Ver detalle por EAN</summary>
+    <div class="enrich-log-detail">
+      ${_enrichLog.map(x => `
+        <div class="enrich-log-row ${x.status}">
+          <span class="mono">${esc(x.ean)}</span>
+          ${x.status === 'found'
+            ? `<span>✓ ${esc(x.name||'Sin nombre')} <em style="opacity:.6">(${esc(x.source)})</em></span>`
+            : `<span style="opacity:.5">✗ No encontrado</span>`}
+        </div>`).join('')}
+    </div>
+  </details>
+</div>` : ''}
+
 ${conflictLog.length > 0 ? `
 <div class="conflict-log">
   <p class="conflict-log-title">Productos que ya existían en la plataforma:</p>
@@ -399,34 +434,62 @@ ${conflictLog.length > 0 ? `
   // ────────────────────────────────────────────
   async function startImport() {
     if (!_mapping.ean) { App.showToast('Debes mapear la columna del EAN', 'error'); return; }
-    
+
+    _enrichLog = [];
     _step = 4;
     render();
 
-    const fill     = document.getElementById('import-prog-fill');
-    const detail   = document.getElementById('import-detail');
-    const status   = document.getElementById('import-status');
+    const fill   = document.getElementById('import-prog-fill');
+    const detail = document.getElementById('import-detail');
+    const status = document.getElementById('import-status');
 
+    // 1) Import products into DB
     const products = Importer.applyMapping(_fileData.rows, _mapping, _retailer);
     _importResults = Importer.importWithMode(products, _importMode);
-    if (fill) fill.style.width = '35%';
+    if (fill) fill.style.width = '30%';
     if (detail) detail.textContent = `${_importResults.created} nuevos · ${_importResults.updated} actualizados · ${_importResults.skipped} omitidos`;
 
-    // 2) Enrich via Open Food Facts
+    // 2) Parallel enrichment
     if (_enrich && products.length > 0) {
-      if (status) status.textContent = 'Enriqueciendo con Open Food Facts…';
+      if (status) status.textContent = 'Enriqueciendo con APIs externas (en paralelo)…';
+
+      const liveLog = document.getElementById('enrich-live-log');
+      const logRows = document.getElementById('enrich-log-rows');
+      if (liveLog) liveLog.style.display = 'block';
+
       const eans = products.map(p => p.ean);
       let done = 0;
 
       await API.enrichBatch(eans, (i, total, ean, apiData) => {
         done++;
-        if (fill) fill.style.width = (35 + Math.round((done/total)*60)) + '%';
-        if (detail) detail.textContent = `Enriqueciendo ${done}/${total}: ${ean}`;
-        if (apiData) {
-          const existing = DB.getProduct(ean);
-          if (existing) DB.saveProduct(API.mergeEnriched(existing, apiData));
+        const pct = 30 + Math.round((done / total) * 65);
+        if (fill) fill.style.width = pct + '%';
+        if (detail) detail.textContent = `Enriqueciendo ${done}/${total}…`;
+
+        // Save each enriched product immediately as it arrives
+        const existing = DB.getProduct(ean);
+        if (existing) {
+          const merged = API.mergeEnriched(existing, apiData);
+          DB.saveProduct(merged);
         }
-      });
+
+        // Log entry
+        const logEntry = apiData
+          ? { ean, name: apiData.name, status: 'found', source: apiData.dataSource === 'open_food_facts' ? 'Open Food Facts' : 'Open Products Facts' }
+          : { ean, status: 'not_found' };
+        _enrichLog.push(logEntry);
+
+        // Append live log row
+        if (logRows) {
+          const row = document.createElement('div');
+          row.style.cssText = `padding:2px 6px; border-radius:3px; background:${apiData ? 'rgba(74,201,155,0.08)' : 'rgba(196,43,32,0.06)'}; color:${apiData ? '#4ac99b' : 'var(--text-muted)'};`;
+          row.textContent = apiData
+            ? `✓ ${ean}  →  ${apiData.name || 'sin nombre'}`
+            : `✗ ${ean}  —  no encontrado`;
+          logRows.appendChild(row);
+          logRows.scrollTop = logRows.scrollHeight;
+        }
+      }, 5); // 5 concurrent requests
     }
 
     if (fill) fill.style.width = '100%';
@@ -440,7 +503,7 @@ ${conflictLog.length > 0 ? `
   // ── helpers ────────────────────────────────
   function setMapping(field, col) { _mapping[field] = col; }
   function setRetailer(rid)       { _retailer = rid; }
-  function setMode(mode)          {
+  function setMode(mode) {
     _importMode = mode;
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(mode)));
     document.querySelectorAll('.mode-dot').forEach((d, i) => {
@@ -463,7 +526,7 @@ ${conflictLog.length > 0 ? `
   function goStep(n) { _step = n; render(); }
   function reset() {
     _step=1; _fileData=null; _mapping={}; _retailer=''; _enrich=true;
-    _importMode='fill_empty'; _importResults=null;
+    _importMode='fill_empty'; _importResults=null; _enrichLog=[];
     render();
   }
 

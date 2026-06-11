@@ -24,11 +24,6 @@ const App = {
     }, type === 'error' ? 5000 : 3000);
   },
 
-  formatDate(iso) {
-    if (!iso) return '';
-    try { return new Date(iso).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }
-    catch { return iso.slice(0,16); }
-  },
 
   // ── routing ────────────────────────────────
   navigateTo(view) {
@@ -49,7 +44,6 @@ const App = {
     if (view === 'catalog')   UICatalog.render();
     if (view === 'import')    UIImport.render();
     if (view === 'retailers') UIRetailers.render();
-    if (view === 'api')       UIApi.render();
   },
 
   // ── Technical Sheet modal ──────────────────
@@ -213,6 +207,56 @@ const App = {
     this.showToast('CSV exportado correctamente', 'success');
   },
 
+  // ── export DMU Excel (one sheet per DMU) ──────────────
+  exportDMUExcel(retailerId) {
+    if (typeof XLSX === 'undefined') {
+      this.showToast('Librería Excel no cargada', 'error');
+      return;
+    }
+    const products  = DB.getProductsArray().filter(p => p.retailers?.[retailerId]);
+    const retailers = DB.getRetailers();
+    const rInfo     = retailers.find(r => r.id === retailerId);
+    if (!rInfo) return;
+
+    // Group by DMU
+    const groups = {};
+    products.forEach(p => {
+      const rd  = p.retailers[retailerId];
+      const dmu = rd.dmu || rd.category || 'Sin DMU';
+      if (!groups[dmu]) groups[dmu] = [];
+      groups[dmu].push({ p, rd });
+    });
+
+    const wb = XLSX.utils.book_new();
+    const headers = ['EAN', 'Nombre', 'Marca', 'ID Retailer', 'Categoría', 'DMU', 'Posición', 'Peso (g)', 'Tipo Envase', 'Imagen URL'];
+
+    Object.entries(groups).forEach(([dmu, items]) => {
+      items.sort((a, b) => (a.rd.position || 9999) - (b.rd.position || 9999));
+      const rows = [headers];
+      items.forEach(({ p, rd }) => {
+        rows.push([
+          p.ean,
+          rd.name || p.name || '',
+          p.brand || '',
+          rd.customerId || '',
+          rd.category || '',
+          rd.dmu || '',
+          rd.position || '',
+          p.weight_g || '',
+          p.packageType || '',
+          rd.imageUrl || p.imageUrl || ''
+        ]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const sheetName = String(dmu).replace(/[\\/*?:[\]]/g, '').slice(0, 31);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName || 'DMU');
+    });
+
+    const fname = `${rInfo.name.replace(/\s+/g,'-')}-DMUs-${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, fname);
+    this.showToast(`Excel DMU de ${rInfo.name} exportado`, 'success');
+  },
+
   exportRetailerCSV(retailerId) {
     const products = DB.getProductsArray();
     const retailers = DB.getRetailers();
@@ -301,13 +345,13 @@ const App = {
     // Hash tracking for F5 refreshes
     window.addEventListener('hashchange', () => {
       const hash = window.location.hash.replace('#', '');
-      const validViews = ['catalog', 'import', 'retailers', 'api'];
+      const validViews = ['catalog', 'import', 'retailers'];
       this.navigateTo(validViews.includes(hash) ? hash : 'catalog');
     });
 
     // Start on requested hash or default to catalog
     const startHash = window.location.hash.replace('#', '');
-    const validViews = ['catalog', 'import', 'retailers', 'api'];
+    const validViews = ['catalog', 'import', 'retailers'];
     this.navigateTo(validViews.includes(startHash) ? startHash : 'catalog');
   }
 };
