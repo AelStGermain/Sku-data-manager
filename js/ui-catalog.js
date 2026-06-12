@@ -95,7 +95,6 @@ const UICatalog = (() => {
     const name  = esc(p.name || 'Sin nombre');
     const brand = esc(p.brand || '—');
     const ean   = esc(p.ean);
-    const checked = _selected.has(p.ean);
     const noImg = !rawImg;
 
     const retailerBadges = retailers
@@ -140,7 +139,6 @@ const UICatalog = (() => {
     const name    = esc(p.name || 'Sin nombre');
     const brand   = esc(p.brand || '—');
     const ean     = esc(p.ean);
-    const checked = _selected.has(p.ean);
     const noImg   = !rawImg;
 
     const retailerBadges = retailers
