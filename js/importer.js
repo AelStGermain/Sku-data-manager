@@ -41,7 +41,7 @@ const Importer = (() => {
       customerId:   f('idretailer','retailerid','sku','idinterno','codinterno','codigointerno','skuinterno','articuloid','itemid','productid','customerid','codigocomercial','codcomercial','skucentral','codigocliente','idcliente','skuproveedor'),
       retailerName: f('nombreretailer','descripcionretailer','nombresupermercado','nombretienda','desctienda'),
       category:     f('categoria','category','departamento','department','seccion','rubro','linea','familia','sub','subcategoria','cat','depto'),
-      retailerImage:f('imagen','image','foto','photo','url','imageurl','imgurl','fotoproducto','imagenproducto'),
+      retailerImage:f('imagen','image','foto','photo','url','imageurl','imgurl','fotoproducto','imagenproducto','fotofleje'),
       dmu:          f('dmu','pasillo','aisle','gondola','gondolas','seccion','pasillo','sector','nave'),
       position:     f('posicion','position','orden','order','lugar','pos','nro','numero','fila','columna'),
     };
@@ -81,9 +81,9 @@ const Importer = (() => {
             const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
             if (!raw.length) return resolve({ headers: [], rows: [] });
             const headers = raw[0].map(String);
-            const rows = raw.slice(1).map(row => {
-              const obj = {};
-              headers.forEach((h, i) => { obj[h] = String(row[i] ?? ''); });
+            const rows = raw.slice(1).map((row, i) => {
+              const obj = { _excelRow: i + 1 };
+              headers.forEach((h, j) => { obj[h] = String(row[j] ?? ''); });
               return obj;
             });
             resolve({ headers, rows });
@@ -100,9 +100,11 @@ const Importer = (() => {
   // ────────────────────────────────────────────
   //  APPLY MAPPING → product objects
   // ────────────────────────────────────────────
-  function applyMapping(rows, mapping, retailerId) {
+  function applyMapping(rows, mapping, retailerId, extraData = {}) {
     const get = (row, col) => col ? (row[col] || '').toString().trim() : null;
     const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
+    const { headers = [], cellImages = {} } = extraData;
+    const imgColIndex = headers.indexOf(mapping.retailerImage);
 
     return rows
       .map(row => {
@@ -127,14 +129,25 @@ const Importer = (() => {
           const rName = get(row, mapping.retailerName) || product.name;
           const custId = get(row, mapping.customerId) || null;
           let rImgUrl = get(row, mapping.retailerImage) || null;
+          let rImgBlob = null;
+
+          // Check for embedded blob from Excel
+          if (imgColIndex !== -1 && row._excelRow !== undefined) {
+             const blob = cellImages[`${row._excelRow},${imgColIndex}`];
+             if (blob) rImgBlob = blob;
+          }
 
           // -- TOTTUS AUTOMATION INTERCEPTOR --
           const retailers = typeof DB !== 'undefined' ? DB.getRetailers() : [];
           const rInfo = retailers.find(r => r.id === retailerId);
           const isTottus = rInfo && (rInfo.name || '').toLowerCase().includes('tottus');
-          if (isTottus && custId && !rImgUrl) {
+          if (isTottus && custId && !rImgUrl && !rImgBlob) {
              rImgUrl = `https://media.falabella.com/tottusCL/${custId}_1`;
           }
+
+          // Set master image if found in Excel or via Tottus hack (before API runs)
+          if (rImgUrl) product.imageUrl = rImgUrl;
+          if (rImgBlob) product._imageBlob = rImgBlob;
 
           product.retailers[retailerId] = {
             customerId:  custId,

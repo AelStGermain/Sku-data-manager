@@ -12,6 +12,7 @@ const UIImport = (() => {
   let _importMode  = 'fill_empty';   // 'fill_empty' | 'overwrite' | 'skip'
   let _importResults = null;         // { created, updated, skipped, conflictLog }
   let _enrichLog   = [];             // [{ ean, name, status, source }]
+  let _cellImages  = {};             // Map of "row,col" -> Blob
 
   // Labels for each master field
   const MASTER_FIELDS = [
@@ -113,6 +114,11 @@ const UIImport = (() => {
     const errEl = document.getElementById('file-error');
     if (zone) zone.classList.add('loading');
     try {
+      if (file.name.match(/\.xlsx$/i)) {
+        _cellImages = await ExcelImageParser.extractImages(file);
+      } else {
+        _cellImages = {};
+      }
       _fileData = await Importer.readFile(file);
       _mapping  = Importer.autoDetect(_fileData.headers);
       _step = 2;
@@ -238,7 +244,7 @@ const UIImport = (() => {
   //  STEP 3 — Preview + conflict analysis + mode
   // ────────────────────────────────────────────
   function renderStep3() {
-    const products  = Importer.applyMapping(_fileData.rows, _mapping, _retailer);
+    const products  = Importer.applyMapping(_fileData.rows, _mapping, _retailer, { headers: _fileData.headers, cellImages: _cellImages });
     const { conflicts, news, total } = Importer.analyzeConflicts(products);
     const preview   = products.slice(0, 12);
     const extra     = products.length - 12;
@@ -443,8 +449,27 @@ ${conflictLog.length > 0 ? `
     const detail = document.getElementById('import-detail');
     const status = document.getElementById('import-status');
 
-    // 1) Import products into DB
-    const products = Importer.applyMapping(_fileData.rows, _mapping, _retailer);
+    // 1) Extract images from Excel and Import products into DB
+    const products = Importer.applyMapping(_fileData.rows, _mapping, _retailer, { headers: _fileData.headers, cellImages: _cellImages });
+    
+    if (status) status.textContent = 'Procesando imágenes de Excel...';
+    let imgCount = 0;
+    for (const p of products) {
+       if (p._imageBlob) {
+          imgCount++;
+          if (detail) detail.textContent = `Procesando imagen ${imgCount}...`;
+          try {
+             // Subirá a Supabase Storage, o devolverá Base64 nativo si no está configurado
+             const url = await DB.uploadProductImage(p.ean, p._imageBlob, 'product');
+             p.imageUrl = url;
+             if (_retailer && p.retailers[_retailer]) {
+                p.retailers[_retailer].imageUrl = url;
+             }
+          } catch(e) { console.error('Error procesando imagen para', p.ean, e); }
+          delete p._imageBlob;
+       }
+    }
+
     _importResults = Importer.importWithMode(products, _importMode);
     if (fill) fill.style.width = '30%';
     if (detail) detail.textContent = `${_importResults.created} nuevos · ${_importResults.updated} actualizados · ${_importResults.skipped} omitidos`;
@@ -518,7 +543,7 @@ ${conflictLog.length > 0 ? `
   }
   function toPreview() {
     if (!_mapping.ean) { App.showToast('Debes seleccionar la columna del EAN', 'error'); return; }
-    const sample = Importer.applyMapping(_fileData.rows, _mapping, _retailer);
+    const sample = Importer.applyMapping(_fileData.rows, _mapping, _retailer, { headers: _fileData.headers, cellImages: _cellImages });
     if (sample.length === 0) { App.showToast('No se encontraron filas válidas con EAN.', 'error'); return; }
     _step = 3;
     render();
