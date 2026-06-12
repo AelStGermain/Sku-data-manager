@@ -12,17 +12,34 @@ const API = (() => {
       .finally(() => clearTimeout(id));
   }
 
+  const _sleep = ms => new Promise(r => setTimeout(r, ms));
+
   // ── Low-level fetch ────────────────────────────
-  async function _fetch(url) {
-    try {
-      const res = await _fetchWithTimeout(url, 8000);
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (data.status !== 1) return null;
-      return data.product;
-    } catch {
-      return null;
+  async function _fetch(url, retries = 3) {
+    let delay = 500;
+    for (let i = 0; i < retries; i++) {
+      try {
+        const res = await _fetchWithTimeout(url, 8000);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status !== 1) return null;
+          return data.product;
+        }
+        
+        if (res.status === 429 || res.status >= 500) {
+          console.warn(`API retry ${i+1}/${retries} for ${url} due to ${res.status}`);
+          await _sleep(delay);
+          delay *= 3;
+          continue;
+        }
+        return null;
+      } catch (err) {
+        console.warn(`API network error ${i+1}/${retries} for ${url}`);
+        await _sleep(delay);
+        delay *= 3;
+      }
     }
+    return null;
   }
 
   // Pad EAN to 13 digits (UPC-A → EAN-13)

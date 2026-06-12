@@ -409,18 +409,63 @@ const DB = (() => {
     });
 
     try {
-      const { error } = await _supabase
-        .from('master_catalog')
-        .upsert(payload, { onConflict: 'ean' });
+      const chunkSize = 500;
       
-      if (error) console.error('Error upsert masivo en Supabase:', error);
+      // 1. Chunking para master_catalog
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        const chunk = payload.slice(i, i + chunkSize);
+        const { error } = await _supabase
+          .from('master_catalog')
+          .upsert(chunk, { onConflict: 'ean' });
+        
+        if (error) console.error(`Error upsert masivo en chunk master ${i/chunkSize}:`, error);
+      }
 
-      // Save retailer relations in background
+      // 2. Chunking para retailer_catalog
+      const retailerRelations = [];
       for (const p of productsArray) {
         if (p.retailers) {
           for (const [rid, rData] of Object.entries(p.retailers)) {
-            await saveRetailerRelation(p.ean, rid, rData);
+            retailerRelations.push({ ean: p.ean, rid, rData });
           }
+        }
+      }
+
+      if (retailerRelations.length > 0) {
+        for (let i = 0; i < retailerRelations.length; i += chunkSize) {
+          const chunk = retailerRelations.slice(i, i + chunkSize);
+          const eansInChunk = [...new Set(chunk.map(c => c.ean))];
+          
+          // Buscar UUIDs existentes de un solo golpe para este bloque
+          const { data: existingRelations } = await _supabase
+            .from('retailer_catalog')
+            .select('uuid, ean, retailer_id')
+            .in('ean', eansInChunk);
+            
+          const existingMap = {};
+          if (existingRelations) {
+            existingRelations.forEach(r => {
+               existingMap[`${r.ean}_${r.retailer_id}`] = r.uuid;
+            });
+          }
+
+          const upsertPayload = chunk.map(c => {
+             const key = `${c.ean}_${c.rid}`;
+             return {
+                uuid: existingMap[key] || (crypto.randomUUID ? crypto.randomUUID() : (Math.random().toString(36).substring(2) + Date.now().toString(36))),
+                ean: c.ean,
+                retailer_id: c.rid,
+                internal_sku_id: c.rData.customerId || c.ean,
+                retailer_category: c.rData.category || 'General',
+                is_trained: c.rData.stockStatus !== false
+             };
+          });
+
+          const { error: relError } = await _supabase
+            .from('retailer_catalog')
+            .upsert(upsertPayload, { onConflict: 'uuid' });
+            
+          if (relError) console.error(`Error upsert masivo en chunk retailers ${i/chunkSize}:`, relError);
         }
       }
     } catch (err) {
