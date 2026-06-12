@@ -14,7 +14,7 @@ Históricamente, la homologación de datos logísticos se ha manejado mediante p
 ##  Acceso en Vivo (Producción)
 
 El proyecto se encuentra desplegado de forma continua en Vercel y puede ser accedido públicamente:
-**🔗 [Visitar Smart Shelf - Master Data en Producción](https://sku-data-manager.vercel.app/)**
+** [Visitar Smart Shelf - Master Data en Producción](https://sku-data-manager.vercel.app/)**
 
 ##  Arquitectura Técnica y Stack
 
@@ -23,7 +23,7 @@ El proyecto fue construido priorizando la eficiencia operativa, evitando la sobr
 * **Frontend (Cliente):** Vanilla JavaScript (ES6+), HTML5 Semántico, y CSS3 (Variables, Flexbox/Grid). Se utiliza el patrón de diseño "Módulo (Module Pattern)" (IIFE) para encapsular la lógica de negocio y estado (ej. `DB.js`, `API.js`, `ui-catalog.js`).
 * **Integración Externa (API):** Consumo automatizado de la API RESTful de [OpenFoodFacts](https://world.openfoodfacts.org/data) para el enriquecimiento asíncrono de SKUs (dimensiones, ingredientes e imágenes).
 
-## 🗄️ Estructura de la Base de Datos (Supabase)
+##  Estructura de la Base de Datos (Supabase)
 
 El backend opera bajo el modelo BaaS (Backend as a Service) utilizando **Supabase (PostgreSQL)**, lo cual elimina la necesidad de mantener un servidor web tradicional y confía la persistencia a un motor relacional de grado empresarial.
 
