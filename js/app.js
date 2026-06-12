@@ -42,6 +42,7 @@ const App = {
 
     // render appropriate view
     if (view === 'catalog')   UICatalog.render();
+    if (view === 'bulk')      UIBulk.render();
     if (view === 'import')    UIImport.render();
     if (view === 'retailers') UIRetailers.render();
   },
@@ -345,13 +346,13 @@ const App = {
     // Hash tracking for F5 refreshes
     window.addEventListener('hashchange', () => {
       const hash = window.location.hash.replace('#', '');
-      const validViews = ['catalog', 'import', 'retailers'];
+      const validViews = ['catalog', 'import', 'retailers', 'bulk'];
       this.navigateTo(validViews.includes(hash) ? hash : 'catalog');
     });
 
     // Start on requested hash or default to catalog
     const startHash = window.location.hash.replace('#', '');
-    const validViews = ['catalog', 'import', 'retailers'];
+    const validViews = ['catalog', 'import', 'retailers', 'bulk'];
     this.navigateTo(validViews.includes(startHash) ? startHash : 'catalog');
   }
 };

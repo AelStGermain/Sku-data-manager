@@ -18,10 +18,6 @@ const UICatalog = (() => {
   let _page          = 0;
   const PAGE_SIZE    = 50;
 
-  // ── bulk-edit state ─────────────────────
-  let _selectMode = false;
-  let _selected   = new Set();
-
   // ── export dropdown state ───────────────
   let _exportDropdownOpen = false;
 
@@ -108,15 +104,10 @@ const UICatalog = (() => {
       .join('');
 
     return `
-<article class="product-card ${_selectMode?'selectable':''} ${checked?'selected':''}"
+<article class="product-card"
   data-ean="${ean}"
-  onclick="${_selectMode ? `UICatalog.toggleSelect('${ean}')` : `App.openSheet('${ean}')`}"
-  title="${_selectMode ? 'Seleccionar / deseleccionar' : 'Ver Technical Sheet'}">
-
-  ${_selectMode ? `
-  <div class="card-checkbox ${checked?'checked':''}">
-    ${checked ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
-  </div>` : ''}
+  onclick="App.openSheet('${ean}')"
+  title="Ver Technical Sheet">
 
   <div class="card-img-wrap">
     <img class="card-img${noImg?' no-img':''}" src="${img}" alt="${name}" onerror="this.classList.add('no-img');this.src=''">
@@ -134,10 +125,9 @@ const UICatalog = (() => {
       <span class="comp-label" style="color:${col}">${pct}%</span>
     </div>
   </div>
-  ${!_selectMode ? `
   <div class="card-footer">
     <button class="btn-card-cta" onclick="event.stopPropagation();App.openSheet('${ean}')">Ver Technical Sheet →</button>
-  </div>` : ''}
+  </div>
 </article>`;
   }
 
@@ -159,8 +149,7 @@ const UICatalog = (() => {
       .join('');
 
     return `
-<div class="product-list-row ${_selectMode?'selectable':''} ${checked?'selected':''}" data-ean="${ean}"
-  onclick="${_selectMode ? `UICatalog.toggleSelect('${ean}')` : `App.openSheet('${ean}')`}">
+<div class="product-list-row" data-ean="${ean}" onclick="App.openSheet('${ean}')">
   <div class="pl-img">
     <img class="${noImg?'no-img':''}" style="width:100%;height:100%;object-fit:contain;padding:4px${noImg?';display:none':''}" src="${img}" alt="${name}" onerror="this.style.display='none'">
   </div>
@@ -174,8 +163,7 @@ const UICatalog = (() => {
     <div class="pl-comp-bar"><div class="pl-comp-fill" style="width:${pct}%;background:${col}"></div></div>
     <span class="pl-comp-lbl" style="color:${col}">${pct}%</span>
   </div>
-  <div>${_selectMode ? `<div class="pl-checkbox ${checked?'checked':''}">${checked?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>` : ''}</div>
-  <div class="pl-actions">${!_selectMode ? `<button class="btn-mini" onclick="event.stopPropagation();App.openSheet('${ean}')">Ver Sheet →</button>` : ''}</div>
+  <div class="pl-actions"><button class="btn-mini" onclick="event.stopPropagation();App.openSheet('${ean}')">Ver Sheet →</button></div>
 </div>`;
   }
 
@@ -185,47 +173,7 @@ const UICatalog = (() => {
       : `<div class="empty-state"><div class="empty-icon">📦</div><h3>Sin productos aún</h3><p>Importa tu primer archivo de SKUs para comenzar.</p><button class="btn-primary" onclick="App.navigateTo('import')">Importar SKUs</button></div>`;
   }
 
-  // ── bulk edit bar ────────────────────────────
-  function renderBulkBar(filtered, retailers) {
-    if (!_selectMode) return '';
-    const n = _selected.size;
 
-    // Master fields that can be bulk-cleared or set
-    const masterFields = [
-      { v:'',             l:'— Seleccionar campo —' },
-      { v:'width_cm',     l:'Ancho (cm)' },
-      { v:'height_cm',    l:'Alto (cm)' },
-      { v:'depth_cm',     l:'Profundidad (cm)' },
-      { v:'weight_g',     l:'Peso (g)' },
-      { v:'brand',        l:'Marca' },
-      { v:'packageType',  l:'Tipo de paquete' },
-    ];
-    // Retailer category fields
-    const rFields = retailers.map(r => ({ v:`rcat_${r.id}`, l:`Categoría — ${r.name}` }));
-    const rStock  = retailers.map(r => ({ v:`rstock_${r.id}`, l:`Stock — ${r.name}` }));
-    const allFields = [...masterFields, ...rFields, ...rStock];
-
-    return `
-<div class="bulk-bar" id="bulk-bar">
-  <div class="bulk-bar-left">
-    <span class="bulk-count">${n} producto${n!==1?'s':''} seleccionado${n!==1?'s':''}</span>
-    <button class="bulk-sel-all" onclick="UICatalog.selectAll()">Seleccionar todos (${filtered.length})</button>
-    <button class="bulk-sel-all" onclick="UICatalog.deselectAll()">Deseleccionar</button>
-  </div>
-  <div class="bulk-bar-mid">
-    <select class="form-select bulk-field-sel" id="bulk-field" style="font-size:12px">
-      ${allFields.map(f => `<option value="${esc(f.v)}">${esc(f.l)}</option>`).join('')}
-    </select>
-    <input type="text" class="form-input bulk-value-inp" id="bulk-value" placeholder="Nuevo valor (vacío = borrar)">
-    <button class="btn-primary" style="padding:7px 14px;font-size:12px" onclick="UICatalog.applyBulk()">Aplicar</button>
-    <button class="btn-danger-sm" onclick="UICatalog.bulkDelete()" title="Eliminar seleccionados">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-      Eliminar
-    </button>
-  </div>
-  <button class="bulk-close" onclick="UICatalog.exitSelectMode()">✕ Salir</button>
-</div>`;
-  }
 
   // ── pagination bar ────────────────────────────
   function renderPagination(total) {
@@ -309,10 +257,7 @@ const UICatalog = (() => {
     <button class="btn-teal" id="enrich-all-btn" onclick="UICatalog.enrichAll()" ${_enriching?'disabled':''}>
       ${_enriching ? `<span class="spin-ico">↻</span> Enriqueciendo…` : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg> Enriquecer catálogo`}
     </button>
-    <button class="btn-outline ${_selectMode?'active':''}" onclick="UICatalog.toggleSelectMode()" title="Edición masiva de productos">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      Edición masiva
-    </button>
+
     <div class="export-dropdown-container" style="position:relative; display:inline-block;">
       <button class="btn-outline" onclick="UICatalog.toggleExportDropdown(event)" title="Exportar catálogo en CSV">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -397,7 +342,7 @@ const UICatalog = (() => {
 
 <p class="result-count">${filtered.length} resultado${filtered.length!==1?'s':''}${filtered.length>PAGE_SIZE?` &nbsp;·&nbsp; Página ${_page+1} de ${Math.ceil(filtered.length/PAGE_SIZE)}`:''}</p>
 
-${_selectMode ? `<p class="bulk-hint">❖ Modo edición masiva — haz click en las cards para seleccionarlas</p>` : ''}
+
 
 ${filtered.length === 0
   ? renderEmpty(all.length > 0)
@@ -410,76 +355,10 @@ ${filtered.length === 0
 
 ${renderPagination(filtered.length)}
 
-${renderBulkBar(filtered, retailers)}`;
+
   }
 
-  // ── select mode handlers ─────────────────────
-  function toggleSelectMode() {
-    _selectMode = !_selectMode;
-    if (!_selectMode) _selected.clear();
-    render();
-  }
-  function exitSelectMode() { _selectMode = false; _selected.clear(); render(); }
 
-  function toggleSelect(ean) {
-    if (_selected.has(ean)) _selected.delete(ean);
-    else _selected.add(ean);
-    // Lightweight update: just toggle classes on card + update bar count
-    const card = document.querySelector(`[data-ean="${ean}"]`);
-    if (card) card.classList.toggle('selected', _selected.has(ean));
-    const cb = card?.querySelector('.card-checkbox');
-    if (cb) { cb.classList.toggle('checked', _selected.has(ean)); cb.innerHTML = _selected.has(ean) ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''; }
-    const cnt = document.querySelector('.bulk-count');
-    if (cnt) { const n=_selected.size; cnt.textContent = `${n} producto${n!==1?'s':''} seleccionado${n!==1?'s':''}`; }
-  }
-
-  function selectAll() {
-    document.querySelectorAll('.product-card[data-ean]').forEach(c => _selected.add(c.dataset.ean));
-    render();
-  }
-  function deselectAll() { _selected.clear(); render(); }
-
-  // ── bulk apply ──────────────────────────────
-  function applyBulk() {
-    if (_selected.size === 0) { App.showToast('Selecciona al menos un producto', 'error'); return; }
-    const field = document.getElementById('bulk-field')?.value;
-    const raw   = document.getElementById('bulk-value')?.value.trim();
-    if (!field) { App.showToast('Selecciona un campo', 'error'); return; }
-
-    const numVal = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
-    let changed = 0;
-
-    _selected.forEach(ean => {
-      const p = DB.getProduct(ean);
-      if (!p) return;
-
-      if (field.startsWith('rcat_')) {
-        // Retailer category
-        const rid = field.replace('rcat_','');
-        p.retailers = p.retailers || {};
-        if (p.retailers[rid]) { p.retailers[rid].category = raw || null; changed++; }
-      } else if (field.startsWith('rstock_')) {
-        // Retailer stock toggle
-        const rid = field.replace('rstock_','');
-        p.retailers = p.retailers || {};
-        if (p.retailers[rid]) {
-          p.retailers[rid].stockStatus = raw.toLowerCase() === 'si' || raw === '1' || raw.toLowerCase() === 'true';
-          changed++;
-        }
-      } else {
-        // Master field
-        const numFields = ['width_cm','height_cm','depth_cm','weight_g'];
-        p[field] = numFields.includes(field) ? numVal(raw) : (raw || null);
-        changed++;
-      }
-      DB.saveProduct(p);
-    });
-
-    App.showToast(`${changed} producto${changed!==1?'s':''} actualizado${changed!==1?'s':''}`, 'success');
-    _selected.clear();
-    _selectMode = false;
-    render();
-  }
 
   // ── filter / sort / quick-filter setters ────
   let _searchTimer = null;
@@ -530,17 +409,7 @@ ${renderBulkBar(filtered, retailers)}`;
     App.checkUndo();
   }
 
-  // ── bulk delete ──────────────────────────────
-  function bulkDelete() {
-    if (_selected.size === 0) { App.showToast('Selecciona al menos un producto', 'error'); return; }
-    const n = _selected.size;
-    if (!confirm(`¿Eliminar ${n} producto${n!==1?'s':''}? Esta acción se puede deshacer usando ↩ Deshacer.`)) return;
-    DB.deleteProducts([..._selected]);
-    App.showToast(`${n} producto${n!==1?'s':''} eliminado${n!==1?'s':''}. Puedes deshacer.`, 'info');
-    _selected.clear(); _selectMode = false;
-    render();
-    App.checkUndo();
-  }
+
 
   // ── enrich all ───────────────────────────────
   async function enrichAll(silent = false) {
@@ -588,7 +457,6 @@ ${renderBulkBar(filtered, retailers)}`;
     render,
     setSearch, setRetailer, setCategory, setSource, setStatusFilter, setSortBy, toggleIncomplete, setImagePref,
     clearFilters, setViewMode, goPage, enrichAll, deleteOne,
-    toggleSelectMode, exitSelectMode, toggleSelect, selectAll, deselectAll, applyBulk, bulkDelete,
     toggleExportDropdown
   };
 })();
