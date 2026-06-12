@@ -290,10 +290,6 @@ const UICatalog = (() => {
 <div class="stats-bar">
   <div class="stat-card"><span class="stat-v">${all.length}</span><span class="stat-l">SKUs totales</span></div>
   <div class="stat-card"><span class="stat-v">${retailers.length}</span><span class="stat-l">Retailers activos</span></div>
-  <div class="stat-card accent"><span class="stat-v">${enriched}</span><span class="stat-l">Enriquecidos (API)</span></div>
-  <div class="stat-card warn" style="cursor:pointer" onclick="UICatalog.toggleIncomplete()" title="Filtrar incompletos">
-    <span class="stat-v">${noData}</span><span class="stat-l">Incompletos ${_showIncomplete?'✓':''}</span>
-  </div>
 </div>
 
 <!-- Sort bar + Status quick filters -->

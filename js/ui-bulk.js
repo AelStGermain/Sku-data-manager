@@ -41,6 +41,13 @@ const UIBulk = (() => {
         </div>
       </div>
 
+      <div class="stats-bar" style="margin-bottom: 16px;">
+        <div class="stat-card accent"><span class="stat-v">${_allProducts.filter(p => p.dataSource !== 'manual').length}</span><span class="stat-l">Enriquecidos (API)</span></div>
+        <div class="stat-card warn" style="cursor:pointer" onclick="UIBulk.setErrorFilter('incomplete')" title="Filtrar incompletos">
+          <span class="stat-v">${_allProducts.filter(p => DB.computeCompleteness(p) < 50).length}</span><span class="stat-l">Incompletos (< 50%)</span>
+        </div>
+      </div>
+
       <div class="bulk-layout">
         <!-- Main Table Area -->
         <div class="bulk-main">
