@@ -2,8 +2,8 @@
 
 ![Smart Shelf Logo](https://img.shields.io/badge/Smart_Shelf-Master_Data-005BAC?style=for-the-badge&logo=supabase)
 
-**Autor:** Sofía Gómez (Estudiante de Técnico en Logística)  
-**Proyecto de Integración:** Taller de Integración Técnico (Etapa 3)
+**Autor:** Sofía Gómez (Estudiante de Técnico en Informática)  
+**Proyecto de Integración:** Taller de Integración Profesional
 
 ##  Descripción del Proyecto
 
