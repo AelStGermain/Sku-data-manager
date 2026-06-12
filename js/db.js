@@ -96,13 +96,29 @@ const DB = (() => {
 
   async function fetchProducts() {
     try {
-      const { data: masterData, error: masterError } = await _supabase
-        .from('master_catalog')
-        .select('*');
+      let masterData = [];
+      let mFetchMore = true;
+      let mFrom = 0;
+      const step = 1000;
       
-      if (masterError) {
-        console.error('Error cargando catálogo maestro:', masterError);
-        return;
+      while (mFetchMore) {
+        const { data, error } = await _supabase
+          .from('master_catalog')
+          .select('*')
+          .range(mFrom, mFrom + step - 1);
+          
+        if (error) {
+          console.error('Error cargando catálogo maestro:', error);
+          mFetchMore = false;
+          break;
+        }
+        if (data && data.length > 0) {
+          masterData = masterData.concat(data);
+          mFrom += step;
+          if (data.length < step) mFetchMore = false;
+        } else {
+          mFetchMore = false;
+        }
       }
 
       // Check available columns on the remote database
@@ -114,11 +130,22 @@ const DB = (() => {
       // Try fetching retailer_catalog data
       let retailerData = [];
       try {
-        const { data, error } = await _supabase
-          .from('retailer_catalog')
-          .select('*');
-        if (!error && data) {
-          retailerData = data;
+        let rFetchMore = true;
+        let rFrom = 0;
+        while (rFetchMore) {
+          const { data, error } = await _supabase
+            .from('retailer_catalog')
+            .select('*')
+            .range(rFrom, rFrom + step - 1);
+            
+          if (error) break;
+          if (data && data.length > 0) {
+            retailerData = retailerData.concat(data);
+            rFrom += step;
+            if (data.length < step) rFetchMore = false;
+          } else {
+            rFetchMore = false;
+          }
         }
       } catch (err) {
         console.warn('retailer_catalog table fetch not supported or failed:', err);
@@ -152,8 +179,8 @@ const DB = (() => {
           
           // Fallbacks for OFF fields
           offImageUrl: local.offImageUrl || null,
-          offAttempted: local.offAttempted || false,
-          dataSource: p.dataSource || local.dataSource || 'manual',
+          offAttempted: p.off_attempted !== undefined ? p.off_attempted : (local.offAttempted || false),
+          dataSource: p.data_source || local.dataSource || 'manual',
           retailers: local.retailers || {}
         };
       });
@@ -216,6 +243,8 @@ const DB = (() => {
     if (_availableColumns.has('depth_cm')) payload.depth_cm = product.depth_cm;
     if (_availableColumns.has('package_type')) payload.package_type = product.packageType;
     if (_availableColumns.has('images')) payload.images = product.images || [];
+    if (_availableColumns.has('data_source')) payload.data_source = product.dataSource || 'manual';
+    if (_availableColumns.has('off_attempted')) payload.off_attempted = product.offAttempted || false;
 
     try {
       // Upsert product in Supabase master_catalog
@@ -404,6 +433,8 @@ const DB = (() => {
       if (_availableColumns.has('depth_cm')) masterRow.depth_cm = p.depth_cm;
       if (_availableColumns.has('package_type')) masterRow.package_type = p.packageType;
       if (_availableColumns.has('images')) masterRow.images = p.images || [];
+      if (_availableColumns.has('data_source')) masterRow.data_source = p.dataSource || 'manual';
+      if (_availableColumns.has('off_attempted')) masterRow.off_attempted = p.offAttempted || false;
       
       return masterRow;
     });
