@@ -351,9 +351,7 @@ ${filtered.length === 0
        <div class="product-list">${page.map(p => renderListRow(p, retailers)).join('')}</div>`
     : `<div class="product-grid">${page.map(p => renderCard(p, retailers)).join('')}</div>`}
 
-${renderPagination(filtered.length)}
-
-
+${renderPagination(filtered.length)}`;
   }
 
 
