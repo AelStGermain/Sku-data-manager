@@ -39,7 +39,7 @@ const UISheet = (() => {
       ean: '', name: '', brand: '', packageType: 'other', 
       status: 'active', nameSource: 'manual', masterCategory: null,
       offAttempted: false, width_cm: null, height_cm: null, depth_cm: null,
-      weight_g: null, imageUrl: null, dataSource: 'manual', history: [], 
+      weight_g: null, imageUrl: null, images: [], dataSource: 'manual', history: [], 
       planogram: {}, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       retailers: {}
     };
@@ -203,10 +203,63 @@ const UISheet = (() => {
 
   // ── image change ───────────────────────────
   function changeImage() {
+    // Hidden file input to select an image
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const btn = document.querySelector('.sheet-img-col .btn-change-img');
+      const originalText = btn ? btn.innerHTML : '';
+      if (btn) { btn.innerHTML = 'Subiendo...'; btn.disabled = true; }
+      
+      try {
+        const url = await DB.uploadProductImage(_data.ean || 'temp', file, 'product');
+        if (url) {
+          _data.images = _data.images || [];
+          if (!_data.imageUrl) {
+            _data.imageUrl = url;
+            _data.images.push(url);
+          } else {
+            if (!_data.images.includes(_data.imageUrl)) {
+              _data.images.unshift(_data.imageUrl); // make sure main is in array
+            }
+            if (!_data.images.includes(url)) {
+              _data.images.push(url);
+            }
+            _data.imageUrl = url; // set newest as main
+          }
+          _markDirty();
+          _activeImageIndex = _data.images.indexOf(url);
+          _render();
+        }
+      } catch (err) {
+        App.showToast('Error subiendo imagen', 'error');
+      }
+      if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
+    };
+    input.click();
+  }
+
+  function changeImageUrl() {
     const url = prompt('URL de la imagen del producto:', _data.imageUrl || '');
     if (url === null) return;
-    updateField('imageUrl', url.trim() || null);
-    _activeImageIndex = 0; // reset to main image tab
+    
+    _data.images = _data.images || [];
+    if (!_data.imageUrl) {
+       _data.imageUrl = url.trim() || null;
+       if (_data.imageUrl) _data.images.push(_data.imageUrl);
+    } else if (url.trim()) {
+       if (!_data.images.includes(_data.imageUrl)) _data.images.unshift(_data.imageUrl);
+       if (!_data.images.includes(url.trim())) _data.images.push(url.trim());
+       _data.imageUrl = url.trim();
+    } else {
+       _data.imageUrl = null;
+    }
+    _markDirty();
+    _activeImageIndex = _data.images.indexOf(_data.imageUrl) >= 0 ? _data.images.indexOf(_data.imageUrl) : 0;
     _render();
   }
 
@@ -243,9 +296,19 @@ const UISheet = (() => {
     const offImg = _data.offImageUrl;
     const rImg = rData?.imageUrl;
     
-    imageTabs.push({ id: 'main', label: 'Principal', src: mainImg || null });
-    if (offImg && offImg !== mainImg) imageTabs.push({ id: 'off', label: 'API (OFF)', src: offImg });
-    if (rImg && rImg !== mainImg && rImg !== offImg) imageTabs.push({ id: 'retailer', label: rInfo?.name || 'Retailer', src: rImg });
+    const gallery = _data.images || [];
+    if (mainImg && !gallery.includes(mainImg)) gallery.unshift(mainImg);
+    
+    if (gallery.length > 0) {
+      gallery.forEach((imgUrl, i) => {
+        imageTabs.push({ id: `main_${i}`, label: `Principal ${i+1}`, src: imgUrl });
+      });
+    } else {
+      imageTabs.push({ id: 'main', label: 'Principal', src: mainImg || null });
+    }
+
+    if (offImg && !gallery.includes(offImg)) imageTabs.push({ id: 'off', label: 'API (OFF)', src: offImg });
+    if (rImg && !gallery.includes(rImg)) imageTabs.push({ id: 'retailer', label: rInfo?.name || 'Retailer', src: rImg });
     
     if (_activeImageIndex === -1) {
       _activeImageIndex = 0;
@@ -341,10 +404,15 @@ const UISheet = (() => {
           <img id="sheet-img" src="${imgSrc || NO_IMG}" alt="${esc(_data.name || '')}"
                onerror="this.src='${NO_IMG}'">
         </div>
-        <button class="btn-change-img" onclick="UISheet.changeImage()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          Cambiar URL manual
-        </button>
+        <div style="display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; justify-content: center;">
+          <button class="btn-change-img" onclick="UISheet.changeImage()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Subir Imagen
+          </button>
+          <button class="btn-change-img" style="background: transparent; border: 1px dashed var(--border); color: var(--text-muted);" onclick="UISheet.changeImageUrl()">
+            URL manual
+          </button>
+        </div>
         ${setMainBtnHtml}
       </div>
 
@@ -481,7 +549,7 @@ const UISheet = (() => {
   }
 
   return {
-    open, openCreate, close, save, discard, syncOFF, changeImage, setActiveImage, setAsMainImage,
+    open, openCreate, close, save, discard, syncOFF, changeImage, changeImageUrl, setActiveImage, setAsMainImage,
     updateField, updateRetailerField, toggleStock,
     setRetailer, addToRetailer, removeFromRetailer
   };

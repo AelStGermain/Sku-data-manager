@@ -13,7 +13,8 @@ ALTER TABLE master_catalog
   ADD COLUMN IF NOT EXISTS weight_g       NUMERIC,
   ADD COLUMN IF NOT EXISTS width_cm       NUMERIC,
   ADD COLUMN IF NOT EXISTS height_cm      NUMERIC,
-  ADD COLUMN IF NOT EXISTS depth_cm       NUMERIC;
+  ADD COLUMN IF NOT EXISTS depth_cm       NUMERIC,
+  ADD COLUMN IF NOT EXISTS images         JSONB;
 
 -- Index to speed up the cron query (products not yet enriched)
 CREATE INDEX IF NOT EXISTS idx_master_catalog_off_attempted

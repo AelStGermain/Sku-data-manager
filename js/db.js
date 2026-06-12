@@ -138,6 +138,7 @@ const DB = (() => {
           brand: p.brand || local.brand || 'N/A',
           category: p.category_master || local.category || 'Otro',
           imageUrl: p.image_url || local.imageUrl || null,
+          images: p.images || local.images || [],
           status: p.product_name === 'Nuevo SKU de Terreno' || p.product_name.includes('UNDEFINED') ? 'review' : (local.status || 'active'),
           updatedAt: p.updated_at || local.updatedAt || new Date().toISOString(),
           createdAt: local.createdAt || new Date().toISOString(),
@@ -214,6 +215,7 @@ const DB = (() => {
     if (_availableColumns.has('height_cm')) payload.height_cm = product.height_cm;
     if (_availableColumns.has('depth_cm')) payload.depth_cm = product.depth_cm;
     if (_availableColumns.has('package_type')) payload.package_type = product.packageType;
+    if (_availableColumns.has('images')) payload.images = product.images || [];
 
     try {
       // Upsert product in Supabase master_catalog
@@ -316,7 +318,7 @@ const DB = (() => {
     if (p.category)    score += 10;
     if (p.packageType) score += 10;
     if (p.weight_g)    score += 10;
-    if (p.imageUrl)    score += 20;
+    if (p.imageUrl || (p.images && p.images.length > 0)) score += 20;
     if (p.width_cm && p.height_cm && p.depth_cm) score += 20;
     return Math.min(score, 100);
   }
@@ -401,6 +403,7 @@ const DB = (() => {
       if (_availableColumns.has('height_cm')) masterRow.height_cm = p.height_cm;
       if (_availableColumns.has('depth_cm')) masterRow.depth_cm = p.depth_cm;
       if (_availableColumns.has('package_type')) masterRow.package_type = p.packageType;
+      if (_availableColumns.has('images')) masterRow.images = p.images || [];
       
       return masterRow;
     });
