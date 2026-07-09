@@ -2,16 +2,18 @@
 
 // ──────────────────────────────────────────────
 //  SHARED CONSTANTS (global scope)
+//  Categorías Universales Vispera (17 categorías globales)
 // ──────────────────────────────────────────────
-window.CATEGORIES = [
-  'Bebidas y Jugos', 'Lácteos y Huevos', 'Carnes y Embutidos',
-  'Frutas y Verduras', 'Panadería y Repostería', 'Snacks y Galletas',
-  'Cereales y Desayuno', 'Conservas y Enlatados',
-  'Aceites, Salsas y Condimentos', 'Pasta, Arroz y Legumbres',
-  'Café, Té e Infusiones', 'Dulces y Chocolates', 'Congelados',
-  'Limpieza del Hogar', 'Cuidado Personal', 'Bebé y Maternidad',
-  'Mascotas', 'Farmacia y Salud', 'Otro'
+window.UNIVERSAL_CATEGORIES = [
+  'GROCERY STORE', 'SWEET', 'ALCOHOL', 'CLEANING',
+  'DAIRYS', 'FROZEN', 'BREAKFAST', 'SNACKS',
+  'BABY', 'PET', 'DESSERT', 'CEREALS',
+  'CANNED FOOD', 'DETERGENTS', 'DRINKS',
+  'HEALTHY', 'PAPER ITEMS'
 ];
+
+// Legacy alias for backward compat
+window.CATEGORIES = window.UNIVERSAL_CATEGORIES;
 
 window.PACKAGE_TYPES = [
   { value: 'bottle',    label: 'Botella'       },
@@ -33,38 +35,46 @@ window.SKU_STATUSES = [
   { value: 'review',       label: 'En revisión',       color: 'var(--warning)' },
 ];
 
-window.MASTER_TAXONOMY = [
-  'Frutas y Verduras','Carnes y Pescados','Lácteos y Derivados',
-  'Congelados','Despensa','Bebidas y Aguas','Bebidas Alcohólicas',
-  'Panadería y Pastelería','Snacks, Chocolates y Galletas',
-  'Quesos y Fiambres','Limpieza del Hogar','Higiene y Cuidado Personal',
-  'Mascotas','Bebé e Infantil','Farmacia y Salud','Electro y Hogar','Otro'
-];
+// Vispera universal category colors (for badges)
+window.VISPERA_CATEGORY_COLORS = {
+  'GROCERY STORE': '#4CAF50', 'SWEET': '#E91E63', 'ALCOHOL': '#9C27B0',
+  'CLEANING': '#00BCD4', 'DAIRYS': '#FFC107', 'FROZEN': '#2196F3',
+  'BREAKFAST': '#FF9800', 'SNACKS': '#F44336', 'BABY': '#EC407A',
+  'PET': '#8D6E63', 'DESSERT': '#AD1457', 'CEREALS': '#FF7043',
+  'CANNED FOOD': '#607D8B', 'DETERGENTS': '#26A69A', 'DRINKS': '#42A5F5',
+  'HEALTHY': '#66BB6A', 'PAPER ITEMS': '#BDBDBD'
+};
 
 // ──────────────────────────────────────────────
 //  DATABASE (Supabase Backend + Local Cache)
+//  Arquitectura: BigQuery Data Warehouse (Multi-Holding)
 // ──────────────────────────────────────────────
 const DB = (() => {
   const SUPABASE_URL = window.NEXT_PUBLIC_SUPABASE_URL || 'https://vijowftfzwcbgkfsglhy.supabase.co';
   const SUPABASE_KEY = window.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_-5KjPgzE1FNDtoZyf8DbJA_cENpDqPV';
   
   const PRODUCTS_CACHE_KEY = 'ss_products_cache';
-  const RETAILERS_KEY = 'ss_retailers';
+  const HOLDINGS_KEY = 'ss_holdings';
   const STORES_KEY = 'ss_physical_stores';
   const PLANOGRAMS_KEY = 'ss_planograms';
+  const STAGING_LEVANTAMIENTO_KEY = 'ss_staging_levantamiento';
+  const STAGING_UNMATCHED_KEY = 'ss_staging_unmatched';
+  const VISPERA_BATCH_KEY = 'ss_vispera_batch';
+  const BRANDS_PRODUCERS_KEY = 'ss_brands_producers';
+  const CATEGORY_MAPPING_KEY = 'ss_category_mapping';
 
-  const DEFAULT_RETAILERS = [
+  const DEFAULT_HOLDINGS = [
     { id: 'tottus',  name: 'Tottus',  color: '#E8001C', logoUrl: 'tottus_logo.png' },
     { id: 'jumbo',   name: 'Jumbo',   color: '#009A44', logoUrl: 'jumbo_logo.png' },
     { id: 'unimarc', name: 'Unimarc', color: '#005BAC', logoUrl: 'unimarc_logo.png' }
   ];
 
   const DEFAULT_STORES = [
-    { storeId: 'tkm_kennedy', retailerId: 'tottus', city: 'Santiago', branchName: 'Sucursal Kennedy' },
-    { storeId: 'tottus_nunoa', retailerId: 'tottus', city: 'Santiago', branchName: 'Sucursal Ñuñoa' },
-    { storeId: 'jumbo_bilbao', retailerId: 'jumbo', city: 'Santiago', branchName: 'Sucursal Francisco Bilbao' },
-    { storeId: 'jumbo_kennedy', retailerId: 'jumbo', city: 'Santiago', branchName: 'Sucursal Portal La Reina' },
-    { storeId: 'unimarc_los_leones', retailerId: 'unimarc', city: 'Santiago', branchName: 'Sucursal Los Leones' }
+    { storeId: 'tkm_kennedy', retailerId: 'tottus', holdingId: 'tottus', city: 'Santiago', branchName: 'Sucursal Kennedy' },
+    { storeId: 'tottus_nunoa', retailerId: 'tottus', holdingId: 'tottus', city: 'Santiago', branchName: 'Sucursal Ñuñoa' },
+    { storeId: 'jumbo_bilbao', retailerId: 'jumbo', holdingId: 'jumbo', city: 'Santiago', branchName: 'Sucursal Francisco Bilbao' },
+    { storeId: 'jumbo_kennedy', retailerId: 'jumbo', holdingId: 'jumbo', city: 'Santiago', branchName: 'Sucursal Portal La Reina' },
+    { storeId: 'unimarc_los_leones', retailerId: 'unimarc', holdingId: 'unimarc', city: 'Santiago', branchName: 'Sucursal Los Leones' }
   ];
 
   let _supabase = null;
@@ -72,23 +82,37 @@ const DB = (() => {
   let _availableColumns = new Set();
   let _undoStack = [];
 
+  // ── Staging & Pipeline data (in-memory + localStorage) ──
+  let _stagingLevantamiento = [];
+  let _stagingUnmatched = [];
+  let _visperaBatch = [];
+  let _brandsProducers = [];
+  let _categoryMapping = [];
+
   async function init() {
      if (typeof supabase === 'undefined') {
        console.warn('Supabase SDK no cargado. Asegúrate de incluirlo en index.html');
        return;
      }
      _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-     console.log('⚡ Conectado a Master Data Hub (Supabase)');
+     console.log('⚡ Conectado a BigQuery Data Warehouse (Multi-Holding)');
      
-     // Initialize retailers in localStorage if not set
-     if (!localStorage.getItem(RETAILERS_KEY)) {
-       localStorage.setItem(RETAILERS_KEY, JSON.stringify(DEFAULT_RETAILERS));
+     // Initialize holdings in localStorage if not set
+     if (!localStorage.getItem(HOLDINGS_KEY)) {
+       localStorage.setItem(HOLDINGS_KEY, JSON.stringify(DEFAULT_HOLDINGS));
      }
 
      // Initialize stores in localStorage if not set
      if (!localStorage.getItem(STORES_KEY)) {
        localStorage.setItem(STORES_KEY, JSON.stringify(DEFAULT_STORES));
      }
+
+     // Load staging data from localStorage
+     _stagingLevantamiento = JSON.parse(localStorage.getItem(STAGING_LEVANTAMIENTO_KEY) || '[]');
+     _stagingUnmatched = JSON.parse(localStorage.getItem(STAGING_UNMATCHED_KEY) || '[]');
+     _visperaBatch = JSON.parse(localStorage.getItem(VISPERA_BATCH_KEY) || '[]');
+     _brandsProducers = JSON.parse(localStorage.getItem(BRANDS_PRODUCERS_KEY) || '[]');
+     _categoryMapping = JSON.parse(localStorage.getItem(CATEGORY_MAPPING_KEY) || '[]');
 
      // Load initial data
      await fetchProducts();
@@ -108,7 +132,7 @@ const DB = (() => {
           .range(mFrom, mFrom + step - 1);
           
         if (error) {
-          console.error('Error cargando catálogo maestro:', error);
+          console.error('Error cargando Universal Products (master_catalog):', error);
           mFetchMore = false;
           break;
         }
@@ -127,8 +151,8 @@ const DB = (() => {
         Object.keys(masterData[0]).forEach(k => _availableColumns.add(k));
       }
 
-      // Try fetching retailer_catalog data
-      let retailerData = [];
+      // Try fetching holding_sku_catalog (retailer_catalog) data
+      let holdingData = [];
       try {
         let rFetchMore = true;
         let rFrom = 0;
@@ -140,7 +164,7 @@ const DB = (() => {
             
           if (error) break;
           if (data && data.length > 0) {
-            retailerData = retailerData.concat(data);
+            holdingData = holdingData.concat(data);
             rFrom += step;
             if (data.length < step) rFetchMore = false;
           } else {
@@ -148,7 +172,7 @@ const DB = (() => {
           }
         }
       } catch (err) {
-        console.warn('retailer_catalog table fetch not supported or failed:', err);
+        console.warn('holding_sku_catalog (retailer_catalog) fetch failed:', err);
       }
 
       // Get local storage cache to reconstruct missing fields and offline additions
@@ -156,17 +180,22 @@ const DB = (() => {
       
       _memoryProducts = {};
 
-      // 1. Map from remote database (Supabase is source of truth)
+      // 1. Map from remote database (Supabase is source of truth → Universal Products)
       masterData.forEach(p => {
         const local = localCache[p.ean] || {};
         _memoryProducts[p.ean] = {
           ean: p.ean,
+          masterProductId: p.ean, // master_product_id = ean as PK
+          visperaId: p.vispera_id || local.visperaId || null,
           name: p.product_name || local.name || '',
           brand: p.brand || local.brand || 'N/A',
-          category: p.category_master || local.category || 'Otro',
+          brandId: p.brand_id || local.brandId || null,
+          producerId: p.producer_id || local.producerId || null,
+          category: p.category_master || local.category || 'GROCERY STORE',
+          universalCategory: p.category_master || local.universalCategory || local.category || 'GROCERY STORE',
           imageUrl: p.image_url || local.imageUrl || null,
           images: p.images || local.images || [],
-          status: p.product_name === 'Nuevo SKU de Terreno' || p.product_name.includes('UNDEFINED') ? 'review' : (local.status || 'active'),
+          status: p.product_name === 'Nuevo SKU de Terreno' || (p.product_name && p.product_name.includes('UNDEFINED')) ? 'review' : (local.status || 'active'),
           updatedAt: p.updated_at || local.updatedAt || new Date().toISOString(),
           createdAt: local.createdAt || new Date().toISOString(),
           
@@ -181,22 +210,31 @@ const DB = (() => {
           offImageUrl: local.offImageUrl || null,
           offAttempted: p.off_attempted !== undefined ? p.off_attempted : (local.offAttempted || false),
           dataSource: p.data_source || local.dataSource || 'manual',
-          retailers: local.retailers || {}
+          
+          // Holdings (formerly retailers) - Holding-Specific SKU Data
+          holdings: local.holdings || local.retailers || {}
         };
       });
 
-      // 2. Map retailer relations from Supabase retailer_catalog
-      retailerData.forEach(r => {
+      // 2. Map holding relations from Supabase holding_sku_catalog (retailer_catalog)
+      holdingData.forEach(r => {
         const p = _memoryProducts[r.ean];
         if (p) {
-          p.retailers = p.retailers || {};
-          p.retailers[r.retailer_id] = p.retailers[r.retailer_id] || {};
+          p.holdings = p.holdings || {};
+          p.holdings[r.retailer_id] = p.holdings[r.retailer_id] || {};
           
-          // Merge remote values over local values
-          p.retailers[r.retailer_id] = {
-            ...p.retailers[r.retailer_id],
-            customerId: r.internal_sku_id || p.retailers[r.retailer_id].customerId || r.ean,
-            category: r.retailer_category || p.retailers[r.retailer_id].category || p.category || 'General',
+          // Merge remote values over local values → Holding SKU Catalog fields
+          p.holdings[r.retailer_id] = {
+            ...p.holdings[r.retailer_id],
+            holdingProductId: r.uuid || p.holdings[r.retailer_id].holdingProductId,
+            masterProductId: r.ean,
+            holdingInternalId: r.internal_sku_id || p.holdings[r.retailer_id].holdingInternalId || p.holdings[r.retailer_id].customerId || r.ean,
+            customerId: r.internal_sku_id || p.holdings[r.retailer_id].customerId || r.ean,
+            localProductName: r.local_product_name || p.holdings[r.retailer_id].localProductName || p.holdings[r.retailer_id].name || p.name,
+            name: p.holdings[r.retailer_id].name || p.name,
+            localCategoryName: r.retailer_category || p.holdings[r.retailer_id].localCategoryName || p.holdings[r.retailer_id].category || p.category || 'General',
+            category: r.retailer_category || p.holdings[r.retailer_id].category || p.category || 'General',
+            isActiveHolding: r.is_trained !== false,
             stockStatus: r.is_trained !== false,
             updatedAt: r.updated_at || p.updatedAt
           };
@@ -221,6 +259,12 @@ const DB = (() => {
       pushUndo('guardar producto', 'save', old, product.ean);
     }
 
+    // Normalize: ensure holdings exists (migrate from retailers if needed)
+    if (!product.holdings && product.retailers) {
+      product.holdings = product.retailers;
+    }
+    if (!product.holdings) product.holdings = {};
+
     _memoryProducts[product.ean] = product;
     
     // Save to LocalStorage cache
@@ -228,12 +272,12 @@ const DB = (() => {
     localCache[product.ean] = product;
     localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
     
-    // Build master catalog payload dynamically based on database capabilities
+    // Build Universal Products (master_catalog) payload
     const payload = {
       ean: product.ean,
       product_name: product.name || 'Sin Nombre',
       brand: product.brand || 'N/A',
-      category_master: product.category || 'General',
+      category_master: product.universalCategory || product.category || 'GROCERY STORE',
       image_url: product.imageUrl || null
     };
 
@@ -247,17 +291,17 @@ const DB = (() => {
     if (_availableColumns.has('off_attempted')) payload.off_attempted = product.offAttempted || false;
 
     try {
-      // Upsert product in Supabase master_catalog
+      // Upsert product in Supabase master_catalog (Universal Products)
       const { error } = await _supabase
         .from('master_catalog')
         .upsert(payload, { onConflict: 'ean' });
 
-      if (error) console.error('Error guardando en Supabase:', error);
+      if (error) console.error('Error guardando en Universal Products:', error);
       
-      // Upsert relations in Supabase retailer_catalog
-      if (product.retailers) {
-        for (const [rid, rData] of Object.entries(product.retailers)) {
-          await saveRetailerRelation(product.ean, rid, rData);
+      // Upsert relations in Supabase holding_sku_catalog (retailer_catalog)
+      if (product.holdings) {
+        for (const [hid, hData] of Object.entries(product.holdings)) {
+          await saveHoldingRelation(product.ean, hid, hData);
         }
       }
     } catch (err) {
@@ -267,20 +311,20 @@ const DB = (() => {
     if (window.App && window.App.refreshData) window.App.refreshData();
   }
 
-  async function saveRetailerRelation(ean, rid, rData) {
+  async function saveHoldingRelation(ean, hid, hData) {
     try {
       const { data, error } = await _supabase
         .from('retailer_catalog')
         .select('uuid')
         .eq('ean', ean)
-        .eq('retailer_id', rid);
+        .eq('retailer_id', hid);
       
       const payload = {
         ean: ean,
-        retailer_id: rid,
-        internal_sku_id: rData.customerId || ean,
-        retailer_category: rData.category || 'General',
-        is_trained: rData.stockStatus !== false
+        retailer_id: hid,
+        internal_sku_id: hData.holdingInternalId || hData.customerId || ean,
+        retailer_category: hData.localCategoryName || hData.category || 'General',
+        is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false
       };
 
       if (data && data.length > 0) {
@@ -297,9 +341,12 @@ const DB = (() => {
           });
       }
     } catch (err) {
-      console.warn('Error syncing retailer relation to Supabase:', err);
+      console.warn('Error syncing holding relation to Supabase:', err);
     }
   }
+
+  // Legacy alias
+  const saveRetailerRelation = saveHoldingRelation;
 
   function getProduct(ean) {
     return _memoryProducts[ean] || null;
@@ -309,42 +356,48 @@ const DB = (() => {
     return Object.values(_memoryProducts);
   }
 
-  // ── retailers (stored in LocalStorage for customizable CRUD) ───
-  function getRetailers() {
-    return JSON.parse(localStorage.getItem(RETAILERS_KEY) || JSON.stringify(DEFAULT_RETAILERS));
+  // ── Holdings (formerly Retailers — stored in LocalStorage for customizable CRUD) ───
+  function getHoldings() {
+    return JSON.parse(localStorage.getItem(HOLDINGS_KEY) || JSON.stringify(DEFAULT_HOLDINGS));
   }
+  // Legacy alias
+  function getRetailers() { return getHoldings(); }
   
-  function saveRetailers(r) {
-    localStorage.setItem(RETAILERS_KEY, JSON.stringify(r));
+  function saveHoldings(h) {
+    localStorage.setItem(HOLDINGS_KEY, JSON.stringify(h));
   }
+  function saveRetailers(h) { saveHoldings(h); }
   
-  function addRetailer(retailer) {
-    const list = getRetailers();
-    list.push(retailer);
-    saveRetailers(list);
+  function addHolding(holding) {
+    const list = getHoldings();
+    list.push(holding);
+    saveHoldings(list);
   }
+  function addRetailer(r) { addHolding(r); }
   
-  function updateRetailer(id, updates) {
-    const list = getRetailers();
-    const i = list.findIndex(r => r.id === id);
+  function updateHolding(id, updates) {
+    const list = getHoldings();
+    const i = list.findIndex(h => h.id === id);
     if (i !== -1) {
       list[i] = { ...list[i], ...updates };
-      saveRetailers(list);
+      saveHoldings(list);
       return list[i];
     }
     return null;
   }
+  function updateRetailer(id, u) { return updateHolding(id, u); }
   
-  function deleteRetailer(id) {
-    saveRetailers(getRetailers().filter(r => r.id !== id));
+  function deleteHolding(id) {
+    saveHoldings(getHoldings().filter(h => h.id !== id));
   }
+  function deleteRetailer(id) { deleteHolding(id); }
 
   function computeCompleteness(p) {
     if (!p) return 0;
     let score = 0;
     if (p.name)        score += 15;
     if (p.brand)       score += 15;
-    if (p.category)    score += 10;
+    if (p.universalCategory || p.category) score += 10;
     if (p.packageType) score += 10;
     if (p.weight_g)    score += 10;
     if (p.imageUrl || (p.images && p.images.length > 0)) score += 20;
@@ -369,7 +422,7 @@ const DB = (() => {
     localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
 
     try {
-      // Delete from master_catalog (retailer_catalog relation usually cascades or is deleted too)
+      // Delete from master_catalog (holding_sku_catalog relation also deleted)
       await _supabase.from('retailer_catalog').delete().eq('ean', ean);
       const { error } = await _supabase.from('master_catalog').delete().eq('ean', ean);
       if (error) console.error('Error borrando en Supabase:', error);
@@ -412,18 +465,21 @@ const DB = (() => {
     // 1. Update in-memory and local storage cache
     const localCache = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || '{}');
     productsArray.forEach(p => {
+      // Normalize: ensure holdings exists
+      if (!p.holdings && p.retailers) p.holdings = p.retailers;
+      if (!p.holdings) p.holdings = {};
       _memoryProducts[p.ean] = p;
       localCache[p.ean] = p;
     });
     localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
 
-    // 2. Prepare payload for bulk upsert to master_catalog
+    // 2. Prepare payload for bulk upsert to master_catalog (Universal Products)
     const payload = productsArray.map(p => {
       const masterRow = {
         ean: p.ean,
         product_name: p.name || 'Sin Nombre',
         brand: p.brand || 'N/A',
-        category_master: p.category || 'General',
+        category_master: p.universalCategory || p.category || 'GROCERY STORE',
         image_url: p.imageUrl || null
       };
       
@@ -442,7 +498,7 @@ const DB = (() => {
     try {
       const chunkSize = 500;
       
-      // 1. Chunking para master_catalog
+      // 1. Chunking para master_catalog (Universal Products)
       for (let i = 0; i < payload.length; i += chunkSize) {
         const chunk = payload.slice(i, i + chunkSize);
         const { error } = await _supabase
@@ -452,19 +508,20 @@ const DB = (() => {
         if (error) console.error(`Error upsert masivo en chunk master ${i/chunkSize}:`, error);
       }
 
-      // 2. Chunking para retailer_catalog
-      const retailerRelations = [];
+      // 2. Chunking para holding_sku_catalog (retailer_catalog)
+      const holdingRelations = [];
       for (const p of productsArray) {
-        if (p.retailers) {
-          for (const [rid, rData] of Object.entries(p.retailers)) {
-            retailerRelations.push({ ean: p.ean, rid, rData });
+        const holdings = p.holdings || p.retailers || {};
+        if (holdings) {
+          for (const [hid, hData] of Object.entries(holdings)) {
+            holdingRelations.push({ ean: p.ean, hid, hData });
           }
         }
       }
 
-      if (retailerRelations.length > 0) {
-        for (let i = 0; i < retailerRelations.length; i += chunkSize) {
-          const chunk = retailerRelations.slice(i, i + chunkSize);
+      if (holdingRelations.length > 0) {
+        for (let i = 0; i < holdingRelations.length; i += chunkSize) {
+          const chunk = holdingRelations.slice(i, i + chunkSize);
           const eansInChunk = [...new Set(chunk.map(c => c.ean))];
           
           // Buscar UUIDs existentes de un solo golpe para este bloque
@@ -481,14 +538,14 @@ const DB = (() => {
           }
 
           const upsertPayload = chunk.map(c => {
-             const key = `${c.ean}_${c.rid}`;
+             const key = `${c.ean}_${c.hid}`;
              return {
                 uuid: existingMap[key] || (crypto.randomUUID ? crypto.randomUUID() : (Math.random().toString(36).substring(2) + Date.now().toString(36))),
                 ean: c.ean,
-                retailer_id: c.rid,
-                internal_sku_id: c.rData.customerId || c.ean,
-                retailer_category: c.rData.category || 'General',
-                is_trained: c.rData.stockStatus !== false
+                retailer_id: c.hid,
+                internal_sku_id: c.hData.holdingInternalId || c.hData.customerId || c.ean,
+                retailer_category: c.hData.localCategoryName || c.hData.category || 'General',
+                is_trained: c.hData.isActiveHolding !== false && c.hData.stockStatus !== false
              };
           });
 
@@ -496,7 +553,7 @@ const DB = (() => {
             .from('retailer_catalog')
             .upsert(upsertPayload, { onConflict: 'uuid' });
             
-          if (relError) console.error(`Error upsert masivo en chunk retailers ${i/chunkSize}:`, relError);
+          if (relError) console.error(`Error upsert masivo en chunk holdings ${i/chunkSize}:`, relError);
         }
       }
     } catch (err) {
@@ -504,6 +561,105 @@ const DB = (() => {
     }
 
     if (window.App && window.App.refreshData) window.App.refreshData();
+  }
+
+  // ── Staging: Levantamiento ────────────────────
+  function getStagingLevantamiento() { return _stagingLevantamiento; }
+
+  function addStagingLevantamiento(entry) {
+    entry.id = entry.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36));
+    entry.timestamp = entry.timestamp || new Date().toISOString();
+    _stagingLevantamiento.push(entry);
+    localStorage.setItem(STAGING_LEVANTAMIENTO_KEY, JSON.stringify(_stagingLevantamiento));
+    return entry;
+  }
+
+  function clearStagingLevantamiento() {
+    _stagingLevantamiento = [];
+    localStorage.setItem(STAGING_LEVANTAMIENTO_KEY, JSON.stringify([]));
+  }
+
+  // ── Staging: Unmatched EANs ─────────────────
+  function getStagingUnmatched() { return _stagingUnmatched; }
+
+  function addStagingUnmatched(entry) {
+    entry.id = entry.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36));
+    _stagingUnmatched.push(entry);
+    localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify(_stagingUnmatched));
+    return entry;
+  }
+
+  function updateStagingUnmatched(id, updates) {
+    const idx = _stagingUnmatched.findIndex(e => e.id === id);
+    if (idx !== -1) {
+      _stagingUnmatched[idx] = { ..._stagingUnmatched[idx], ...updates };
+      localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify(_stagingUnmatched));
+      return _stagingUnmatched[idx];
+    }
+    return null;
+  }
+
+  function removeStagingUnmatched(id) {
+    _stagingUnmatched = _stagingUnmatched.filter(e => e.id !== id);
+    localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify(_stagingUnmatched));
+  }
+
+  function clearStagingUnmatched() {
+    _stagingUnmatched = [];
+    localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify([]));
+  }
+
+  // ── Vispera Submission Batch ─────────────────
+  function getVisperaBatch() { return _visperaBatch; }
+
+  function addVisperaBatchItem(item) {
+    item.batchId = item.batchId || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36));
+    item.status = item.status || 'PENDING_REVIEW';
+    item.createdAt = item.createdAt || new Date().toISOString();
+    _visperaBatch.push(item);
+    localStorage.setItem(VISPERA_BATCH_KEY, JSON.stringify(_visperaBatch));
+    return item;
+  }
+
+  function updateVisperaBatchItem(batchId, updates) {
+    const idx = _visperaBatch.findIndex(b => b.batchId === batchId);
+    if (idx !== -1) {
+      _visperaBatch[idx] = { ..._visperaBatch[idx], ...updates };
+      localStorage.setItem(VISPERA_BATCH_KEY, JSON.stringify(_visperaBatch));
+      return _visperaBatch[idx];
+    }
+    return null;
+  }
+
+  function clearVisperaBatch() {
+    _visperaBatch = [];
+    localStorage.setItem(VISPERA_BATCH_KEY, JSON.stringify([]));
+  }
+
+  // ── Brands & Producers ──────────────────────
+  function getBrandsProducers() { return _brandsProducers; }
+
+  function addBrandProducer(entry) {
+    const existing = _brandsProducers.find(b => b.brandId === entry.brandId);
+    if (existing) return existing;
+    _brandsProducers.push(entry);
+    localStorage.setItem(BRANDS_PRODUCERS_KEY, JSON.stringify(_brandsProducers));
+    return entry;
+  }
+
+  // ── Category Mapping ──────────────────────────
+  function getCategoryMapping() { return _categoryMapping; }
+
+  function addCategoryMapping(ean, visperaCategoryId) {
+    const existing = _categoryMapping.findIndex(m => m.ean === ean);
+    const entry = { ean, visperaCategoryId, categoryName: visperaCategoryId };
+    if (existing !== -1) {
+      _categoryMapping[existing] = entry;
+    } else {
+      _categoryMapping.push(entry);
+    }
+    localStorage.setItem(CATEGORY_MAPPING_KEY, JSON.stringify(_categoryMapping));
+    return entry;
   }
 
   // ── backup / restore ───────────────────────
@@ -525,18 +681,28 @@ const DB = (() => {
   function resetToDefaults() {
     localStorage.removeItem(PRODUCTS_CACHE_KEY);
     localStorage.removeItem(PLANOGRAMS_KEY);
-    localStorage.setItem(RETAILERS_KEY, JSON.stringify(DEFAULT_RETAILERS));
+    localStorage.removeItem(STAGING_LEVANTAMIENTO_KEY);
+    localStorage.removeItem(STAGING_UNMATCHED_KEY);
+    localStorage.removeItem(VISPERA_BATCH_KEY);
+    localStorage.removeItem(BRANDS_PRODUCERS_KEY);
+    localStorage.removeItem(CATEGORY_MAPPING_KEY);
+    localStorage.setItem(HOLDINGS_KEY, JSON.stringify(DEFAULT_HOLDINGS));
     localStorage.setItem(STORES_KEY, JSON.stringify(DEFAULT_STORES));
     _memoryProducts = {};
     _undoStack = [];
+    _stagingLevantamiento = [];
+    _stagingUnmatched = [];
+    _visperaBatch = [];
+    _brandsProducers = [];
+    _categoryMapping = [];
     fetchProducts();
   }
 
   // ── physical stores ──────────────────────────
-  function getStores(retailerId = 'all') {
+  function getStores(holdingId = 'all') {
     const list = JSON.parse(localStorage.getItem(STORES_KEY) || JSON.stringify(DEFAULT_STORES));
-    if (retailerId === 'all') return list;
-    return list.filter(s => s.retailerId === retailerId);
+    if (holdingId === 'all') return list;
+    return list.filter(s => s.holdingId === holdingId || s.retailerId === holdingId);
   }
 
   function getStore(storeId) {
@@ -545,6 +711,9 @@ const DB = (() => {
   }
 
   function saveStore(store) {
+    // Ensure holdingId is set (backward compat from retailerId)
+    if (!store.holdingId && store.retailerId) store.holdingId = store.retailerId;
+    if (!store.retailerId && store.holdingId) store.retailerId = store.holdingId;
     const list = getStores();
     const idx = list.findIndex(s => s.storeId === store.storeId);
     if (idx !== -1) {
@@ -570,14 +739,16 @@ const DB = (() => {
     const store = getStore(storeId);
     if (!store) return [];
 
+    const holdingId = store.holdingId || store.retailerId;
     const planogram = [];
     const aisles = ['Aceites y Aderezos', 'Lácteos y Quesos', 'Limpieza del Hogar', 'Bebidas y Licores', 'Snacks y Galletas'];
     
     products.forEach((p, idx) => {
-      if (!p.retailers || !p.retailers[store.retailerId]) return;
+      const holdings = p.holdings || p.retailers || {};
+      if (!holdings[holdingId]) return;
       
-      const rData = p.retailers[store.retailerId];
-      const aisle = rData.dmu || rData.category || aisles[idx % aisles.length];
+      const hData = holdings[holdingId];
+      const aisle = hData.dmu || hData.category || aisles[idx % aisles.length];
       const shelf = `Góndola ${(idx % 4) + 1} - Repisa ${(idx % 3) + 1}`;
       
       planogram.push({
@@ -588,8 +759,8 @@ const DB = (() => {
         brand: p.brand || 'N/A',
         officialAisle: aisle,
         officialShelf: shelf,
-        dmu: rData.dmu || aisle,
-        position: rData.position || null,
+        dmu: hData.dmu || aisle,
+        position: hData.position || null,
         isCertified: true
       });
     });
@@ -604,7 +775,11 @@ const DB = (() => {
     const storeSessions = localSessions.filter(s => s.storeId === storeId);
     if (storeSessions.length > 0) return storeSessions;
 
-    const products = getProductsArray().filter(p => p.retailers && p.retailers[store.retailerId]);
+    const holdingId = store.holdingId || store.retailerId;
+    const products = getProductsArray().filter(p => {
+      const holdings = p.holdings || p.retailers || {};
+      return holdings[holdingId];
+    });
     if (products.length === 0) return [];
 
     const sessions = [
@@ -745,7 +920,18 @@ const DB = (() => {
     fetchProducts,
     getProduct,
     getProductsArray,
+    // Holdings (new) + legacy aliases
+    getHoldings,
     getRetailers,
+    saveHoldings,
+    saveRetailers,
+    addHolding,
+    addRetailer,
+    updateHolding,
+    updateRetailer,
+    deleteHolding,
+    deleteRetailer,
+    // Products
     saveProduct,
     saveProducts,
     deleteProduct,
@@ -756,6 +942,7 @@ const DB = (() => {
     resetToDefaults,
     getUndo,
     applyUndo,
+    // Stores
     getStores,
     getStore,
     saveStore,
@@ -764,6 +951,25 @@ const DB = (() => {
     getStoreCaptureSessions,
     savePlanogram,
     saveCaptureSession,
-    uploadProductImage
+    uploadProductImage,
+    // Staging & Pipeline
+    getStagingLevantamiento,
+    addStagingLevantamiento,
+    clearStagingLevantamiento,
+    getStagingUnmatched,
+    addStagingUnmatched,
+    updateStagingUnmatched,
+    removeStagingUnmatched,
+    clearStagingUnmatched,
+    getVisperaBatch,
+    addVisperaBatchItem,
+    updateVisperaBatchItem,
+    clearVisperaBatch,
+    // Brands & Producers
+    getBrandsProducers,
+    addBrandProducer,
+    // Category Mapping
+    getCategoryMapping,
+    addCategoryMapping
   };
 })();

@@ -6,7 +6,7 @@ const UISheet = (() => {
   let _ean      = null;
   let _original = null;   // deep clone of product at open time
   let _data     = null;   // working copy (may have edits)
-  let _retailer = null;   // active retailer tab id
+  let _holding  = null;   // active holding tab id
   let _dirty    = false;
   let _isCreate = false;
   let _activeImageIndex = 0;
@@ -17,17 +17,22 @@ const UISheet = (() => {
     _ean      = ean;
     _original = JSON.parse(JSON.stringify(p));
     _data     = JSON.parse(JSON.stringify(p));
+    
+    // Normalize holdings
+    if (!_data.holdings && _data.retailers) _data.holdings = _data.retailers;
+    if (!_data.holdings) _data.holdings = {};
+
     _dirty    = false;
     _isCreate = false;
     _activeImageIndex = -1; // special flag for auto-select
-    const retailers = DB.getRetailers();
+    const holdings = DB.getHoldings();
     const pref = localStorage.getItem('ss_imagePref');
-    let defRetailer = retailers.length > 0 ? retailers[0].id : null;
+    let defHolding = holdings.length > 0 ? holdings[0].id : null;
     if (pref && pref.startsWith('retailer_')) {
       const rid = pref.split('_')[1];
-      if (retailers.find(r => r.id === rid)) defRetailer = rid;
+      if (holdings.find(r => r.id === rid)) defHolding = rid;
     }
-    _retailer = defRetailer;
+    _holding = defHolding;
     _render();
     _showModal();
   }
@@ -37,16 +42,16 @@ const UISheet = (() => {
     _isCreate = true;
     _data = {
       ean: '', name: '', brand: '', packageType: 'other', 
-      status: 'active', nameSource: 'manual', masterCategory: null,
+      status: 'active', nameSource: 'manual', masterCategory: null, universalCategory: null,
       offAttempted: false, width_cm: null, height_cm: null, depth_cm: null,
       weight_g: null, imageUrl: null, images: [], dataSource: 'manual', history: [], 
       planogram: {}, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-      retailers: {}
+      holdings: {}
     };
     _original = JSON.parse(JSON.stringify(_data));
     _dirty = true;
-    const retailers = DB.getRetailers();
-    _retailer = retailers.length > 0 ? retailers[0].id : null;
+    const holdings = DB.getHoldings();
+    _holding = holdings.length > 0 ? holdings[0].id : null;
     _render();
     _showModal();
   }
@@ -77,49 +82,50 @@ const UISheet = (() => {
     _markDirty();
   }
 
-  function updateRetailerField(field, value) {
-    if (!_retailer) return;
-    _data.retailers = _data.retailers || {};
-    _data.retailers[_retailer] = _data.retailers[_retailer] || {};
-    _data.retailers[_retailer][field] = value;
+  function updateHoldingField(field, value) {
+    if (!_holding) return;
+    _data.holdings = _data.holdings || {};
+    _data.holdings[_holding] = _data.holdings[_holding] || {};
+    _data.holdings[_holding][field] = value;
     _markDirty();
   }
 
   function toggleStock() {
-    if (!_retailer || !_data.retailers?.[_retailer]) return;
-    _data.retailers[_retailer].stockStatus = !_data.retailers[_retailer].stockStatus;
+    if (!_holding || !_data.holdings?.[_holding]) return;
+    _data.holdings[_holding].stockStatus = !_data.holdings[_holding].stockStatus;
+    _data.holdings[_holding].isActiveHolding = _data.holdings[_holding].stockStatus; // keep sync
     _markDirty();
     // Update toggle visual only
     const tog = document.getElementById('stock-toggle');
     if (tog) {
-      const isOn = _data.retailers[_retailer].stockStatus;
+      const isOn = _data.holdings[_holding].stockStatus;
       tog.classList.toggle('on', isOn);
       const lbl = document.getElementById('stock-label');
-      if (lbl) lbl.textContent = isOn ? 'Disponible en tienda' : 'Sin stock';
+      if (lbl) lbl.textContent = isOn ? 'Disponible en tienda' : 'Sin stock / Inactivo';
     }
   }
 
-  function addToRetailer(rid) {
-    _data.retailers = _data.retailers || {};
-    _data.retailers[rid] = {
-      customerId: null, name: _data.name || '', category: null,
-      stockStatus: true, imageUrl: null, updatedAt: new Date().toISOString()
+  function addToHolding(hid) {
+    _data.holdings = _data.holdings || {};
+    _data.holdings[hid] = {
+      holdingInternalId: null, customerId: null, localProductName: _data.name || '', name: _data.name || '', localCategoryName: null, category: null,
+      stockStatus: true, isActiveHolding: true, imageUrl: null, updatedAt: new Date().toISOString()
     };
-    _retailer = rid;
+    _holding = hid;
     _markDirty();
     _render();
   }
 
-  function removeFromRetailer(rid) {
-    if (!confirm(`¿Quitar este producto del retailer?`)) return;
-    delete _data.retailers[rid];
-    _retailer = DB.getRetailers().find(r => r.id !== rid)?.id || DB.getRetailers()[0]?.id || null;
+  function removeFromHolding(hid) {
+    if (!confirm(`¿Quitar este producto del holding?`)) return;
+    delete _data.holdings[hid];
+    _holding = DB.getHoldings().find(r => r.id !== hid)?.id || DB.getHoldings()[0]?.id || null;
     _markDirty();
     _render();
   }
 
-  function setRetailer(rid) {
-    _retailer = rid;
+  function setHolding(hid) {
+    _holding = hid;
     _render();
   }
 
@@ -172,10 +178,36 @@ const UISheet = (() => {
       } else {
         const before = JSON.parse(JSON.stringify(_data));
         _data = API.mergeEnriched(_data, apiData);
+        
+        // Map category
+        const t = String(apiData.masterCategory || apiData.name || '').toLowerCase();
+        const mapping = {
+          'alcohol': 'ALCOHOL', 'whisky': 'ALCOHOL', 'cerveza': 'ALCOHOL', 'vino': 'ALCOHOL', 'beer': 'ALCOHOL', 'wine': 'ALCOHOL', 'vodka': 'ALCOHOL', 'licor': 'ALCOHOL',
+          'cleaning': 'CLEANING', 'limpieza': 'CLEANING', 'detergent': 'DETERGENTS', 'detergente': 'DETERGENTS', 'lavaloza': 'DETERGENTS', 'jabón': 'CLEANING',
+          'dairy': 'DAIRYS', 'lácteo': 'DAIRYS', 'leche': 'DAIRYS', 'yogurt': 'DAIRYS', 'queso': 'DAIRYS', 'milk': 'DAIRYS',
+          'frozen': 'FROZEN', 'congelado': 'FROZEN', 'helado': 'FROZEN',
+          'breakfast': 'BREAKFAST', 'desayuno': 'BREAKFAST', 'cereal': 'CEREALS', 'avena': 'CEREALS',
+          'snack': 'SNACKS', 'galleta': 'SNACKS', 'chip': 'SNACKS', 'biscuit': 'SNACKS',
+          'baby': 'BABY', 'bebé': 'BABY', 'infant': 'BABY', 'pañal': 'BABY',
+          'pet': 'PET', 'mascota': 'PET', 'perro': 'PET', 'gato': 'PET',
+          'sweet': 'SWEET', 'dulce': 'SWEET', 'chocolate': 'DESSERT', 'caramelo': 'SWEET', 'candy': 'SWEET',
+          'dessert': 'DESSERT', 'postre': 'DESSERT', 'torta': 'DESSERT',
+          'canned': 'CANNED FOOD', 'conserva': 'CANNED FOOD', 'enlatado': 'CANNED FOOD', 'lata': 'CANNED FOOD',
+          'drink': 'DRINKS', 'beverage': 'DRINKS', 'bebida': 'DRINKS', 'jugo': 'DRINKS', 'agua': 'DRINKS', 'juice': 'DRINKS', 'soda': 'DRINKS',
+          'healthy': 'HEALTHY', 'salud': 'HEALTHY', 'organic': 'HEALTHY', 'natural': 'HEALTHY',
+          'paper': 'PAPER ITEMS', 'papel': 'PAPER ITEMS', 'servilleta': 'PAPER ITEMS', 'toalla': 'PAPER ITEMS',
+          'grocery': 'GROCERY STORE', 'tienda': 'GROCERY STORE'
+        };
+        let foundCat = 'GROCERY STORE';
+        for (const [key, cat] of Object.entries(mapping)) {
+          if (t.includes(key)) { foundCat = cat; break; }
+        }
+        _data.universalCategory = _data.universalCategory || foundCat;
+        _data.category = _data.universalCategory;
 
         // Collect what changed
         const changed = [];
-        ['name','brand','packageType','weight_g','imageUrl','width_cm','height_cm','depth_cm','masterCategory'].forEach(f => {
+        ['name','brand','packageType','weight_g','imageUrl','width_cm','height_cm','depth_cm','universalCategory'].forEach(f => {
           if (!before[f] && _data[f]) changed.push(f);
         });
 
@@ -281,13 +313,13 @@ const UISheet = (() => {
     const container = document.getElementById('sheet-content');
     if (!container || !_data) return;
 
-    const retailers = DB.getRetailers();
-    if (_retailer && !retailers.find(r => r.id === _retailer)) {
-      _retailer = retailers[0]?.id || null;
+    const holdings = DB.getHoldings();
+    if (_holding && !holdings.find(r => r.id === _holding)) {
+      _holding = holdings[0]?.id || null;
     }
 
-    const rInfo = retailers.find(r => r.id === _retailer);
-    const rData = _retailer ? (_data.retailers?.[_retailer] || null) : null;
+    const rInfo = holdings.find(r => r.id === _holding);
+    const rData = _holding ? (_data.holdings?.[_holding] || null) : null;
     const inStock = rData?.stockStatus ?? true;
 
     // -- IMAGE TABS LOGIC --
@@ -308,7 +340,7 @@ const UISheet = (() => {
     }
 
     if (offImg && !gallery.includes(offImg)) imageTabs.push({ id: 'off', label: 'API (OFF)', src: offImg });
-    if (rImg && !gallery.includes(rImg)) imageTabs.push({ id: 'retailer', label: rInfo?.name || 'Retailer', src: rImg });
+    if (rImg && !gallery.includes(rImg)) imageTabs.push({ id: 'retailer', label: rInfo?.name || 'Holding', src: rImg });
     
     if (_activeImageIndex === -1) {
       _activeImageIndex = 0;
@@ -351,15 +383,22 @@ const UISheet = (() => {
     const pkgOpts = PACKAGE_TYPES.map(pt =>
       `<option value="${pt.value}" ${_data.packageType===pt.value?'selected':''}>${esc(pt.label)}</option>`
     ).join('');
-    const rCategories = (rInfo?.categories?.length ? rInfo.categories : CATEGORIES);
+    
+    // Universal categories for Master SKU
+    const masterCatOpts = UNIVERSAL_CATEGORIES.map(c =>
+      `<option value="${esc(c)}" ${(_data.universalCategory || _data.category)===c?'selected':''}>${esc(c)}</option>`
+    ).join('');
+    
+    const rCategories = (rInfo?.categories?.length ? rInfo.categories : UNIVERSAL_CATEGORIES);
     const catOpts = rCategories.map(c =>
-      `<option value="${esc(c)}" ${rData?.category===c?'selected':''}>${esc(c)}</option>`
+      `<option value="${esc(c)}" ${(rData?.localCategoryName || rData?.category)===c?'selected':''}>${esc(c)}</option>`
     ).join('');
 
     const sourceLabel = {
       'open_food_facts': 'Open Food Facts',
       'open_products_facts': 'Open Products Facts',
       'manual': 'Carga manual',
+      'levantamiento': 'App de Levantamiento',
       'mixed': 'Múltiple fuentes'
     }[_data.dataSource] || _data.dataSource || '—';
 
@@ -376,15 +415,15 @@ const UISheet = (() => {
     container.innerHTML = `
 <div class="sheet-layout">
 
-  <!-- ═══ LEFT: MASTER DATA ═══ -->
+  <!-- ═══ LEFT: UNIVERSAL PRODUCTS (MASTER) ═══ -->
   <div class="sheet-left">
 
     <div class="sheet-hdr">
       <div class="sheet-hdr-left">
-        <span class="badge-master">MASTER DATA</span>
+        <span class="badge-master">UNIVERSAL PRODUCTS</span>
         <button class="btn-sync" id="sync-btn" onclick="UISheet.syncOFF()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-          Consultar a la API
+          Enriquecer SKU
         </button>
       </div>
       <button class="btn-close-sheet" onclick="UISheet.close()">
@@ -393,7 +432,7 @@ const UISheet = (() => {
     </div>
 
     <input class="sheet-title-inp" type="text" id="sheet-name"
-      value="${esc(_data.name || '')}" placeholder="Nombre del producto…"
+      value="${esc(_data.name || '')}" placeholder="Nombre Universal del producto…"
       oninput="UISheet.updateField('name', this.value)">
 
     <div class="sheet-body-row">
@@ -421,18 +460,24 @@ const UISheet = (() => {
         <p class="section-lbl">INFORMACIÓN CENTRAL</p>
 
         <div class="form-group">
-          <label>Nombre de marca</label>
+          <label>Marca Universal</label>
           <input type="text" class="form-input" value="${esc(_data.brand || '')}"
             placeholder="—" oninput="UISheet.updateField('brand', this.value)">
         </div>
         <div class="form-group">
-          <label>Tipo de paquete</label>
+          <label>Categoría Vispera</label>
+          <select class="form-select" onchange="UISheet.updateField('universalCategory', this.value); UISheet.updateField('category', this.value);">
+            <option value="">Seleccionar…</option>${masterCatOpts}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipo de envase</label>
           <select class="form-select" onchange="UISheet.updateField('packageType', this.value)">
             <option value="">Seleccionar…</option>${pkgOpts}
           </select>
         </div>
         <div class="form-group">
-          <label>EAN-13 / Barcode</label>
+          <label>EAN-13 / master_product_id</label>
           <input type="text" class="form-input ${_isCreate ? '' : 'readonly-inp'}" value="${esc(_data.ean)}" ${_isCreate ? '' : 'readonly'} oninput="UISheet.updateField('ean', this.value)">
         </div>
         <div class="form-group">
@@ -444,28 +489,6 @@ const UISheet = (() => {
       </div>
     </div>
 
-    <!-- Dimensions -->
-    <div class="sheet-dims">
-      <p class="section-lbl">DIMENSIONES LOGÍSTICAS</p>
-      <div class="dims-row">
-        <div class="form-group">
-          <label>Ancho (cm)</label>
-          <input type="number" class="form-input" value="${_data.width_cm||''}" placeholder="—"
-            oninput="UISheet.updateField('width_cm', parseFloat(this.value)||null)">
-        </div>
-        <div class="form-group">
-          <label>Alto (cm)</label>
-          <input type="number" class="form-input" value="${_data.height_cm||''}" placeholder="—"
-            oninput="UISheet.updateField('height_cm', parseFloat(this.value)||null)">
-        </div>
-        <div class="form-group">
-          <label>Profundidad (cm)</label>
-          <input type="number" class="form-input" value="${_data.depth_cm||''}" placeholder="—"
-            oninput="UISheet.updateField('depth_cm', parseFloat(this.value)||null)">
-        </div>
-      </div>
-    </div>
-
     <!-- Meta -->
     <div class="sheet-meta-row">
       ${enrichBadge}
@@ -473,62 +496,62 @@ const UISheet = (() => {
     </div>
   </div>
 
-  <!-- ═══ RIGHT: RETAILER SPECIFICS ═══ -->
+  <!-- ═══ RIGHT: HOLDING SKU CATALOG ═══ -->
   <div class="sheet-right">
-    <p class="section-lbl">RETAILER SPECIFICS</p>
+    <p class="section-lbl">HOLDING SKU CATALOG</p>
 
     <div class="retailer-tabs">
-      ${retailers.map(r => `
-        <button class="r-tab ${r.id===_retailer?'active':''}"
-          onclick="UISheet.setRetailer('${esc(r.id)}')"
-          style="${r.id===_retailer ? `border-bottom-color:${r.color};color:${r.color}` : ''}">
+      ${holdings.map(r => `
+        <button class="r-tab ${r.id===_holding?'active':''}"
+          onclick="UISheet.setHolding('${esc(r.id)}')"
+          style="${r.id===_holding ? `border-bottom-color:${r.color};color:${r.color}` : ''}">
           ${esc(r.name)}
-          ${_data.retailers?.[r.id] ? '' : '<span class="r-tab-dot">+</span>'}
+          ${_data.holdings?.[r.id] ? '' : '<span class="r-tab-dot">+</span>'}
         </button>`).join('')}
-    </div><!-- retailer-tabs -->
+    </div><!-- holding-tabs -->
 
     ${rData ? `
-    <!-- Retailer form -->
+    <!-- Holding form -->
     <div class="retailer-form-area">
       <div class="form-group">
-        <label>ID del retailer</label>
-        <input type="text" class="form-input" value="${esc(rData.customerId||'')}"
+        <label>ID del Holding (holding_internal_id)</label>
+        <input type="text" class="form-input" value="${esc(rData.holdingInternalId || rData.customerId || '')}"
           placeholder="ej. TOT-44921-X"
-          oninput="UISheet.updateRetailerField('customerId', this.value)">
+          oninput="UISheet.updateHoldingField('holdingInternalId', this.value); UISheet.updateHoldingField('customerId', this.value);">
       </div>
       <div class="form-group">
-        <label>Nombre en este retailer</label>
-        <input type="text" class="form-input" value="${esc(rData.name||'')}"
-          placeholder="Nombre como aparece en el supermercado"
-          oninput="UISheet.updateRetailerField('name', this.value)">
+        <label>Nombre Local (local_product_name)</label>
+        <input type="text" class="form-input" value="${esc(rData.localProductName || rData.name || '')}"
+          placeholder="Nombre en este holding"
+          oninput="UISheet.updateHoldingField('localProductName', this.value); UISheet.updateHoldingField('name', this.value);">
       </div>
       <div class="form-group">
-        <label>Categoría</label>
-        <select class="form-select" onchange="UISheet.updateRetailerField('category', this.value)">
+        <label>Categoría Local</label>
+        <select class="form-select" onchange="UISheet.updateHoldingField('localCategoryName', this.value); UISheet.updateHoldingField('category', this.value);">
           <option value="">Seleccionar…</option>${catOpts}
         </select>
       </div>
       <div class="form-group">
-        <label>Stock</label>
+        <label>Estado / Stock (is_active_holding)</label>
         <div class="toggle-row">
           <div class="toggle-switch ${inStock?'on':''}" id="stock-toggle" onclick="UISheet.toggleStock()">
             <div class="toggle-knob"></div>
           </div>
-          <span id="stock-label">${inStock ? 'Disponible en tienda' : 'Sin stock'}</span>
+          <span id="stock-label">${inStock ? 'Disponible en tienda' : 'Sin stock / Inactivo'}</span>
         </div>
       </div>
-      <button class="btn-danger-sm" onclick="UISheet.removeFromRetailer('${esc(_retailer)}')">
-        Quitar de ${esc(rInfo?.name || _retailer)} ×
+      <button class="btn-danger-sm" onclick="UISheet.removeFromHolding('${esc(_holding)}')">
+        Quitar de ${esc(rInfo?.name || _holding)} ×
       </button>
     </div>` : `
-    <!-- Add to retailer -->
+    <!-- Add to holding -->
     <div class="retailer-empty-area">
       <div class="retailer-empty-icon" style="color:${rInfo?.color||'var(--accent)'}">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </div>
-      <p>Este producto no está listado en <strong>${esc(rInfo?.name || _retailer)}</strong>.</p>
-      <button class="btn-primary" onclick="UISheet.addToRetailer('${esc(_retailer)}')">
-        + Agregar a ${esc(rInfo?.name || _retailer)}
+      <p>Este SKU no está activo en el Holding <strong>${esc(rInfo?.name || _holding)}</strong>.</p>
+      <button class="btn-primary" onclick="UISheet.addToHolding('${esc(_holding)}')">
+        + Activar en ${esc(rInfo?.name || _holding)}
       </button>
     </div>`}
 
@@ -548,9 +571,16 @@ const UISheet = (() => {
 `;
   }
 
+  // Legacy aliases for backward compatibility with external calls
+  function updateRetailerField(field, value) { updateHoldingField(field, value); }
+  function addToRetailer(rid) { addToHolding(rid); }
+  function removeFromRetailer(rid) { removeFromHolding(rid); }
+  function setRetailer(rid) { setHolding(rid); }
+
   return {
     open, openCreate, close, save, discard, syncOFF, changeImage, changeImageUrl, setActiveImage, setAsMainImage,
-    updateField, updateRetailerField, toggleStock,
-    setRetailer, addToRetailer, removeFromRetailer
+    updateField, updateHoldingField, toggleStock,
+    setHolding, addToHolding, removeFromHolding,
+    updateRetailerField, addToRetailer, removeFromRetailer, setRetailer
   };
 })();

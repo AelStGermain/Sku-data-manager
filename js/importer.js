@@ -100,7 +100,7 @@ const Importer = (() => {
   // ────────────────────────────────────────────
   //  APPLY MAPPING → product objects
   // ────────────────────────────────────────────
-  function applyMapping(rows, mapping, retailerId, extraData = {}) {
+  function applyMapping(rows, mapping, holdingId, extraData = {}) {
     const get = (row, col) => col ? (row[col] || '').toString().trim() : null;
     const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
     const { headers = [], cellImages = {} } = extraData;
@@ -122,10 +122,10 @@ const Importer = (() => {
           weight_g:    num(get(row, mapping.weight)),
           imageUrl:    null,
           dataSource:  'manual',
-          retailers:   {}
+          holdings:    {}
         };
 
-        if (retailerId) {
+        if (holdingId) {
           const rName = get(row, mapping.retailerName) || product.name;
           const custId = get(row, mapping.customerId) || null;
           let rImgUrl = get(row, mapping.retailerImage) || null;
@@ -138,8 +138,8 @@ const Importer = (() => {
           }
 
           // -- TOTTUS AUTOMATION INTERCEPTOR --
-          const retailers = typeof DB !== 'undefined' ? DB.getRetailers() : [];
-          const rInfo = retailers.find(r => r.id === retailerId);
+          const retailers = typeof DB !== 'undefined' ? DB.getHoldings() : [];
+          const rInfo = retailers.find(r => r.id === holdingId);
           const isTottus = rInfo && (rInfo.name || '').toLowerCase().includes('tottus');
           if (isTottus && custId && !rImgUrl && !rImgBlob) {
              rImgUrl = `https://media.falabella.com/tottusCL/${custId}_1`;
@@ -149,13 +149,17 @@ const Importer = (() => {
           if (rImgUrl) product.imageUrl = rImgUrl;
           if (rImgBlob) product._imageBlob = rImgBlob;
 
-          product.retailers[retailerId] = {
+          product.holdings[holdingId] = {
             customerId:  custId,
+            holdingInternalId: custId,
             name:        rName,
+            localProductName: rName,
             category:    get(row, mapping.category)      || null,
+            localCategoryName: get(row, mapping.category) || null,
             dmu:         get(row, mapping.dmu)           || null,
             position:    num(get(row, mapping.position)) || null,
             stockStatus: true,
+            isActiveHolding: true,
             imageUrl:    rImgUrl,
             updatedAt:   new Date().toISOString()
           };
@@ -199,19 +203,22 @@ const Importer = (() => {
       masterFields.forEach(f => { if (!merged[f] && incoming[f]) merged[f] = incoming[f]; });
     }
 
-    // Merge retailers
-    merged.retailers = merged.retailers || {};
-    Object.entries(incoming.retailers || {}).forEach(([rid, rData]) => {
-      if (!merged.retailers[rid]) {
-        merged.retailers[rid] = rData;
+    // Merge holdings (formerly retailers)
+    merged.holdings = merged.holdings || merged.retailers || {};
+    const incomingHoldings = incoming.holdings || incoming.retailers || {};
+    Object.entries(incomingHoldings).forEach(([hid, hData]) => {
+      if (!merged.holdings[hid]) {
+        merged.holdings[hid] = hData;
       } else if (mode === 'overwrite') {
-        merged.retailers[rid] = { ...merged.retailers[rid], ...rData, updatedAt: new Date().toISOString() };
+        merged.holdings[hid] = { ...merged.holdings[hid], ...hData, updatedAt: new Date().toISOString() };
       } else {
-        Object.keys(rData).forEach(k => {
-          if (!merged.retailers[rid][k] && rData[k]) merged.retailers[rid][k] = rData[k];
+        Object.keys(hData).forEach(k => {
+          if (!merged.holdings[hid][k] && hData[k]) merged.holdings[hid][k] = hData[k];
         });
       }
     });
+    // Keep retailers alias for backward compat
+    merged.retailers = merged.holdings;
 
     return merged;
   }

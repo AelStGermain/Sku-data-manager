@@ -14,30 +14,33 @@ const UIRetailers = (() => {
   // ── stats helpers ───────────────────────────
   function retailerStats(rid) {
     const products = DB.getProductsArray();
-    const inRetailer = products.filter(p => p.retailers?.[rid]);
-    const avg = inRetailer.length
-      ? Math.round(inRetailer.reduce((s, p) => s + DB.computeCompleteness(p), 0) / inRetailer.length)
+    const inHolding = products.filter(p => {
+      const h = p.holdings || p.retailers || {};
+      return h[rid];
+    });
+    const avg = inHolding.length
+      ? Math.round(inHolding.reduce((s, p) => s + DB.computeCompleteness(p), 0) / inHolding.length)
       : 0;
-    const withImg = inRetailer.filter(p => p.imageUrl).length;
-    return { count: inRetailer.length, avg, withImg };
+    const withImg = inHolding.filter(p => p.imageUrl).length;
+    return { count: inHolding.length, avg, withImg };
   }
 
   // ── main render ────────────────────────────
   function render() {
-    const el = document.getElementById('view-retailers');
+    const el = document.getElementById('view-holdings') || document.getElementById('view-retailers');
     if (!el) return;
-    const retailers = DB.getRetailers();
+    const retailers = DB.getHoldings();
 
     el.innerHTML = `
 <header class="view-header">
   <div>
-    <h1 class="view-title">Retailers</h1>
-    <p class="view-sub">${retailers.length} supermercados configurados</p>
+    <h1 class="view-title">Holdings</h1>
+    <p class="view-sub">${retailers.length} holdings configurados · Holding-Specific SKU Data</p>
   </div>
   <div class="view-actions">
     <button class="btn-primary" onclick="UIRetailers.openForm()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Agregar retailer
+      Agregar Holding
     </button>
   </div>
 </header>
@@ -47,7 +50,7 @@ const UIRetailers = (() => {
   <div class="retailer-add-card" onclick="UIRetailers.openForm()">
     <div class="add-card-inner">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      <p>Agregar retailer</p>
+      <p>Agregar Holding</p>
     </div>
   </div>
 </div>
@@ -752,3 +755,6 @@ const UIRetailers = (() => {
     goStoresList
   };
 })();
+
+// UIHoldings alias for the new architecture
+const UIHoldings = UIRetailers;

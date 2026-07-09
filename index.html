@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Plataforma de Master Data para gestión centralizada de SKUs en supermercados con tecnología Smart Shelf.">
-  <title>Smart Shelf — Master Data Platform</title>
+  <meta name="description" content="Plataforma Multi-Holding de gestión centralizada de SKUs con BigQuery Data Warehouse y Pipeline de Enriquecimiento Vispera.">
+  <title>Smart Shelf — Multi-Holding Data Warehouse</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,7 +26,7 @@
 
 <div id="global-loader" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;">
   <div class="spinning-loader" style="width:40px;height:40px;border:4px solid #eaeaea;border-top-color:#4F6EF7;border-radius:50%;animation:spin 1s linear infinite;"></div>
-  <p style="margin-top:16px;font-weight:600;color:#1A1D27;">Conectando con DB en vivo...</p>
+  <p style="margin-top:16px;font-weight:600;color:#1A1D27;">Conectando con BigQuery Data Warehouse...</p>
 </div>
 <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
 
@@ -44,7 +44,7 @@
       <div class="brand-icon" id="brand-icon-fallback" style="display:none">SS</div>
       <div class="brand-text">
         <span class="brand-name">Smart Shelf</span>
-        <span class="brand-sub">Master Data</span>
+        <span class="brand-sub">Multi-Holding DW</span>
       </div>
     </div>
 
@@ -74,20 +74,45 @@
         <span>Modo edición</span>
       </button>
 
-  <button class="nav-item" data-view="retailers" id="nav-retailers">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-      <polyline points="9 22 9 12 15 12 15 22"/>
-    </svg>
-    <span>Retailers</span>
-  </button>
+      <div class="nav-divider"></div>
+      <span class="nav-section-label">Data Warehouse</span>
+
+      <button class="nav-item" data-view="holdings" id="nav-holdings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Holdings</span>
+      </button>
+
+      <button class="nav-item" data-view="levantamiento" id="nav-levantamiento">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+          <line x1="12" y1="18" x2="12.01" y2="18"/>
+        </svg>
+        <span>Levantamiento</span>
+      </button>
+
+      <button class="nav-item" data-view="staging" id="nav-staging">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        <span>Pipeline</span>
+      </button>
+
+      <button class="nav-item" data-view="api" id="nav-api">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+        <span>API / ETL</span>
+      </button>
 
     </nav>
 
-    <!-- Retailer filters -->
+    <!-- Holding filters -->
     <div class="sidebar-filter">
-      <p class="filter-label">Filtrar por retailer</p>
-      <div id="sidebar-retailer-filters"><!-- Rendered by App.renderSidebar() --></div>
+      <p class="filter-label">Filtrar por Holding</p>
+      <div id="sidebar-holding-filters"><!-- Rendered by App.renderSidebar() --></div>
     </div>
 
     <!-- Footer -->
@@ -137,9 +162,24 @@
       <!-- Rendered by UIBulk.render() -->
     </section>
 
-    <!-- RETAILERS VIEW -->
-    <section id="view-retailers" class="view">
-      <!-- Rendered by UIRetailers.render() -->
+    <!-- HOLDINGS VIEW (formerly Retailers) -->
+    <section id="view-holdings" class="view">
+      <!-- Rendered by UIHoldings.render() -->
+    </section>
+
+    <!-- LEVANTAMIENTO VIEW -->
+    <section id="view-levantamiento" class="view">
+      <!-- Rendered by UILevantamiento.render() -->
+    </section>
+
+    <!-- STAGING / PIPELINE VIEW -->
+    <section id="view-staging" class="view">
+      <!-- Rendered by UIStaging.render() -->
+    </section>
+
+    <!-- API / ETL VIEW -->
+    <section id="view-api" class="view">
+      <!-- Rendered by UIApi.render() -->
     </section>
 
 
@@ -165,17 +205,20 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- App Scripts -->
-<script src="js/db.js?v=5"></script>
-<script src="js/api.js?v=5"></script>
-<script src="js/excel-image-parser.js?v=5"></script>
-<script src="js/importer.js?v=5"></script>
-<script src="js/ui-catalog.js?v=5"></script>
-<script src="js/ui-sheet.js?v=5"></script>
-<script src="js/ui-import.js?v=5"></script>
-<script src="js/ui-bulk.js?v=5"></script>
-<script src="js/ui-retailers.js?v=5"></script>
+<script src="js/db.js?v=6"></script>
+<script src="js/api.js?v=6"></script>
+<script src="js/excel-image-parser.js?v=6"></script>
+<script src="js/importer.js?v=6"></script>
+<script src="js/ui-catalog.js?v=6"></script>
+<script src="js/ui-sheet.js?v=6"></script>
+<script src="js/ui-import.js?v=6"></script>
+<script src="js/ui-bulk.js?v=6"></script>
+<script src="js/ui-retailers.js?v=6"></script>
+<script src="js/ui-levantamiento.js?v=6"></script>
+<script src="js/ui-staging.js?v=6"></script>
+<script src="js/ui-api.js?v=6"></script>
 
-<script src="js/app.js?v=5"></script>
+<script src="js/app.js?v=6"></script>
 
 </body>
 </html>

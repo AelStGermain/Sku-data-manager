@@ -47,7 +47,7 @@ const UIApi = (function () {
           <!-- Left Panel: Webhook Input -->
           <div style="flex:1; display:flex; flex-direction:column; gap:10px; background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border);">
             <h3>📥 Simular Entrada (Webhook de Captura)</h3>
-            <p style="color:var(--text-light); font-size:13px; margin:0;">Inyecta un JSON Payload para probar el flujo de asimilación relacional hacia la Base de Datos Central.</p>
+            <p style="color:var(--text-light); font-size:13px; margin:0;">Inyecta un JSON Payload para probar el flujo de asimilación relacional hacia el BigQuery Data Warehouse.</p>
             <textarea id="api-payload-input" style="flex:1; width:100%; border-radius:8px; border:1px solid var(--border); background:#1e1e1e; color:#d4d4d4; padding:15px; font-family:monospace; font-size:13px; resize:none;">${MOCK_GABRIEL_JSON}</textarea>
             <div style="display:flex; justify-content:flex-end; gap:10px;">
               <button class="btn-clear" onclick="document.getElementById('api-payload-input').value=''">Limpiar</button>
@@ -61,7 +61,7 @@ const UIApi = (function () {
           <!-- Right Panel: Terminal Log -->
           <div style="flex:1; display:flex; flex-direction:column; gap:10px; background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border);">
             <h3>⚙️ Consola de Extracción (Log ETL)</h3>
-            <p style="color:var(--text-light); font-size:13px; margin:0;">Registros del Backend de Fase 2 particionando datos hacia MASTER_SKU y HOLDING_SKU.</p>
+            <p style="color:var(--text-light); font-size:13px; margin:0;">Registros del Backend particionando datos hacia UNIVERSAL_PRODUCTS y HOLDING_SKU_CATALOG.</p>
             <div id="api-terminal" style="flex:1; border-radius:8px; background:#0f0f15; padding:15px; overflow-y:auto; font-family:monospace; font-size:12px; color:#4af; line-height:1.5;">
                > Base de Datos a la espera de peticiones...
             </div>
@@ -73,7 +73,7 @@ const UIApi = (function () {
            <div style="display:flex; justify-content:space-between; align-items:center;">
              <div>
                <h3 style="margin:0 0 5px 0;">📤 Consultar Endpoint de Datos Limpios (Fase 3/4)</h3>
-               <p style="color:var(--text-light); font-size:13px; margin:0;">Exportar las Vistas Rest API Limpias consumidas por los Dashboards de Josip o escaneadas por Sebas.</p>
+               <p style="color:var(--text-light); font-size:13px; margin:0;">Exportar las Vistas Rest API Limpias consumidas por los Dashboards o escaneadas por la App de Levantamiento.</p>
              </div>
              <button class="btn-outline" style="min-width:200px; font-weight:600;" onclick="UIApi.generateOutputJSON()">
                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -141,11 +141,11 @@ const UIApi = (function () {
         
         // Log detallado de los resultados retornados por el servidor
         result.results.forEach(resItem => {
-           printLog(`  ➔ SKU ${resItem.ean} asimilado en Master Catalog & Retailer Catalog.`, '#4af');
+           printLog(`  ➔ SKU ${resItem.ean} asimilado en Universal Products & Holding SKU Catalog.`, '#4af');
         });
 
         printLog('────────────────────────────────────────');
-        printLog(`✅ Tarea ETL Satisfactoria. ${processed} registros procesados remotamente y guardados en Supabase.`, '#0f0');
+        printLog(`✅ Tarea ETL Satisfactoria. ${processed} registros procesados remotamente y guardados en BigQuery DW.`, '#0f0');
         
         App.showToast('Ingesta procesada en la base de datos central', 'success');
         if (window.App) window.App.refreshData(); // Refrescar catálogos

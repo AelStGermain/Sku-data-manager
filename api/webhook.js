@@ -77,13 +77,16 @@ export default async function handler(req, res) {
         continue;
       }
 
-      // 3. Crear relación en RETAILER_CATALOG
+      // 3. Crear relación en HOLDING_SKU_CATALOG (retailer_catalog table)
       const retailerPayload = {
         uuid: crypto.randomUUID(),
         ean: item.ean,
         retailer_id: holding_id.toLowerCase(),
         internal_sku_id: item.internal_id || item.ean,
         retailer_category: item.pasillo || 'Desconocido',
+        local_product_name: item.ocr_name || enrichedData.name,
+        local_category_name: item.pasillo || 'Desconocido',
+        is_active_holding: true,
         is_trained: true
       };
 

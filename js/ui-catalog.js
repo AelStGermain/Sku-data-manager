@@ -98,7 +98,7 @@ const UICatalog = (() => {
     const noImg = !rawImg;
 
     const retailerBadges = retailers
-      .filter(r => p.retailers?.[r.id])
+      .filter(r => { const h = p.holdings || p.retailers || {}; return h[r.id]; })
       .map(r => `<span class="r-badge" style="background:${r.color}" title="${esc(r.name)}">${esc(r.name[0])}</span>`)
       .join('');
 
@@ -142,7 +142,7 @@ const UICatalog = (() => {
     const noImg   = !rawImg;
 
     const retailerBadges = retailers
-      .filter(r => p.retailers?.[r.id])
+      .filter(r => { const h = p.holdings || p.retailers || {}; return h[r.id]; })
       .map(r => `<span class="r-badge" style="background:${r.color}" title="${esc(r.name)}">${esc(r.name[0])}</span>`)
       .join('');
 
@@ -212,7 +212,7 @@ const UICatalog = (() => {
     if (!el) return;
 
     const all       = DB.getProductsArray();
-    const retailers = DB.getRetailers();
+    const retailers = DB.getHoldings();
     const q  = normalizeStr(_search);
 
     let filtered = all;
@@ -224,8 +224,8 @@ const UICatalog = (() => {
       if (Object.values(p.retailers||{}).some(r => normalizeStr(r.customerId).includes(q))) return true;
       return false;
     });
-    if (_retailer !== 'all')  filtered = filtered.filter(p => p.retailers?.[_retailer]);
-    if (_category !== 'all')  filtered = filtered.filter(p => Object.values(p.retailers||{}).some(r => r.category === _category));
+    if (_retailer !== 'all')  filtered = filtered.filter(p => { const h = p.holdings || p.retailers || {}; return h[_retailer]; });
+    if (_category !== 'all')  filtered = filtered.filter(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).some(r => (r.localCategoryName || r.category) === _category); });
     if (_source   !== 'all')  filtered = filtered.filter(p => p.dataSource === _source);
     if (_statusFilter !== 'all') filtered = filtered.filter(p => (p.status||'active') === _statusFilter);
     if (_showIncomplete)      filtered = filtered.filter(p => DB.computeCompleteness(p) < 50);
@@ -235,7 +235,7 @@ const UICatalog = (() => {
 
     const enriched = all.filter(p => p.dataSource !== 'manual').length;
     const noData   = all.filter(p => DB.computeCompleteness(p) < 40).length;
-    const cats = [...new Set(all.flatMap(p => Object.values(p.retailers||{}).map(r => r.category).filter(Boolean)))].sort();
+    const cats = [...new Set(all.flatMap(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).map(r => r.localCategoryName || r.category).filter(Boolean); }))].sort();
 
     el.innerHTML = `
 <header class="view-header">
@@ -289,7 +289,7 @@ const UICatalog = (() => {
 
 <div class="stats-bar">
   <div class="stat-card"><span class="stat-v">${all.length}</span><span class="stat-l">SKUs totales</span></div>
-  <div class="stat-card"><span class="stat-v">${retailers.length}</span><span class="stat-l">Retailers activos</span></div>
+  <div class="stat-card"><span class="stat-v">${retailers.length}</span><span class="stat-l">Holdings activos</span></div>
 </div>
 
 <!-- Sort bar + Status quick filters -->
