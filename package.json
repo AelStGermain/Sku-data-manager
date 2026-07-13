@@ -4,12 +4,15 @@
   "description": "Smart Shelf Master Data — SKU enrichment script",
   "type": "module",
   "scripts": {
+    "start": "node server.js",
     "enrich": "node scripts/enrich-cron.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
+    "cors": "^2.8.6",
     "csv-parser": "^3.2.0",
     "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "pg": "^8.20.0"
   }
 }

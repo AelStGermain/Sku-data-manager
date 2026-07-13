@@ -121,58 +121,19 @@ const DB = (() => {
   async function fetchProducts() {
     try {
       let masterData = [];
-      let mFetchMore = true;
-      let mFrom = 0;
-      const step = 1000;
-      
-      while (mFetchMore) {
-        const { data, error } = await _supabase
-          .from('master_catalog')
-          .select('*')
-          .range(mFrom, mFrom + step - 1);
-          
-        if (error) {
-          console.error('Error cargando Universal Products (master_catalog):', error);
-          mFetchMore = false;
-          break;
-        }
-        if (data && data.length > 0) {
-          masterData = masterData.concat(data);
-          mFrom += step;
-          if (data.length < step) mFetchMore = false;
-        } else {
-          mFetchMore = false;
-        }
-      }
-
-      // Check available columns on the remote database
-      _availableColumns.clear();
-      if (masterData && masterData.length > 0) {
-        Object.keys(masterData[0]).forEach(k => _availableColumns.add(k));
-      }
-
-      // Try fetching holding_sku_catalog (retailer_catalog) data
       let holdingData = [];
+
       try {
-        let rFetchMore = true;
-        let rFrom = 0;
-        while (rFetchMore) {
-          const { data, error } = await _supabase
-            .from('retailer_catalog')
-            .select('*')
-            .range(rFrom, rFrom + step - 1);
-            
-          if (error) break;
-          if (data && data.length > 0) {
-            holdingData = holdingData.concat(data);
-            rFrom += step;
-            if (data.length < step) rFetchMore = false;
-          } else {
-            rFetchMore = false;
-          }
+        const res = await fetch('http://localhost:3000/api/products');
+        if (res.ok) {
+          const data = await res.json();
+          masterData = data.master_catalog || [];
+          holdingData = data.retailer_catalog || [];
+        } else {
+          console.warn('Local server no respondió correctamente. Usando caché local.');
         }
       } catch (err) {
-        console.warn('holding_sku_catalog (retailer_catalog) fetch failed:', err);
+        console.warn('Servidor local apagado (http://localhost:3000). Usando caché local offline.');
       }
 
       // Get local storage cache to reconstruct missing fields and offline additions
@@ -291,59 +252,38 @@ const DB = (() => {
     if (_availableColumns.has('off_attempted')) payload.off_attempted = product.offAttempted || false;
 
     try {
-      // Upsert product in Supabase master_catalog (Universal Products)
-      const { error } = await _supabase
-        .from('master_catalog')
-        .upsert(payload, { onConflict: 'ean' });
-
-      if (error) console.error('Error guardando en Universal Products:', error);
-      
-      // Upsert relations in Supabase holding_sku_catalog (retailer_catalog)
+      // Upsert product and relations to Local Server
+      const holdingRelations = [];
       if (product.holdings) {
         for (const [hid, hData] of Object.entries(product.holdings)) {
-          await saveHoldingRelation(product.ean, hid, hData);
+          holdingRelations.push({
+            ean: product.ean,
+            retailer_id: hid,
+            internal_sku_id: hData.holdingInternalId || hData.customerId || product.ean,
+            retailer_category: hData.localCategoryName || hData.category || 'General',
+            is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false
+          });
         }
       }
+
+      try {
+        await fetch('http://localhost:3000/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product: payload, holdingRelations })
+        });
+      } catch (err) {
+        console.warn('Servidor local apagado. Cambios guardados solo en LocalStorage.');
+      }
     } catch (err) {
-      console.error('Supabase save failed:', err);
+      console.error('Local save failed:', err);
     }
 
     if (window.App && window.App.refreshData) window.App.refreshData();
   }
 
-  async function saveHoldingRelation(ean, hid, hData) {
-    try {
-      const { data, error } = await _supabase
-        .from('retailer_catalog')
-        .select('uuid')
-        .eq('ean', ean)
-        .eq('retailer_id', hid);
-      
-      const payload = {
-        ean: ean,
-        retailer_id: hid,
-        internal_sku_id: hData.holdingInternalId || hData.customerId || ean,
-        retailer_category: hData.localCategoryName || hData.category || 'General',
-        is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false
-      };
-
-      if (data && data.length > 0) {
-        await _supabase
-          .from('retailer_catalog')
-          .update(payload)
-          .eq('uuid', data[0].uuid);
-      } else {
-        await _supabase
-          .from('retailer_catalog')
-          .insert({
-            uuid: crypto.randomUUID ? crypto.randomUUID() : (Math.random().toString(36).substring(2) + Date.now().toString(36)),
-            ...payload
-          });
-      }
-    } catch (err) {
-      console.warn('Error syncing holding relation to Supabase:', err);
-    }
-  }
+  // Legacy alias
+  const saveHoldingRelation = () => {};
 
   // Legacy alias
   const saveRetailerRelation = saveHoldingRelation;
@@ -422,12 +362,13 @@ const DB = (() => {
     localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
 
     try {
-      // Delete from master_catalog (holding_sku_catalog relation also deleted)
-      await _supabase.from('retailer_catalog').delete().eq('ean', ean);
-      const { error } = await _supabase.from('master_catalog').delete().eq('ean', ean);
-      if (error) console.error('Error borrando en Supabase:', error);
+      await fetch('http://localhost:3000/api/products', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eans: [ean] })
+      });
     } catch (err) {
-      console.error('Supabase delete failed:', err);
+      console.warn('Servidor local apagado. Eliminado solo en LocalStorage.');
     }
 
     if (window.App && window.App.refreshData) window.App.refreshData();
@@ -449,11 +390,13 @@ const DB = (() => {
     localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
 
     try {
-      await _supabase.from('retailer_catalog').delete().in('ean', eans);
-      const { error } = await _supabase.from('master_catalog').delete().in('ean', eans);
-      if (error) console.error('Error borrando bulk en Supabase:', error);
+      await fetch('http://localhost:3000/api/products', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eans })
+      });
     } catch (err) {
-      console.error('Supabase delete bulk failed:', err);
+      console.warn('Servidor local apagado. Eliminado bulk solo en LocalStorage.');
     }
 
     if (window.App && window.App.refreshData) window.App.refreshData();
@@ -496,68 +439,29 @@ const DB = (() => {
     });
 
     try {
-      const chunkSize = 500;
-      
-      // 1. Chunking para master_catalog (Universal Products)
-      for (let i = 0; i < payload.length; i += chunkSize) {
-        const chunk = payload.slice(i, i + chunkSize);
-        const { error } = await _supabase
-          .from('master_catalog')
-          .upsert(chunk, { onConflict: 'ean' });
-        
-        if (error) console.error(`Error upsert masivo en chunk master ${i/chunkSize}:`, error);
-      }
-
-      // 2. Chunking para holding_sku_catalog (retailer_catalog)
       const holdingRelations = [];
       for (const p of productsArray) {
         const holdings = p.holdings || p.retailers || {};
         if (holdings) {
           for (const [hid, hData] of Object.entries(holdings)) {
-            holdingRelations.push({ ean: p.ean, hid, hData });
-          }
-        }
-      }
-
-      if (holdingRelations.length > 0) {
-        for (let i = 0; i < holdingRelations.length; i += chunkSize) {
-          const chunk = holdingRelations.slice(i, i + chunkSize);
-          const eansInChunk = [...new Set(chunk.map(c => c.ean))];
-          
-          // Buscar UUIDs existentes de un solo golpe para este bloque
-          const { data: existingRelations } = await _supabase
-            .from('retailer_catalog')
-            .select('uuid, ean, retailer_id')
-            .in('ean', eansInChunk);
-            
-          const existingMap = {};
-          if (existingRelations) {
-            existingRelations.forEach(r => {
-               existingMap[`${r.ean}_${r.retailer_id}`] = r.uuid;
+            holdingRelations.push({
+              ean: p.ean,
+              retailer_id: hid,
+              internal_sku_id: hData.holdingInternalId || hData.customerId || p.ean,
+              retailer_category: hData.localCategoryName || hData.category || 'General',
+              is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false
             });
           }
-
-          const upsertPayload = chunk.map(c => {
-             const key = `${c.ean}_${c.hid}`;
-             return {
-                uuid: existingMap[key] || (crypto.randomUUID ? crypto.randomUUID() : (Math.random().toString(36).substring(2) + Date.now().toString(36))),
-                ean: c.ean,
-                retailer_id: c.hid,
-                internal_sku_id: c.hData.holdingInternalId || c.hData.customerId || c.ean,
-                retailer_category: c.hData.localCategoryName || c.hData.category || 'General',
-                is_trained: c.hData.isActiveHolding !== false && c.hData.stockStatus !== false
-             };
-          });
-
-          const { error: relError } = await _supabase
-            .from('retailer_catalog')
-            .upsert(upsertPayload, { onConflict: 'uuid' });
-            
-          if (relError) console.error(`Error upsert masivo en chunk holdings ${i/chunkSize}:`, relError);
         }
       }
+
+      await fetch('http://localhost:3000/api/products/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: payload, holdingRelations })
+      });
     } catch (err) {
-      console.error('Supabase bulk save failed:', err);
+      console.warn('Servidor local apagado. Upsert masivo guardado solo en LocalStorage.');
     }
 
     if (window.App && window.App.refreshData) window.App.refreshData();

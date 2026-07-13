@@ -33,6 +33,17 @@ const UIStaging = (() => {
   </div>
 </header>
 
+<div class="dashboard-row stagger-in" style="display:flex; gap:16px; margin-bottom: 24px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow);">
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
+    <h3 style="font-size:12px; color:var(--text-sec); margin-bottom: 12px; text-transform:uppercase; letter-spacing:0.05em;">Tasa de Enriquecimiento (Global)</h3>
+    <div style="position:relative; width:140px; height:140px;"><canvas id="chart-enrichment"></canvas></div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
+    <h3 style="font-size:12px; color:var(--text-sec); margin-bottom: 12px; text-transform:uppercase; letter-spacing:0.05em;">Completitud (Global)</h3>
+    <div style="position:relative; width:140px; height:140px;"><canvas id="chart-completeness"></canvas></div>
+  </div>
+</div>
+
 <!-- Tabs -->
 <div class="staging-tabs">
   <button class="staging-tab ${_activeTab === 'unmatched' ? 'active' : ''}" onclick="UIStaging.setTab('unmatched')">
@@ -47,6 +58,52 @@ const UIStaging = (() => {
 
 ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
 `;
+
+    setTimeout(_drawCharts, 50);
+  }
+
+  let _chart1 = null;
+  let _chart2 = null;
+
+  function _drawCharts() {
+    if (typeof Chart === 'undefined') return;
+    
+    const all = DB.getProductsArray();
+    if (!all || all.length === 0) return;
+
+    const enriched = all.filter(p => p.dataSource !== 'manual').length;
+    const manual = all.length - enriched;
+
+    const complete = all.filter(p => DB.computeCompleteness(p) >= 80).length;
+    const partial = all.filter(p => DB.computeCompleteness(p) >= 50 && DB.computeCompleteness(p) < 80).length;
+    const incomplete = all.filter(p => DB.computeCompleteness(p) < 50).length;
+
+    const ctx1 = document.getElementById('chart-enrichment');
+    const ctx2 = document.getElementById('chart-completeness');
+
+    if (ctx1) {
+      if (_chart1) _chart1.destroy();
+      _chart1 = new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+          labels: ['Por API', 'Manual'],
+          datasets: [{ data: [enriched, manual], backgroundColor: ['#4F6EF7', '#D8DFF0'], borderWidth: 0 }]
+        },
+        options: { cutout: '75%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    if (ctx2) {
+      if (_chart2) _chart2.destroy();
+      _chart2 = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: ['Alta (>80%)', 'Media', 'Baja (<50%)'],
+          datasets: [{ data: [complete, partial, incomplete], backgroundColor: ['#1A7A34', '#D29922', '#C42B20'], borderWidth: 0 }]
+        },
+        options: { cutout: '75%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+      });
+    }
   }
 
   function renderUnmatched(items) {

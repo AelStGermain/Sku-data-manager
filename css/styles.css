@@ -298,6 +298,29 @@ img { display: block; }
   gap: 16px;
 }
 
+/* ── STAGGERED ANIMATIONS ────────────────────── */
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.stagger-in {
+  animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+.stagger-in:nth-child(1) { animation-delay: 0.05s; }
+.stagger-in:nth-child(2) { animation-delay: 0.10s; }
+.stagger-in:nth-child(3) { animation-delay: 0.15s; }
+.stagger-in:nth-child(4) { animation-delay: 0.20s; }
+.stagger-in:nth-child(5) { animation-delay: 0.25s; }
+.stagger-in:nth-child(6) { animation-delay: 0.30s; }
+.stagger-in:nth-child(7) { animation-delay: 0.35s; }
+.stagger-in:nth-child(8) { animation-delay: 0.40s; }
+.stagger-in:nth-child(9) { animation-delay: 0.45s; }
+.stagger-in:nth-child(10) { animation-delay: 0.50s; }
+.stagger-in:nth-child(11) { animation-delay: 0.55s; }
+.stagger-in:nth-child(12) { animation-delay: 0.60s; }
+.stagger-in:nth-child(n+13) { animation-delay: 0.65s; }
+
 /* ── PRODUCT CARD ────────────────────────────── */
 .product-card {
   background: var(--surface);
@@ -368,7 +391,7 @@ img { display: block; }
 
 .completeness-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .comp-track { flex: 1; height: 4px; background: var(--surface-el); border-radius: 99px; overflow: hidden; }
-.comp-fill  { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+.comp-fill  { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1); background-image: linear-gradient(90deg, rgba(255,255,255,0.1), transparent); }
 .comp-label { font-size: 11px; font-weight: 700; min-width: 30px; text-align: right; }
 
 .card-footer {
@@ -484,9 +507,9 @@ img { display: block; }
    ════════════════════════════════════════════ */
 .sheet-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.75);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 1000;
   display: flex; align-items: center; justify-content: center;
   opacity: 0; transition: opacity 0.28s ease;
@@ -741,7 +764,7 @@ img { display: block; }
 /* Retailer form overlay */
 .form-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(12px);
   z-index: 900;
   display: flex; align-items: center; justify-content: center;
   opacity: 0; transition: opacity 0.25s ease;

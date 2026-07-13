@@ -103,7 +103,7 @@ const UICatalog = (() => {
       .join('');
 
     return `
-<article class="product-card"
+<article class="product-card stagger-in"
   data-ean="${ean}"
   onclick="App.openSheet('${ean}')"
   title="Ver Technical Sheet">
@@ -147,7 +147,7 @@ const UICatalog = (() => {
       .join('');
 
     return `
-<div class="product-list-row" data-ean="${ean}" onclick="App.openSheet('${ean}')">
+<div class="product-list-row stagger-in" data-ean="${ean}" onclick="App.openSheet('${ean}')">
   <div class="pl-img">
     <img class="${noImg?'no-img':''}" style="width:100%;height:100%;object-fit:contain;padding:4px${noImg?';display:none':''}" src="${img}" alt="${name}" onerror="this.style.display='none'">
   </div>

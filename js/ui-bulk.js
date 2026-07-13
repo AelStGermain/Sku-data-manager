@@ -30,6 +30,12 @@ const UIBulk = (() => {
           <p class="view-subtitle">${_allProducts.length} SKUs en la base de datos</p>
         </div>
         <div class="header-actions">
+          <button class="btn-outline" onclick="UIBulk.exportFilteredCSV()" style="margin-right: 8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Exportar Filtrados
+          </button>
           <button class="btn-primary" onclick="UIBulk.saveSelected()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
@@ -160,8 +166,8 @@ const UIBulk = (() => {
           </tr>
         </thead>
         <tbody>
-          ${items.map(p => `
-            <tr class="${_selectedEans.has(p.ean) ? 'selected' : ''}">
+          ${items.map((p, idx) => `
+            <tr class="${_selectedEans.has(p.ean) ? 'selected' : ''} stagger-in" style="animation-delay: ${0.03 * idx}s">
               <td><input type="checkbox" class="bulk-sel-cb" data-ean="${p.ean}" ${Math.random() /* shift+click logic handled by js */} ${_selectedEans.has(p.ean) ? 'checked' : ''}></td>
               <td>
                 <div class="bulk-img-cell" style="background-image:url('${p.imageUrl || 'logo.png'}')"></div>
@@ -387,6 +393,30 @@ const UIBulk = (() => {
         _selectedEans.clear();
         render();
       }
+    },
+    exportFilteredCSV() {
+      if (_filteredProducts.length === 0) {
+        if (App) App.showToast('No hay productos para exportar', 'warning');
+        return;
+      }
+      const header = ['EAN', 'Nombre', 'Marca', 'Categoría', 'Completitud', 'Fuente'].join(',');
+      const rows = _filteredProducts.map(p => {
+        return [
+          p.ean,
+          `"${(p.name||'').replace(/"/g, '""')}"`,
+          `"${(p.brand||'').replace(/"/g, '""')}"`,
+          `"${(p.category||'').replace(/"/g, '""')}"`,
+          `${DB.computeCompleteness(p)}%`,
+          p.dataSource
+        ].join(',');
+      });
+      const csv = [header, ...rows].join('\\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `sku-audit-export-${new Date().toISOString().slice(0,10)}.csv`;
+      link.click();
+      if (App) App.showToast(`Exportados ${_filteredProducts.length} productos a CSV`, 'success');
     },
     saveSelected() {
       // Since inline edit saves directly to DB.saveProduct, this button is mostly a psychological reassurance,
