@@ -4,8 +4,27 @@ const UILevantamiento = (() => {
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   
   let _hasSyncedFirebase = false;
+  let _auditoresFetched = false;
   let _filterDate = '';
   let _filterAuditor = '';
+  let _auditoresOpts = '';
+  let _dmusOpts = '';
+  
+  async function fetchMetadata() {
+    if (_auditoresFetched || !window.FirebaseAPI) return;
+    try {
+      const [auditores, dmus] = await Promise.all([
+        window.FirebaseAPI.obtenerAuditores(),
+        window.FirebaseAPI.obtenerTiposNegocio()
+      ]);
+      _auditoresOpts = auditores.map(a => `<option value="${esc(a.nombre || a.id)}">`).join('');
+      _dmusOpts = dmus.map(d => `<option value="${esc(d.nombre || d.id)}">`).join('');
+      _auditoresFetched = true;
+      render();
+    } catch(e) {
+      console.warn("No se pudieron cargar catálogos desde Firebase", e);
+    }
+  }
 
   function render() {
     const el = document.getElementById('view-levantamiento');
@@ -24,7 +43,8 @@ const UILevantamiento = (() => {
   </div>
   <div class="view-actions" style="display:flex; align-items:center; gap:8px;">
     <input type="date" id="fb-filter-date" class="form-input" style="width:130px;" title="Fecha" value="${_filterDate}" onchange="UILevantamiento.setFilters()">
-    <input type="text" id="fb-filter-auditor" class="form-input" placeholder="Auditor..." style="width:120px;" value="${_filterAuditor}" onchange="UILevantamiento.setFilters()">
+    <input type="text" list="fb-auditores-list" id="fb-filter-auditor" class="form-input" placeholder="Auditor..." style="width:120px;" value="${_filterAuditor}" onchange="UILevantamiento.setFilters()">
+    <datalist id="fb-auditores-list">${_auditoresOpts}</datalist>
     <button class="btn-outline" onclick="UILevantamiento.syncFirebase(true)">
       <span class="spin-ico" id="fb-sync-icon">🔥</span> Descargar
     </button>
@@ -56,7 +76,8 @@ const UILevantamiento = (() => {
       <div class="form-row">
         <div class="form-group" style="flex:1">
           <label>DMU / Góndola</label>
-          <input type="text" class="form-input" id="lev-dmu" placeholder="Ej: ACEITES">
+          <input type="text" list="lev-dmus-list" class="form-input" id="lev-dmu" placeholder="Ej: ACEITES">
+          <datalist id="lev-dmus-list">${_dmusOpts}</datalist>
         </div>
         <div class="form-group" style="flex:1">
           <label>Categoría Levantamiento</label>
@@ -65,7 +86,8 @@ const UILevantamiento = (() => {
       </div>
       <div class="form-group">
         <label>Auditor</label>
-        <input type="text" class="form-input" id="lev-auditor" placeholder="Nombre del auditor">
+        <input type="text" list="lev-auditores-list" class="form-input" id="lev-auditor" placeholder="Nombre del auditor">
+        <datalist id="lev-auditores-list">${_auditoresOpts}</datalist>
       </div>
       <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
         <button class="btn-outline" onclick="UILevantamiento.clearForm()">Limpiar</button>
@@ -99,7 +121,7 @@ const UILevantamiento = (() => {
               </tr>
             </thead>
             <tbody>
-              ${staging.map((s, i) => `
+              ${staging.slice(-25).reverse().map(s => `
               <tr style="background:${s.status === 'MATCHED' ? '#d4edda' : (s.status === 'UNDEFINED' ? '#fff3cd' : 'transparent')}">
                 <td class="mono" style="font-weight:600;">${esc(s.ean)}</td>
                 <td><span class="holding-badge-sm">${esc(s.holdingId)}</span></td>
@@ -111,7 +133,7 @@ const UILevantamiento = (() => {
                     ${s.status === 'MATCHED' ? '✔️ Matched' : (s.status === 'UNDEFINED' ? '⚠️ Indefinido' : 'Pendiente')}
                   </span>
                 </td>
-                <td><button class="btn-mini" style="color:var(--danger)" onclick="UILevantamiento.removeEntry(${i})">✕</button></td>
+                <td><button class="btn-mini" style="color:var(--danger)" onclick="UILevantamiento.removeEntry(${staging.indexOf(s)})">✕</button></td>
               </tr>`).join('')}
             </tbody>
           </table>`
@@ -166,6 +188,7 @@ const UILevantamiento = (() => {
     if (!_hasSyncedFirebase) {
       setTimeout(() => syncFirebase(false), 500); // Auto sync once on first render
     }
+    fetchMetadata();
   }
 
   function setFilters() {
@@ -253,8 +276,16 @@ const UILevantamiento = (() => {
       let nuevos = [];
 
       for (const reg of datos) {
-        if (!reg.ean) {
-           // Ruta C (Terreno): Producto sin EAN
+        let eanStr = String(reg.ean || '').trim();
+        let isValidEan = false;
+        
+        if (eanStr) {
+           const eanCheck = DB.validateEAN(eanStr);
+           isValidEan = eanCheck.valid;
+        }
+
+        if (!isValidEan) {
+           // Ruta C (Terreno): Producto sin EAN o EAN inválido (probablemente un DMU)
            const existsNoEan = DB.getStagingNoEan().find(s => s.firebaseId === reg.id);
            if (!existsNoEan) {
               const mappedCategory = reg.categoria || ''; 
@@ -262,7 +293,7 @@ const UILevantamiento = (() => {
               DB.addStagingNoEan({
                  firebaseId: reg.id,
                  holdingId: holding,
-                 dmu: reg.dmu || reg.pasillo || mappedCategory,
+                 dmu: reg.dmu || reg.pasillo || (eanStr ? eanStr : mappedCategory),
                  category: mappedCategory,
                  auditor: reg.auditor || 'App Terreno',
                  timestamp: reg.fecha?.toDate ? reg.fecha.toDate().toISOString() : new Date().toISOString(),

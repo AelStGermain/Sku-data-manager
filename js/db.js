@@ -59,6 +59,7 @@ const DB = (() => {
   const PLANOGRAMS_KEY = 'ss_planograms';
   const STAGING_LEVANTAMIENTO_KEY = 'ss_staging_levantamiento';
   const STAGING_UNMATCHED_KEY = 'ss_staging_unmatched';
+  const STAGING_NO_EAN_KEY = 'ss_staging_no_ean';
   const VISPERA_BATCH_KEY = 'ss_vispera_batch';
   const BRANDS_PRODUCERS_KEY = 'ss_brands_producers';
   const CATEGORY_MAPPING_KEY = 'ss_category_mapping';

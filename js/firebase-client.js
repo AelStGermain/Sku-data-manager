@@ -65,8 +65,22 @@ async function buscarPorEan(ean) {
   }));
 }
 
+async function obtenerAuditores() {
+  const consulta = query(collection(db, "auditores"));
+  const resultado = await getDocs(consulta);
+  return resultado.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+async function obtenerTiposNegocio() {
+  const consulta = query(collection(db, "tipos_negocio"));
+  const resultado = await getDocs(consulta);
+  return resultado.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
 // Expose globally for vanilla JS compatibility
 window.FirebaseAPI = {
   obtenerLevantamientos,
-  buscarPorEan
+  buscarPorEan,
+  obtenerAuditores,
+  obtenerTiposNegocio
 };
