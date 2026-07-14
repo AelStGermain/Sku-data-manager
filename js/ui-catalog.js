@@ -454,8 +454,6 @@ ${renderPagination(filtered.length)}`;
       if (batchToSave.length > 0) {
         await DB.saveProducts(batchToSave);
       }
-      }
-
       _enriching = false;
       if (found > 0) App.showToast(`${found} productos actualizados usando API`, 'success');
       
