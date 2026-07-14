@@ -493,6 +493,21 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
         UISheet.updateField('imageUrl', item.imageUrl);
       }
 
+      // Pre-select holding and set customerId
+      if (item.holdingId) {
+        UISheet.setHolding(item.holdingId);
+        UISheet.addToHolding(item.holdingId);
+        if (item.customerId) {
+          UISheet.updateHoldingField('customerId', item.customerId);
+          UISheet.updateHoldingField('holdingInternalId', item.customerId);
+          // Update the input manually if it exists
+          setTimeout(() => {
+            const inputs = document.querySelectorAll('.retailer-form-area .form-input');
+            if (inputs && inputs[0]) inputs[0].value = item.customerId;
+          }, 50);
+        }
+      }
+
       App.showToast('Formulario pre-cargado con datos del SKU de terreno. Completa y guarda.', 'info');
 
       // Remove from staging once promoted

@@ -9,7 +9,17 @@ const UISheet = (() => {
   let _holding  = null;   // active holding tab id
   let _dirty    = false;
   let _isCreate = false;
+  let _createMode = 'master'; // 'master' | 'field'
   let _activeImageIndex = 0;
+  
+  // Field discovery states
+  let _fdImageB64 = null;
+  let _fdImageFile = null;
+
+  function setCreateMode(mode) {
+    _createMode = mode;
+    _render();
+  }
 
   function open(ean) {
     const p = DB.getProduct(ean);
@@ -50,6 +60,9 @@ const UISheet = (() => {
     };
     _original = JSON.parse(JSON.stringify(_data));
     _dirty = true;
+    _createMode = 'master';
+    _fdImageB64 = null;
+    _fdImageFile = null;
     const holdings = DB.getHoldings();
     _holding = holdings.length > 0 ? holdings[0].id : null;
     _render();
@@ -418,8 +431,113 @@ const UISheet = (() => {
       enrichBadge = `<span class="enrich-badge pending">○ Sin consultar API</span>`;
     }
 
+    // -- Create Mode Tabs --
+    let tabsHtml = '';
+    if (_isCreate) {
+      tabsHtml = `
+      <div class="sheet-create-tabs" style="display:flex; border-bottom:1px solid var(--border); background:var(--surface-el);">
+        <button class="sheet-c-tab ${_createMode === 'master' ? 'active' : ''}" onclick="UISheet.setCreateMode('master')" style="flex:1; padding:16px; border:none; background:transparent; font-weight:600; cursor:pointer; color:${_createMode === 'master' ? 'var(--accent)' : 'var(--text-sec)'}; border-bottom:${_createMode === 'master' ? '2px solid var(--accent)' : 'none'}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo SKU Máster
+        </button>
+        <button class="sheet-c-tab ${_createMode === 'field' ? 'active' : ''}" onclick="UISheet.setCreateMode('field')" style="flex:1; padding:16px; border:none; background:transparent; font-weight:600; cursor:pointer; color:${_createMode === 'field' ? '#FFC107' : 'var(--text-sec)'}; border-bottom:${_createMode === 'field' ? '2px solid #FFC107' : 'none'}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Reporte de Terreno
+        </button>
+        <button class="btn-close-sheet" onclick="UISheet.close()" style="position:absolute; right:12px; top:12px; padding:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>`;
+    }
+
+    if (_isCreate && _createMode === 'field') {
+      const holdingOpts = holdings.map(h => `<option value="${h.id}">${h.name}</option>`).join('');
+      const uniCatOpts = (window.UNIVERSAL_CATEGORIES || []).map(c => `<option value="${c}">${c}</option>`).join('');
+
+      container.innerHTML = `
+      ${tabsHtml}
+      <div class="fd-modal-body" style="height:calc(100% - 110px); overflow-y:auto; padding:24px;">
+        <div class="fd-two-cols">
+          <div class="fd-col-photo">
+            <p class="fd-section-lbl">Foto del Producto</p>
+            <div class="fd-photo-drop" id="fd-photo-drop" onclick="document.getElementById('fd-file-inp').click()">
+              <img id="fd-photo-preview" src="${_fdImageB64 || ''}" style="display:${_fdImageB64 ? 'block' : 'none'}; width:100%; height:100%; object-fit:contain; border-radius:8px;">
+              <div id="fd-photo-placeholder" style="display:${_fdImageB64 ? 'none' : 'flex'}">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-muted)"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <span>Haz clic o arrastra una foto aquí</span>
+              </div>
+            </div>
+            <input type="file" id="fd-file-inp" accept="image/*" capture="environment" style="display:none" onchange="UISheet._fdHandleImage(this)">
+          </div>
+
+          <div class="fd-col-meta">
+            <p class="fd-section-lbl">Datos del Producto (Sin EAN confirmado)</p>
+            <div class="form-group">
+              <label>Descripción breve <span style="color:var(--danger)">*</span></label>
+              <input type="text" id="fd-desc" class="form-input" placeholder="Ej: Leche descremada, 1L" maxlength="120">
+            </div>
+            <div class="fd-two-mini">
+              <div class="form-group">
+                <label>EAN tentativo <span id="fd-ean-badge" style="font-size:11px; margin-left:8px;"></span></label>
+                <input type="text" id="fd-ean" class="form-input" placeholder="EAN si lo tienes" maxlength="13" oninput="UISheet._fdValidateEAN(this.value)">
+              </div>
+              <div class="form-group">
+                <label>Customer ID (Opcional)</label>
+                <input type="text" id="fd-customer-id" class="form-input" placeholder="ID interno del holding">
+              </div>
+            </div>
+            <div class="fd-two-mini">
+              <div class="form-group">
+                <label>DMU</label>
+                <input type="text" id="fd-dmu" class="form-input">
+              </div>
+              <div class="form-group">
+                <label>Pasillo / Góndola</label>
+                <input type="text" id="fd-aisle" class="form-input">
+              </div>
+            </div>
+            <div class="fd-two-mini">
+              <div class="form-group">
+                <label>Holding</label>
+                <select id="fd-holding" class="form-select"><option value="">-- Seleccionar --</option>${holdingOpts}</select>
+              </div>
+              <div class="form-group">
+                <label>Categoría Vispera</label>
+                <select id="fd-cat-universal" class="form-select"><option value="">-- Seleccionar --</option>${uniCatOpts}</select>
+              </div>
+            </div>
+            <div class="fd-alert-notice" style="margin-top:16px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Este SKU quedará en la lista de EANs sin Identificar (Staging).
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="fd-modal-footer" style="padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:12px; position:absolute; bottom:0; width:100%; background:var(--surface);">
+        <button class="btn-primary" id="fd-submit-btn" onclick="UISheet.submitFieldDiscovery()">
+          Registrar SKU de Terreno
+        </button>
+      </div>`;
+
+      // Drag & drop logic
+      requestAnimationFrame(() => {
+        const dropZone = document.getElementById('fd-photo-drop');
+        if (dropZone) {
+          dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('drag-over'); };
+          dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
+          dropZone.ondrop = e => {
+            e.preventDefault(); dropZone.classList.remove('drag-over');
+            const file = e.dataTransfer?.files[0];
+            if (file && file.type.startsWith('image/')) UISheet._fdSetFile(file);
+          };
+        }
+      });
+      return;
+    }
+
     container.innerHTML = `
-<div class="sheet-layout">
+${tabsHtml}
+<div class="sheet-layout" style="${_isCreate ? 'height:calc(100% - 53px); top:53px;' : ''}">
 
   <!-- ═══ LEFT: UNIVERSAL PRODUCTS (MASTER) ═══ -->
   <div class="sheet-left">
@@ -432,9 +550,9 @@ const UISheet = (() => {
           Enriquecer SKU
         </button>
       </div>
-      <button class="btn-close-sheet" onclick="UISheet.close()">
+      ${!_isCreate ? `<button class="btn-close-sheet" onclick="UISheet.close()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      </button>` : ''}
     </div>
 
     <input class="sheet-title-inp" type="text" id="sheet-name"
@@ -603,6 +721,79 @@ const UISheet = (() => {
     }
   }
 
+  // --- Field Discovery Handlers ---
+  function _fdHandleImage(input) {
+    const file = input.files[0];
+    if (file) _fdSetFile(file);
+  }
+
+  function _fdSetFile(file) {
+    _fdImageFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      _fdImageB64 = e.target.result;
+      const preview = document.getElementById('fd-photo-preview');
+      const placeholder = document.getElementById('fd-photo-placeholder');
+      if (preview) { preview.src = _fdImageB64; preview.style.display = 'block'; }
+      if (placeholder) placeholder.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function _fdValidateEAN(val) {
+    const badge = document.getElementById('fd-ean-badge');
+    if (!badge) return;
+    if (!val || val.length < 8) { badge.textContent = ''; return; }
+    const v = DB.validateEAN(val);
+    badge.textContent = v.valid ? '✓ Válido' : '✗ Inválido';
+    badge.style.color  = v.valid ? 'var(--success, #4ac99b)' : 'var(--danger, #e55)';
+  }
+
+  async function submitFieldDiscovery() {
+    const desc = document.getElementById('fd-desc')?.value.trim();
+    if (!desc) { App.showToast('La descripción es obligatoria', 'error'); return; }
+
+    const tentativeEAN = document.getElementById('fd-ean')?.value.trim();
+    const customerId = document.getElementById('fd-customer-id')?.value.trim();
+    const dmu     = document.getElementById('fd-dmu')?.value.trim();
+    const aisle   = document.getElementById('fd-aisle')?.value.trim();
+    const holding = document.getElementById('fd-holding')?.value;
+    const catUni  = document.getElementById('fd-cat-universal')?.value;
+
+    const btn = document.getElementById('fd-submit-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+    const tempId = `TERRENO-${Date.now().toString(36).toUpperCase()}`;
+    const ean    = tentativeEAN || tempId;
+    const isTentative = !tentativeEAN;
+
+    let imageUrl = null;
+    if (_fdImageFile) {
+      try {
+        imageUrl = await DB.uploadProductImage(ean, _fdImageFile, 'field');
+      } catch { imageUrl = _fdImageB64; }
+    }
+
+    DB.addStagingUnmatched({
+      ean,
+      isTentativeEAN: isTentative,
+      type: 'field_discovery',
+      status: 'FIELD_DISCOVERY',
+      description: desc,
+      dmu,
+      aisle,
+      holdingId: holding || null,
+      customerId: customerId || null,
+      dmuCategory: catUni || null,
+      imageUrl,
+      apiRawName: desc,
+      timestamp: new Date().toISOString(),
+    });
+
+    App.showToast(isTentative ? `SKU de terreno registrado: ${ean}` : `SKU registrado con EAN tentativo: ${ean}`, 'success');
+    close();
+  }
+
   // Legacy aliases for backward compatibility with external calls
   function updateRetailerField(field, value) { updateHoldingField(field, value); }
   function addToRetailer(rid) { addToHolding(rid); }
@@ -614,6 +805,7 @@ const UISheet = (() => {
     updateField, updateHoldingField, toggleStock,
     setHolding, addToHolding, removeFromHolding,
     validateEANInput,
-    updateRetailerField, addToRetailer, removeFromRetailer, setRetailer
+    updateRetailerField, addToRetailer, removeFromRetailer, setRetailer,
+    setCreateMode, _fdHandleImage, _fdSetFile, _fdValidateEAN, submitFieldDiscovery
   };
 })();
