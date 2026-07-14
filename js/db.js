@@ -90,31 +90,67 @@ const DB = (() => {
   let _categoryMapping = [];
 
   async function init() {
-     if (typeof supabase === 'undefined') {
-       console.warn('Supabase SDK no cargado. Asegúrate de incluirlo en index.html');
-       return;
-     }
-     _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-     console.log('⚡ Conectado a BigQuery Data Warehouse (Multi-Holding)');
-     
-     // Initialize holdings in localStorage if not set
-     if (!localStorage.getItem(HOLDINGS_KEY)) {
-       localStorage.setItem(HOLDINGS_KEY, JSON.stringify(DEFAULT_HOLDINGS));
-     }
-
-     // Initialize stores in localStorage if not set
-     if (!localStorage.getItem(STORES_KEY)) {
-       localStorage.setItem(STORES_KEY, JSON.stringify(DEFAULT_STORES));
+     // Intentar inicializar Supabase solo si el SDK está disponible (opcional, no bloquea)
+     if (typeof supabase !== 'undefined') {
+       try {
+         _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+         console.log('⚡ Supabase SDK inicializado (Multi-Holding DW)');
+       } catch(e) {
+         console.warn('Supabase SDK presente pero fallo al inicializar:', e.message);
+       }
+     } else {
+       console.info('ℹ Supabase SDK no disponible. Modo 100% local/offline.');
      }
 
-     // Load staging data from localStorage
+     // Intentar cargar Holdings desde el servidor local (fallback a localStorage)
+     try {
+       const res = await fetch('http://localhost:3000/api/holdings');
+       if (res.ok) {
+         const serverHoldings = await res.json();
+         if (Array.isArray(serverHoldings) && serverHoldings.length > 0) {
+           localStorage.setItem(HOLDINGS_KEY, JSON.stringify(serverHoldings));
+           console.log(`⚡ Holdings cargados desde servidor: ${serverHoldings.length}`);
+         } else if (!localStorage.getItem(HOLDINGS_KEY)) {
+           localStorage.setItem(HOLDINGS_KEY, JSON.stringify(DEFAULT_HOLDINGS));
+         }
+       } else if (!localStorage.getItem(HOLDINGS_KEY)) {
+         localStorage.setItem(HOLDINGS_KEY, JSON.stringify(DEFAULT_HOLDINGS));
+       }
+     } catch (_) {
+       // Servidor offline — inicializar desde localStorage o defaults
+       if (!localStorage.getItem(HOLDINGS_KEY)) {
+         localStorage.setItem(HOLDINGS_KEY, JSON.stringify(DEFAULT_HOLDINGS));
+       }
+     }
+
+     // Intentar cargar Stores desde el servidor local (fallback a localStorage)
+     try {
+       const res = await fetch('http://localhost:3000/api/stores');
+       if (res.ok) {
+         const serverStores = await res.json();
+         if (Array.isArray(serverStores) && serverStores.length > 0) {
+           localStorage.setItem(STORES_KEY, JSON.stringify(serverStores));
+           console.log(`⚡ Stores cargados desde servidor: ${serverStores.length}`);
+         } else if (!localStorage.getItem(STORES_KEY)) {
+           localStorage.setItem(STORES_KEY, JSON.stringify(DEFAULT_STORES));
+         }
+       } else if (!localStorage.getItem(STORES_KEY)) {
+         localStorage.setItem(STORES_KEY, JSON.stringify(DEFAULT_STORES));
+       }
+     } catch (_) {
+       if (!localStorage.getItem(STORES_KEY)) {
+         localStorage.setItem(STORES_KEY, JSON.stringify(DEFAULT_STORES));
+       }
+     }
+
+     // Cargar datos de staging desde localStorage
      _stagingLevantamiento = JSON.parse(localStorage.getItem(STAGING_LEVANTAMIENTO_KEY) || '[]');
      _stagingUnmatched = JSON.parse(localStorage.getItem(STAGING_UNMATCHED_KEY) || '[]');
      _visperaBatch = JSON.parse(localStorage.getItem(VISPERA_BATCH_KEY) || '[]');
      _brandsProducers = JSON.parse(localStorage.getItem(BRANDS_PRODUCERS_KEY) || '[]');
      _categoryMapping = JSON.parse(localStorage.getItem(CATEGORY_MAPPING_KEY) || '[]');
 
-     // Load initial data
+     // Cargar productos (siempre, independientemente de Supabase)
      await fetchProducts();
   }
 
@@ -305,6 +341,12 @@ const DB = (() => {
   
   function saveHoldings(h) {
     localStorage.setItem(HOLDINGS_KEY, JSON.stringify(h));
+    // Sincronizar con servidor local (best-effort, no bloquea)
+    fetch('http://localhost:3000/api/holdings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(h)
+    }).catch(() => {});
   }
   function saveRetailers(h) { saveHoldings(h); }
   
@@ -626,12 +668,24 @@ const DB = (() => {
       list.push(store);
     }
     localStorage.setItem(STORES_KEY, JSON.stringify(list));
+    // Sincronizar con servidor local (best-effort)
+    fetch('http://localhost:3000/api/stores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(list)
+    }).catch(() => {});
     return store;
   }
 
   function deleteStore(storeId) {
     const list = getStores().filter(s => s.storeId !== storeId);
     localStorage.setItem(STORES_KEY, JSON.stringify(list));
+    // Sincronizar con servidor local (best-effort)
+    fetch('http://localhost:3000/api/stores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(list)
+    }).catch(() => {});
   }
 
   function getStorePlanogram(storeId) {
@@ -778,10 +832,20 @@ const DB = (() => {
     localStorage.setItem(PLANOGRAMS_KEY, JSON.stringify(list));
   }
 
+  // Convierte un Blob a Data URL (base64) — funciona siempre offline
+  function _blobToDataURL(blob) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  }
+
   async function uploadProductImage(ean, blob, type = 'product') {
+    // Fallback inmediato si no hay Supabase: usar Data URL (base64 local)
     if (!_supabase) {
-      console.warn('Supabase not initialized.');
-      return null;
+      console.info('Supabase no disponible. Imagen guardada como Data URL local.');
+      return _blobToDataURL(blob);
     }
 
     const fileExt = blob.type.split('/')[1] || 'png';
@@ -796,12 +860,8 @@ const DB = (() => {
         });
 
       if (error) {
-        console.error('Supabase storage upload error:', error);
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
+        console.warn('Supabase storage upload fallback a Data URL:', error.message);
+        return _blobToDataURL(blob);
       }
 
       const { data: publicUrlData } = _supabase.storage
@@ -810,12 +870,8 @@ const DB = (() => {
         
       return publicUrlData.publicUrl;
     } catch (err) {
-      console.error('Failed to upload image:', err);
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
+      console.warn('uploadProductImage error, usando Data URL:', err.message);
+      return _blobToDataURL(blob);
     }
   }
 

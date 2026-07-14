@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "dev":   "node server.js",
     "enrich": "node scripts/enrich-cron.js"
   },
   "dependencies": {

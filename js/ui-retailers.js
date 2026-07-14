@@ -164,7 +164,7 @@ const UIRetailers = (() => {
 
     modal.innerHTML = `
 <div class="form-modal-header">
-  <h2>${isEdit ? `Editar ${esc(r?.name||'')}` : 'Agregar retailer'}</h2>
+  <h2>${isEdit ? `Editar ${esc(r?.name||'')}` : 'Agregar Holding'}</h2>
   <button class="btn-close-sm" onclick="UIRetailers.closeForm()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
   </button>
@@ -172,8 +172,8 @@ const UIRetailers = (() => {
 
 <div class="form-modal-body" style="max-height:70vh;overflow-y:auto">
   <div class="form-group">
-    <label>Nombre del retailer *</label>
-    <input type="text" class="form-input" id="r-name" value="${esc(r?.name||'')}" placeholder="ej. Lider">
+    <label>Nombre del Holding *</label>
+    <input type="text" class="form-input" id="r-name" value="${esc(r?.name||'')}" placeholder="ej. Líder">
   </div>
   ${!isEdit ? `
   <div class="form-group">
@@ -208,7 +208,7 @@ const UIRetailers = (() => {
 <div class="form-modal-footer">
   <button class="btn-outline" onclick="UIRetailers.closeForm()">Cancelar</button>
   <button class="btn-primary" onclick="UIRetailers.saveForm()">
-    ${isEdit ? 'Guardar cambios' : 'Agregar retailer'}
+    ${isEdit ? 'Guardar cambios' : 'Agregar Holding'}
   </button>
 </div>`;
 
@@ -260,7 +260,7 @@ const UIRetailers = (() => {
       const idInput = document.getElementById('r-id')?.value.trim().toLowerCase().replace(/\s+/g,'-');
       if (!idInput) { App.showToast('El ID es obligatorio', 'error'); return; }
       const exists = DB.getRetailers().find(r => r.id === idInput);
-      if (exists) { App.showToast(`Ya existe un retailer con ID "${idInput}"`, 'error'); return; }
+      if (exists) { App.showToast(`Ya existe un Holding con ID "${idInput}"`, 'error'); return; }
       DB.addRetailer({ id: idInput, name, color, logoUrl, categories: [] });
       App.showToast(`${name} agregado correctamente`, 'success');
     }
@@ -273,7 +273,8 @@ const UIRetailers = (() => {
   function deleteRetailer(rid) {
     const r = DB.getRetailers().find(x => x.id === rid);
     if (!r) return;
-    const count = DB.getProductsArray().filter(p => p.retailers?.[rid]).length;
+    // Usar (holdings || retailers) para compatibilidad con ambas arquitecturas
+    const count = DB.getProductsArray().filter(p => (p.holdings || p.retailers || {})[rid]).length;
     const msg = count > 0
       ? `¿Eliminar "${r.name}"? Esto quitará sus datos de ${count} producto(s). Los productos seguirán en el catálogo.`
       : `¿Eliminar "${r.name}"?`;
@@ -385,9 +386,11 @@ const UIRetailers = (() => {
     let count = 0;
     const products = DB.getProductsArray();
     products.forEach(p => {
-      const rData = p.retailers && p.retailers[source];
+      // Acceder a (holdings || retailers) para compatibilidad
+      const hlds = p.holdings || p.retailers || {};
+      const rData = hlds[source];
       if (rData) {
-        if (cat === '__ALL__' || rData.category === cat) count++;
+        if (cat === '__ALL__' || rData.category === cat || rData.localCategoryName === cat) count++;
       }
     });
     
@@ -412,13 +415,24 @@ const UIRetailers = (() => {
     const products = DB.getProductsArray();
     
     products.forEach(p => {
-      const rData = p.retailers && p.retailers[source];
-      if (rData && (cat === '__ALL__' || rData.category === cat)) {
-         if (!p.retailers[_homologateTarget]) {
-            p.retailers[_homologateTarget] = {
+      // Usar holdings con fallback a retailers
+      if (!p.holdings && p.retailers) p.holdings = p.retailers;
+      if (!p.holdings) p.holdings = {};
+
+      const rData = p.holdings[source];
+      if (rData && (cat === '__ALL__' || rData.category === cat || rData.localCategoryName === cat)) {
+         if (!p.holdings[_homologateTarget]) {
+            const sourceCategory = cat === '__ALL__' 
+              ? (rData.localCategoryName || rData.category || 'Categoría por Defecto') 
+              : destCat;
+            p.holdings[_homologateTarget] = {
+               holdingInternalId: `HOM-${p.ean}`,
                customerId: `HOM-${p.ean}`,
+               localProductName: rData.localProductName || rData.name || p.name || '',
                name: rData.name || p.name || '',
-               category: cat === '__ALL__' ? (rData.category || 'Categoría por Defecto') : destCat,
+               localCategoryName: sourceCategory,
+               category: sourceCategory,
+               isActiveHolding: true,
                stockStatus: true,
                imageUrl: rData.imageUrl || p.imageUrl || null,
                updatedAt: new Date().toISOString()
@@ -697,6 +711,7 @@ const UIRetailers = (() => {
 
     const store = {
       storeId,
+      holdingId: _activeRetailerId,
       retailerId: _activeRetailerId,
       branchName,
       city
