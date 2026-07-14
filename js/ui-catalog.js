@@ -96,6 +96,8 @@ const UICatalog = (() => {
     const brand = esc(p.brand || '—');
     const ean   = esc(p.ean);
     const noImg = !rawImg;
+    const isPendingVispera = p.visperaId === null || p.visperaId === undefined;
+    const pendingBadge = isPendingVispera ? `<span class="status-badge conflict" title="Falta en Vispera" style="font-size:10px; margin-left:6px;">⚠️ Vispera</span>` : '';
 
     const retailerBadges = retailers
       .filter(r => { const h = p.holdings || p.retailers || {}; return h[r.id]; })
@@ -117,7 +119,7 @@ const UICatalog = (() => {
   </div>
   <div class="card-body">
     <p class="card-brand">${brand}</p>
-    <h3 class="card-name">${name}</h3>
+    <h3 class="card-name" style="display:flex;align-items:center;">${name} ${pendingBadge}</h3>
     <p class="card-ean">EAN: ${ean}</p>
     <div class="completeness-row">
       <div class="comp-track"><div class="comp-fill" style="width:${pct}%;background:${col}"></div></div>
@@ -140,6 +142,8 @@ const UICatalog = (() => {
     const brand   = esc(p.brand || '—');
     const ean     = esc(p.ean);
     const noImg   = !rawImg;
+    const isPendingVispera = p.visperaId === null || p.visperaId === undefined;
+    const pendingBadge = isPendingVispera ? `<span class="status-badge conflict" title="Falta en Vispera" style="font-size:10px; margin-left:6px;">⚠️ Vispera</span>` : '';
 
     const retailerBadges = retailers
       .filter(r => { const h = p.holdings || p.retailers || {}; return h[r.id]; })
@@ -153,7 +157,7 @@ const UICatalog = (() => {
   </div>
   <div class="pl-ean">${ean}</div>
   <div class="pl-info">
-    <span class="pl-name">${name}</span>
+    <span class="pl-name" style="display:flex;align-items:center;">${name} ${pendingBadge}</span>
     <span class="pl-brand">${brand}</span>
   </div>
   <div class="pl-badges">${retailerBadges} ${srcBadge(p.dataSource)}</div>

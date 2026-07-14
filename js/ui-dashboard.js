@@ -53,14 +53,16 @@ const UIDashboard = (() => {
       return { ...h, count: hProds.length, avg: hAvg };
     });
 
-    const fieldDiscoveryCount = DB.getStagingUnmatched().filter(i => i.type === 'field_discovery').length;
+    const noEanCount = DB.getStagingNoEan().length;
+    const visperaCount = DB.getVisperaBatch().length;
 
     const alerts = [];
-    if (fieldDiscoveryCount > 0) alerts.push({ icon: '📷', label: `${fieldDiscoveryCount} SKU${fieldDiscoveryCount > 1 ? 's' : ''} de terreno por revisar`, action: 'App.navigateTo("staging")' });
-    if (noBrand > 0) alerts.push({ icon: '🏷️', label: `${noBrand} SKU${noBrand > 1 ? 's' : ''} sin marca` });
-    if (noImage > 0) alerts.push({ icon: '🖼️', label: `${noImage} SKU${noImage > 1 ? 's' : ''} sin imagen` });
-    if (noCat > 0)   alerts.push({ icon: '🗂️', label: `${noCat} SKU${noCat > 1 ? 's' : ''} sin categoría Vispera` });
-    if (noWeight > 0) alerts.push({ icon: '⚖️', label: `${noWeight} SKU${noWeight > 1 ? 's' : ''} sin peso registrado` });
+    if (noEanCount > 0) alerts.push({ icon: '🔍', label: `${noEanCount} producto(s) SIN EAN por identificar`, action: 'App.navigateTo("staging")' });
+    if (visperaCount > 0) alerts.push({ icon: '🎫', label: `${visperaCount} ticket(s) pendientes a Vispera`, action: 'App.navigateTo("staging")' });
+    if (noBrand > 0) alerts.push({ icon: '🏷️', label: `${noBrand} SKU${noBrand > 1 ? 's' : ''} sin marca`, action: 'App.navigateTo("bulk")' });
+    if (noImage > 0) alerts.push({ icon: '🖼️', label: `${noImage} SKU${noImage > 1 ? 's' : ''} sin imagen`, action: 'App.navigateTo("bulk")' });
+    if (noCat > 0)   alerts.push({ icon: '🗂️', label: `${noCat} SKU${noCat > 1 ? 's' : ''} sin categoría Vispera`, action: 'App.navigateTo("bulk")' });
+    if (noWeight > 0) alerts.push({ icon: '⚖️', label: `${noWeight} SKU${noWeight > 1 ? 's' : ''} sin peso registrado`, action: 'App.navigateTo("bulk")' });
 
     el.innerHTML = `
 <header class="view-header">

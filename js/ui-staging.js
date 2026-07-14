@@ -4,61 +4,25 @@ const UIStaging = (() => {
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   let _enriching = false;
-  let _activeTab = 'unmatched'; // 'unmatched' | 'batch'
+  let _activeTab = 'no_ean'; // 'no_ean' | 'batch'
 
   function render() {
     const el = document.getElementById('view-auditoria');
     if (!el) return;
 
-    const unmatched = DB.getStagingUnmatched();
+    const noEan = DB.getStagingNoEan();
     const batch = DB.getVisperaBatch();
 
     el.innerHTML = `
 <header class="view-header">
   <div>
-    <h1 class="view-title">Auditoría de Matching</h1>
-    <p class="view-sub">Revisión de EANs no identificados y envío de lotes a Vispera</p>
+    <h1 class="view-title">Bandejas de Colaboración</h1>
+    <p class="view-sub">Asigna EANs a productos de terreno y gestiona Tickets para Vispera.</p>
   </div>
   <div class="view-actions">
-    <button class="btn-teal" onclick="UIStaging.enrichAll()" ${_enriching ? 'disabled' : ''}>
-      ${_enriching
-        ? '<span class="spin-ico">↻</span> Enriqueciendo…'
-        : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg> Paso 3: Enriquecer con APIs`
-      }
-    </button>
-    <button class="btn-primary" onclick="UIStaging.groupAndBatch()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      Agrupar y Enviar a Batch
-    </button>
+    <button class="btn-outline" onclick="UIStaging.clearBatch()">Limpiar Lotes Completados</button>
   </div>
 </header>
-
-<!-- Pipeline Flow Banner -->
-<div class="pipeline-flow-banner">
-  <div class="pf-step active">
-    <div class="pf-step-num">1</div>
-    <div class="pf-step-info">
-      <strong>Levantamiento</strong>
-      <span>Escaneo de EANs en tienda</span>
-    </div>
-  </div>
-  <div class="pf-arrow">→</div>
-  <div class="pf-step ${unmatched.length > 0 ? 'active' : ''}">
-    <div class="pf-step-num">2</div>
-    <div class="pf-step-info">
-      <strong>EANs sin Identificar</strong>
-      <span>${unmatched.length} pendientes de revisión</span>
-    </div>
-  </div>
-  <div class="pf-arrow">→</div>
-  <div class="pf-step ${batch.length > 0 ? 'active' : ''}">
-    <div class="pf-step-num">3</div>
-    <div class="pf-step-info">
-      <strong>Lote para Vispera</strong>
-      <span>${batch.length} SKUs listos para enviar</span>
-    </div>
-  </div>
-</div>
 
 <div class="dashboard-row stagger-in" style="display:flex; gap:16px; margin-bottom: 24px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow);">
   <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
@@ -73,17 +37,17 @@ const UIStaging = (() => {
 
 <!-- Tabs -->
 <div class="staging-tabs">
-  <button class="staging-tab ${_activeTab === 'unmatched' ? 'active' : ''}" onclick="UIStaging.setTab('unmatched')">
-    EANs sin Identificar
-    <span class="staging-tab-count">${unmatched.length}</span>
+  <button class="staging-tab ${_activeTab === 'no_ean' ? 'active' : ''}" onclick="UIStaging.setTab('no_ean')">
+    Por Identificar (Sin EAN)
+    <span class="staging-tab-count">${noEan.length}</span>
   </button>
   <button class="staging-tab ${_activeTab === 'batch' ? 'active' : ''}" onclick="UIStaging.setTab('batch')">
-    Lote para Vispera
+    Tickets a Vispera
     <span class="staging-tab-count">${batch.length}</span>
   </button>
 </div>
 
-${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
+${_activeTab === 'no_ean' ? renderNoEan(noEan) : renderBatch(batch)}
 `;
 
     setTimeout(_drawCharts, 50);
@@ -133,85 +97,55 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
     }
   }
 
-  function renderUnmatched(items) {
+  function renderNoEan(items) {
     if (items.length === 0) {
       return `
 <div class="empty-state" style="padding:40px;">
   <div class="empty-icon">✅</div>
-  <h3>Sin EANs pendientes</h3>
-  <p>Todos los EANs del levantamiento han sido matcheados o procesados.</p>
-  <button class="btn-outline" onclick="App.navigateTo('levantamiento')">Ir a Levantamiento</button>
+  <h3>Bandeja Limpia</h3>
+  <p>No hay productos pendientes de identificar.</p>
 </div>`;
     }
 
     return `
 <div class="staging-info-bar">
   <div class="staging-info-left">
-    <span class="staging-info-label">Total: <strong>${items.length}</strong> EAN(s) sin match</span>
-    <span class="staging-info-label">Enriquecidos: <strong>${items.filter(i => i.apiRawName && i.type !== 'field_discovery').length}</strong></span>
-    <span class="staging-info-label" style="color:var(--warning)">📷 De Terreno: <strong>${items.filter(i => i.type === 'field_discovery').length}</strong></span>
-    <span class="staging-info-label" style="color:var(--success)">Alta confianza: <strong>${items.filter(i => getConfidence(i) === 'ALTA').length}</strong></span>
+    <span class="staging-info-label">Total: <strong>${items.length}</strong> productos sin EAN</span>
   </div>
-  <button class="btn-clear" onclick="UIStaging.clearUnmatched()">Limpiar todo</button>
+  <button class="btn-clear" onclick="UIStaging.clearNoEan()">Limpiar todo</button>
 </div>
 
 <div class="preview-table-wrap" style="max-height:60vh;">
   <table class="preview-table">
     <thead>
       <tr>
-        <th width="50">Img</th>
-        <th>EAN / ID</th>
-        <th>Holding</th>
-        <th>Descripción / Nombre</th>
-        <th>Pasillo / DMU</th>
-        <th>Categoría Vispera</th>
-        <th>Tipo</th>
-        <th>Confianza</th>
+        <th>Holding / DMU</th>
+        <th>Nombre Reportado</th>
+        <th>Auditor / Fecha</th>
+        <th>Identificar EAN</th>
         <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
-      ${items.map(item => {
-        const isField = item.type === 'field_discovery';
-        const conf = isField ? '—' : getConfidence(item);
-        const confColor = conf === 'ALTA' ? 'var(--success)' : conf === 'BAJA' ? 'var(--warning)' : 'var(--text-muted)';
-        const catColor = VISPERA_CATEGORY_COLORS[item.apiUniversalCategory || item.dmuCategory] || '#888';
-        const imgSrc = item.imageUrl || '';
-        return `
-      <tr class="${isField ? 'field-discovery-row' : ''}">
+      ${items.map(item => `
+      <tr>
         <td>
-          ${imgSrc
-            ? `<div class="staging-thumb" style="background-image:url('${esc(imgSrc)}')"></div>`
-            : `<div class="staging-thumb staging-thumb-empty"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}
+          <span class="holding-badge-sm">${esc(item.holdingId || '—')}</span><br>
+          <span style="font-size:12px; color:var(--text-sec)">DMU: ${esc(item.dmu)}</span>
         </td>
-        <td class="mono" style="font-weight:600">
-          ${esc(item.ean)}
-          ${item.isTentativeEAN ? '<span class="tentative-ean-badge">tentativo</span>' : ''}
+        <td style="font-weight:500;">${esc(item.firebaseName || item.source)}</td>
+        <td style="font-size:12px;">
+          ${esc(item.auditor)}<br>
+          <span style="color:var(--text-muted)">${new Date(item.timestamp).toLocaleString('es-CL')}</span>
         </td>
-        <td><span class="holding-badge-sm">${esc(item.holdingId || '—')}</span></td>
-        <td>${esc(item.description || item.apiRawName || '—')}</td>
-        <td style="font-size:12px">
-          ${item.aisle ? `<span style="color:var(--text-sec)">${esc(item.aisle)}</span><br>` : ''}
-          ${item.dmu ? `<span style="color:var(--text-muted);font-size:11px">DMU: ${esc(item.dmu)}</span>` : ''}
-          ${!item.aisle && !item.dmu ? '—' : ''}
-        </td>
-        <td>${(item.apiUniversalCategory || item.dmuCategory)
-          ? `<span class="vispera-cat-badge" style="--cat-color:${catColor}">${esc(item.apiUniversalCategory || item.dmuCategory)}</span>`
-          : '<span style="color:var(--text-muted)">—</span>'}</td>
         <td>
-          ${isField
-            ? '<span class="confidence-badge" style="background:rgba(255,193,7,0.12);color:#FFC107;border-color:#FFC107">📷 Terreno</span>'
-            : `<span class="confidence-badge" style="background:${confColor}20;color:${confColor};border-color:${confColor}40">${conf}</span>`}
+          <input type="text" id="noean-input-${esc(item.id)}" class="form-input" placeholder="Ingresar EAN (13 dígitos)..." style="width:180px; padding:6px; font-family:monospace;">
         </td>
-        <td><span class="status-badge ${item.status === 'ENRICHED' ? 'new' : 'conflict'}" style="font-size:10px">${esc(item.status)}</span></td>
-        <td style="display:flex; gap:4px;">
-          ${isField
-            ? `<button class="btn-mini" onclick="UIStaging.promoteFieldDiscovery('${esc(item.id)}')" title="Crear SKU desde este registro">＋ Crear SKU</button>`
-            : `<button class="btn-mini" onclick="UIStaging.approveAndInsert('${esc(item.id)}')" title="Aprobar e insertar en Master">✓</button>`}
-          <button class="btn-mini" style="color:var(--danger)" onclick="UIStaging.removeUnmatched('${esc(item.id)}')" title="Rechazar">✕</button>
+        <td style="display:flex; gap:6px;">
+          <button class="btn-primary btn-mini" onclick="UIStaging.identifyEan('${esc(item.id)}')">Asignar EAN</button>
+          <button class="btn-mini" style="color:var(--danger)" onclick="UIStaging.removeNoEan('${esc(item.id)}')">✕</button>
         </td>
-      </tr>`;
-      }).join('')}
+      </tr>`).join('')}
     </tbody>
   </table>
 </div>`;
@@ -222,52 +156,47 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
       return `
 <div class="empty-state" style="padding:40px;">
   <div class="empty-icon">📦</div>
-  <h3>Sin lotes pendientes</h3>
-  <p>Agrupa EANs enriquecidos para generar lotes de envío a Vispera.</p>
+  <h3>Sin tickets pendientes</h3>
+  <p>Los tickets a Vispera se generan automáticamente al procesar EANs desconocidos en Levantamiento.</p>
 </div>`;
     }
 
     return `
 <div class="staging-info-bar">
   <div class="staging-info-left">
-    <span class="staging-info-label">Total lotes: <strong>${items.length}</strong></span>
+    <span class="staging-info-label">Total Tickets: <strong>${items.length}</strong></span>
     <span class="staging-info-label">Pendientes: <strong>${items.filter(i => i.status === 'PENDING_REVIEW').length}</strong></span>
     <span class="staging-info-label" style="color:var(--success)">Enviados: <strong>${items.filter(i => i.status === 'SENT_TO_VISPERA').length}</strong></span>
   </div>
-  <button class="btn-clear" onclick="UIStaging.clearBatch()">Limpiar lotes</button>
+  <button class="btn-clear" onclick="UIStaging.clearBatch()">Limpiar lista completa</button>
 </div>
 
 <div class="batch-cards">
   ${items.map(item => {
-    const eanCount = (item.eanList || []).length;
-    const catColor = VISPERA_CATEGORY_COLORS[item.universalCategory] || '#888';
+    const catColor = VISPERA_CATEGORY_COLORS[item.dmuCategory] || '#888';
     const statusClass = item.status === 'SENT_TO_VISPERA' ? 'new' : item.status === 'REJECTED' ? 'conflict' : '';
     return `
   <div class="batch-card">
     <div class="batch-card-header">
       <div>
-        <span class="mono" style="font-size:11px; color:var(--text-muted)">Batch: ${esc(item.batchId?.slice(0, 8))}…</span>
-        <h4 style="margin:4px 0 0 0">${esc(item.suggestedVisperaName || 'Sin nombre')}</h4>
+        <span class="mono" style="font-size:11px; color:var(--text-muted)">Ticket: ${esc(item.batchId?.slice(0, 8))}…</span>
+        <h4 style="margin:4px 0 0 0">${esc(item.name || 'Sin nombre')}</h4>
       </div>
       <span class="status-badge ${statusClass}">${esc(item.status)}</span>
     </div>
     <div class="batch-card-body">
       <div class="batch-meta">
-        <span><strong>Marca:</strong> ${esc(item.brand || '—')}</span>
-        <span><strong>Categoría:</strong> <span class="vispera-cat-badge" style="--cat-color:${catColor}">${esc(item.universalCategory || '—')}</span></span>
-        <span><strong>EANs:</strong> ${eanCount} código(s)</span>
+        <span><strong>EAN:</strong> <span class="mono" style="background:#eee; padding:2px 4px; border-radius:2px;">${esc(item.ean)}</span></span>
+        <span><strong>Categoría:</strong> <span class="vispera-cat-badge" style="--cat-color:${catColor}">${esc(item.dmuCategory || '—')}</span></span>
+        <span><strong>Motivo:</strong> ${esc(item.reason)}</span>
       </div>
-      ${eanCount > 0 ? `
-      <div class="batch-eans">
-        ${(item.eanList || []).map(e => `<span class="mono batch-ean-chip">${esc(e)}</span>`).join('')}
-      </div>` : ''}
     </div>
     <div class="batch-card-footer">
       <span style="font-size:10px; color:var(--text-muted)">${new Date(item.createdAt).toLocaleString('es-CL')}</span>
       ${item.status === 'PENDING_REVIEW' ? `
         <div style="display:flex; gap:6px;">
-          <button class="btn-mini" style="background:rgba(74,201,155,0.1); color:#4ac99b; border-color:rgba(74,201,155,0.2);" onclick="UIStaging.sendToVispera('${esc(item.batchId)}')">Aprobar y Enviar</button>
-          <button class="btn-mini" style="color:var(--danger); border-color:rgba(196,43,32,0.2);" onclick="UIStaging.rejectBatch('${esc(item.batchId)}')">Rechazar</button>
+          <button class="btn-mini" style="background:rgba(74,201,155,0.1); color:#4ac99b; border-color:rgba(74,201,155,0.2);" onclick="UIStaging.sendToVispera('${esc(item.batchId)}')">Marcar como Enviado a Vispera</button>
+          <button class="btn-mini" style="color:var(--danger); border-color:rgba(196,43,32,0.2);" onclick="UIStaging.rejectBatch('${esc(item.batchId)}')">Cancelar</button>
         </div>` : ''}
     </div>
   </div>`;
@@ -374,177 +303,78 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
     return 'GROCERY STORE';
   }
 
-  function groupAndBatch() {
-    const unmatched = DB.getStagingUnmatched().filter(i => i.status === 'ENRICHED');
-    if (unmatched.length === 0) {
-      App.showToast('No hay EANs enriquecidos para agrupar. Ejecuta Step 3 primero.', 'warning');
+  function setTab(tab) {
+    _activeTab = tab;
+    render();
+  }
+
+  function identifyEan(id) {
+    const input = document.getElementById(`noean-input-${id}`);
+    const ean = input ? input.value.trim() : '';
+    if (!ean || ean.length < 6) {
+      App.showToast('Ingresa un EAN válido de al menos 6 dígitos', 'error');
       return;
     }
 
-    // Step: Agrupación por marca + primeros 12 caracteres del nombre normalizado
-    const groups = {};
-    unmatched.forEach(item => {
-      const brand = (item.apiBrand || 'UNKNOWN').toUpperCase().trim();
-      const nameKey = (item.apiRawName || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
-      const groupKey = `${brand}__${nameKey}`;
-
-      if (!groups[groupKey]) {
-        groups[groupKey] = {
-          suggestedVisperaName: item.apiRawName || `${brand} PRODUCT`,
-          brand: item.apiBrand || 'UNKNOWN',
-          universalCategory: item.apiUniversalCategory || 'GROCERY STORE',
-          eanList: []
-        };
-      }
-      groups[groupKey].eanList.push(item.ean);
-    });
-
-    // Create batch items
-    let created = 0;
-    Object.values(groups).forEach(group => {
-      DB.addVisperaBatchItem(group);
-      created++;
-    });
-
-    // Remove processed items from unmatched
-    unmatched.forEach(item => DB.removeStagingUnmatched(item.id));
-
-    App.showToast(`${created} lotes creados con ${unmatched.length} EANs agrupados`, 'success');
-    _activeTab = 'batch';
-    render();
-  }
-
-  async function approveAndInsert(id) {
-    const item = DB.getStagingUnmatched().find(i => i.id === id);
+    const item = DB.getStagingNoEan().find(i => i.id === id);
     if (!item) return;
 
-    // Insert into Master SKU / Universal Products
-    const product = {
-      ean: item.ean,
-      name: item.apiRawName || 'Nuevo SKU de Terreno',
-      brand: item.apiBrand || 'N/A',
-      universalCategory: item.apiUniversalCategory || 'GROCERY STORE',
-      category: item.apiUniversalCategory || 'GROCERY STORE',
-      weight_g: item.apiWeight ? parseFloat(item.apiWeight) : null,
-      imageUrl: null,
-      status: 'new',
-      dataSource: 'levantamiento',
-      holdings: {}
-    };
+    // Send it to Levantamiento Pipeline
+    DB.addStagingLevantamiento({
+      ean: ean,
+      holdingId: item.holdingId,
+      dmu: item.dmu,
+      category: item.category,
+      auditor: item.auditor,
+      firebaseName: item.firebaseName || item.source,
+      status: 'PENDING'
+    });
 
-    // Associate with holding if known
-    if (item.holdingId) {
-      product.holdings[item.holdingId] = {
-        holdingInternalId: item.ean,
-        customerId: item.ean,
-        localProductName: product.name,
-        name: product.name,
-        localCategoryName: item.dmuCategory || product.universalCategory,
-        category: item.dmuCategory || product.universalCategory,
-        isActiveHolding: true,
-        stockStatus: true,
-        updatedAt: new Date().toISOString()
-      };
-    }
-
-    await DB.saveProduct(product);
-    DB.removeStagingUnmatched(id);
-    App.showToast(`EAN ${item.ean} insertado en Universal Products`, 'success');
+    DB.removeStagingNoEan(id);
+    App.showToast(`EAN ${ean} asignado. Producto enviado al Pipeline de Levantamiento.`, 'success');
     render();
   }
 
-  function removeUnmatched(id) {
-    DB.removeStagingUnmatched(id);
-    App.showToast('EAN removido del staging', 'info');
+  function removeNoEan(id) {
+    DB.removeStagingNoEan(id);
+    App.showToast('Registro eliminado', 'info');
     render();
   }
 
-  function clearUnmatched() {
-    if (!confirm('¿Limpiar todos los EANs no matcheados?')) return;
-    DB.clearStagingUnmatched();
-    App.showToast('Staging limpiado', 'info');
+  function clearNoEan() {
+    if (!confirm('¿Eliminar todos los registros por identificar?')) return;
+    DB.clearStagingNoEan();
+    App.showToast('Bandeja limpiada', 'info');
     render();
   }
 
   function clearBatch() {
-    if (!confirm('¿Limpiar todos los lotes de Vispera?')) return;
+    if (!confirm('¿Limpiar todos los tickets de Vispera?')) return;
     DB.clearVisperaBatch();
-    App.showToast('Lotes limpiados', 'info');
+    App.showToast('Tickets limpiados', 'info');
     render();
   }
 
   function sendToVispera(batchId) {
     DB.updateVisperaBatchItem(batchId, { status: 'SENT_TO_VISPERA' });
-    App.showToast('Lote aprobado y marcado como enviado a Vispera', 'success');
+    App.showToast('Ticket marcado como enviado a Vispera', 'success');
     render();
   }
 
   function rejectBatch(batchId) {
     DB.updateVisperaBatchItem(batchId, { status: 'REJECTED' });
-    App.showToast('Lote rechazado', 'info');
+    App.showToast('Ticket cancelado', 'info');
     render();
-  }
-
-  function promoteFieldDiscovery(id) {
-    const item = DB.getStagingUnmatched().find(i => i.id === id);
-    if (!item) return;
-
-    // Open the create sheet pre-populated with field discovery data
-    UISheet.openCreate(id);
-
-    // After a tick, pre-fill available fields
-    setTimeout(() => {
-      const eanInput = document.getElementById('sheet-ean-inp');
-      const nameInput = document.getElementById('sheet-name');
-
-      if (eanInput && !item.isTentativeEAN && item.ean) {
-        eanInput.value = item.ean;
-        UISheet.validateEANInput(item.ean);
-      }
-      if (nameInput && item.description) {
-        nameInput.value = item.description;
-        UISheet.updateField('name', item.description);
-      }
-      // Pre-select universal category
-      if (item.dmuCategory) {
-        UISheet.updateField('universalCategory', item.dmuCategory);
-        UISheet.updateField('category', item.dmuCategory);
-      }
-      // Set image if available
-      if (item.imageUrl) {
-        UISheet.updateField('imageUrl', item.imageUrl);
-      }
-
-      // Pre-select holding and set customerId
-      if (item.holdingId) {
-        UISheet.setHolding(item.holdingId);
-        UISheet.addToHolding(item.holdingId);
-        if (item.customerId) {
-          UISheet.updateHoldingField('customerId', item.customerId);
-          UISheet.updateHoldingField('holdingInternalId', item.customerId);
-          // Update the input manually if it exists
-          setTimeout(() => {
-            const inputs = document.querySelectorAll('.retailer-form-area .form-input');
-            if (inputs && inputs[0]) inputs[0].value = item.customerId;
-          }, 50);
-        }
-      }
-
-      App.showToast('Formulario pre-cargado con datos del SKU de terreno. Completa y guarda.', 'info');
-    }, 120);
   }
 
   return {
     render,
     setTab,
-    enrichAll,
-    groupAndBatch,
-    approveAndInsert,
-    removeUnmatched,
-    clearUnmatched,
+    identifyEan,
+    removeNoEan,
+    clearNoEan,
     clearBatch,
     sendToVispera,
-    rejectBatch,
-    promoteFieldDiscovery
+    rejectBatch
   };
 })();

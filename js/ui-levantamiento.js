@@ -181,6 +181,14 @@ const UILevantamiento = (() => {
     const auditor = document.getElementById('lev-auditor')?.value.trim();
 
     if (!ean || ean.length < 6) {
+      if (!ean) {
+        // Ruta C (Terreno): Producto sin EAN
+        DB.addStagingNoEan({ holdingId, dmu, category, auditor, source: 'Manual' });
+        App.showToast(`Registro SIN EAN agregado a Por Identificar`, 'info');
+        document.getElementById('lev-ean').value = '';
+        document.getElementById('lev-dmu').value = '';
+        return;
+      }
       App.showToast('EAN debe tener al menos 6 dígitos', 'error');
       return;
     }
@@ -240,11 +248,32 @@ const UILevantamiento = (() => {
       const datos = await window.FirebaseAPI.obtenerLevantamientos(opts);
       
       let agregados = 0;
+      let agregadosNoEan = 0;
       const staging = DB.getStagingLevantamiento();
       let nuevos = [];
 
       for (const reg of datos) {
-        if (!reg.ean) continue;
+        if (!reg.ean) {
+           // Ruta C (Terreno): Producto sin EAN
+           const existsNoEan = DB.getStagingNoEan().find(s => s.firebaseId === reg.id);
+           if (!existsNoEan) {
+              const mappedCategory = reg.categoria || ''; 
+              const holding = reg.holding || document.getElementById('lev-holding')?.value || 'TOTTUS';
+              DB.addStagingNoEan({
+                 firebaseId: reg.id,
+                 holdingId: holding,
+                 dmu: reg.dmu || reg.pasillo || mappedCategory,
+                 category: mappedCategory,
+                 auditor: reg.auditor || 'App Terreno',
+                 timestamp: reg.fecha?.toDate ? reg.fecha.toDate().toISOString() : new Date().toISOString(),
+                 firebaseName: reg.productoWeb || reg.nombreProductoOCR || 'Desconocido',
+                 firebasePrice: reg.precioWeb || reg.precioOCR
+              });
+              agregadosNoEan++;
+           }
+           continue;
+        }
+        
         const exists = staging.find(s => s.firebaseId === reg.id);
         if (!exists) nuevos.push(reg);
       }
@@ -293,8 +322,8 @@ const UILevantamiento = (() => {
       }
       
       _hasSyncedFirebase = true;
-      if (agregados > 0) {
-        App.showToast(`Se descargaron y enriquecieron ${agregados} levantamientos 🔥`, 'success');
+      if (agregados > 0 || agregadosNoEan > 0) {
+        App.showToast(`Se descargaron ${agregados} completos y ${agregadosNoEan} sin EAN 🔥`, 'success');
       } else if (force) {
         App.showToast('No se encontraron nuevos levantamientos.', 'info');
       }
@@ -360,19 +389,46 @@ const UILevantamiento = (() => {
         entry.status = 'MATCHED';
         matched++;
       } else {
-        // Step 2: Unmatched → send to staging_unmatched_eans
-        DB.addStagingUnmatched({
+        // Ruta B: Unmatched (New EAN) -> Guardar en Catálogo + Vispera Tickets
+        
+        // 1. Guardar en Catálogo Maestro (como pending Vispera)
+        const newProduct = {
           ean: entry.ean,
-          holdingId: entry.holdingId,
-          dmuCategory: entry.dmu || entry.category,
-          apiRawName: entry.firebaseName || null,
-          apiBrand: null,
-          apiWeight: null,
-          apiUniversalCategory: null,
-          confidenceScore: null,
-          status: 'PENDING_ENRICHMENT'
+          name: entry.firebaseName || 'Producto Nuevo',
+          brand: 'Por Definir',
+          netWeight: 'Por Definir',
+          universalCategory: entry.category || 'General',
+          visperaId: null, // Asegurar que sea null para Vispera
+          holdings: {
+            [entry.holdingId]: {
+              holdingInternalId: entry.ean,
+              customerId: entry.ean,
+              localProductName: entry.firebaseName || 'Producto Nuevo',
+              name: entry.firebaseName || 'Producto Nuevo',
+              localCategoryName: entry.category || 'General',
+              category: entry.category || 'General',
+              dmu: entry.dmu || '',
+              isActiveHolding: true,
+              stockStatus: true,
+              updatedAt: new Date().toISOString()
+            }
+          }
+        };
+        
+        // Guardar asíncronamente
+        DB.saveProduct(newProduct, true);
+        
+        // 2. Enviar a Tickets Vispera (Nuevos SKUs)
+        DB.addVisperaBatchItem({
+          ean: entry.ean,
+          name: newProduct.name,
+          dmuCategory: entry.dmu || entry.category || 'General',
+          reason: 'Nuevo SKU ingresado (Ruta B)',
+          source: 'App de Levantamiento'
         });
-        entry.status = 'UNDEFINED';
+        visperaTickets++;
+        
+        entry.status = 'CATALOGUED';
         unmatched++;
       }
     }
@@ -380,7 +436,7 @@ const UILevantamiento = (() => {
     // Save status changes without clearing staging
     localStorage.setItem('ss_staging_levantamiento', JSON.stringify(staging));
 
-    App.showToast(`Completado: ${matched} matcheados, ${unmatched} a auditoría. ${visperaTickets} tickets a Vispera.`, 'success');
+    App.showToast(`Completado: ${matched} matches, ${unmatched} catalogados. ${visperaTickets} tickets creados.`, 'success');
     render();
   }
 

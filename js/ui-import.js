@@ -386,11 +386,11 @@ ${extra > 0 ? `<p class="preview-more">… y ${extra} producto${extra!==1?'s':''
 <div class="results-stats">
   <div class="rstat-big new">
     <span class="rstat-big-v">${created}</span>
-    <span class="rstat-big-l">✚ Nuevos productos</span>
+    <span class="rstat-big-l">✚ EANs listos (Pipeline)</span>
   </div>
   <div class="rstat-big update">
     <span class="rstat-big-v">${updated}</span>
-    <span class="rstat-big-l">↻ Actualizados</span>
+    <span class="rstat-big-l">↻ Terreno (Sin EAN)</span>
   </div>
   <div class="rstat-big skip">
     <span class="rstat-big-v">${skipped}</span>
@@ -430,12 +430,11 @@ ${conflictLog.length > 0 ? `
 </div>` : ''}
 
 <div class="results-actions">
-  <button class="btn-primary" onclick="App.navigateTo('catalog')">Ver catálogo →</button>
+  <button class="btn-primary" onclick="App.navigateTo('levantamiento')">Ir a Levantamiento →</button>
   <button class="btn-outline" onclick="UIImport.reset()">Importar otro archivo</button>
 </div>`;
   }
-
-  // ────────────────────────────────────────────
+// ────────────────────────────────────────────
   //  IMPORT EXECUTION
   // ────────────────────────────────────────────
   async function startImport() {
@@ -449,7 +448,7 @@ ${conflictLog.length > 0 ? `
     const detail = document.getElementById('import-detail');
     const status = document.getElementById('import-status');
 
-    // 1) Extract images from Excel and Import products into DB
+    // 1) Extract images from Excel and format rows
     const products = Importer.applyMapping(_fileData.rows, _mapping, _retailer, { headers: _fileData.headers, cellImages: _cellImages });
     
     if (status) status.textContent = 'Procesando imágenes de Excel...';
@@ -459,7 +458,6 @@ ${conflictLog.length > 0 ? `
           imgCount++;
           if (detail) detail.textContent = `Procesando imagen ${imgCount}...`;
           try {
-             // Subirá a Supabase Storage, o devolverá Base64 nativo si no está configurado
              const url = await DB.uploadProductImage(p.ean, p._imageBlob, 'product');
              p.imageUrl = url;
              if (_retailer && p.retailers[_retailer]) {
@@ -470,11 +468,46 @@ ${conflictLog.length > 0 ? `
        }
     }
 
-    _importResults = Importer.importWithMode(products, _importMode);
-    if (fill) fill.style.width = '30%';
-    if (detail) detail.textContent = `${_importResults.created} nuevos · ${_importResults.updated} actualizados · ${_importResults.skipped} omitidos`;
+    // 2) Redirect to Levantamiento Staging (Pipeline first) as requested by user
+    let addedCount = 0;
+    let noEanCount = 0;
+    
+    for (const p of products) {
+       if (!p.ean || p.ean.toString().trim().length < 6) {
+           DB.addStagingNoEan({
+             holdingId: _retailer || 'IMPORTACION',
+             dmu: p.retailers?.[_retailer]?.dmu || p.category || '',
+             category: p.category || '',
+             auditor: 'Excel Import',
+             source: 'Subida Masiva Excel',
+             firebaseName: p.name || 'Sin Nombre'
+           });
+           noEanCount++;
+       } else {
+           DB.addStagingLevantamiento({
+             ean: p.ean.toString().trim(),
+             holdingId: _retailer || 'IMPORTACION',
+             dmu: p.retailers?.[_retailer]?.dmu || p.category || '',
+             category: p.category || '',
+             auditor: 'Excel Import',
+             firebaseName: p.name || '',
+             status: 'PENDING'
+           });
+           addedCount++;
+       }
+    }
 
-    // 2) Parallel enrichment
+    _importResults = { 
+      created: addedCount, 
+      updated: noEanCount, // abusing 'updated' to show no-ean count in UI
+      skipped: 0, 
+      conflictLog: [] 
+    };
+
+    if (fill) fill.style.width = '30%';
+    if (detail) detail.textContent = `${addedCount} EANs al Pipeline · ${noEanCount} sin EAN a Por Identificar`;
+
+    // 3) Parallel enrichment
     if (_enrich && products.length > 0) {
       if (status) status.textContent = 'Enriqueciendo con APIs externas (en paralelo)…';
 

@@ -85,6 +85,7 @@ const DB = (() => {
   // ── Staging & Pipeline data (in-memory + localStorage) ──
   let _stagingLevantamiento = [];
   let _stagingUnmatched = [];
+  let _stagingNoEan = [];
   let _visperaBatch = [];
   let _brandsProducers = [];
   let _categoryMapping = [];
@@ -146,6 +147,7 @@ const DB = (() => {
      // Cargar datos de staging desde localStorage
      _stagingLevantamiento = JSON.parse(localStorage.getItem(STAGING_LEVANTAMIENTO_KEY) || '[]');
      _stagingUnmatched = JSON.parse(localStorage.getItem(STAGING_UNMATCHED_KEY) || '[]');
+     _stagingNoEan = JSON.parse(localStorage.getItem(STAGING_NO_EAN_KEY) || '[]');
      _visperaBatch = JSON.parse(localStorage.getItem(VISPERA_BATCH_KEY) || '[]');
      _brandsProducers = JSON.parse(localStorage.getItem(BRANDS_PRODUCERS_KEY) || '[]');
      _categoryMapping = JSON.parse(localStorage.getItem(CATEGORY_MAPPING_KEY) || '[]');
@@ -589,6 +591,38 @@ const DB = (() => {
     localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify([]));
   }
 
+  // ── Staging: Por Identificar (Sin EAN / Terreno) ───────
+  function getStagingNoEan() { return _stagingNoEan; }
+
+  function addStagingNoEan(entry) {
+    entry.id = entry.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36));
+    entry.timestamp = entry.timestamp || new Date().toISOString();
+    entry.status = entry.status || 'PENDING_EAN';
+    _stagingNoEan.push(entry);
+    localStorage.setItem(STAGING_NO_EAN_KEY, JSON.stringify(_stagingNoEan));
+    return entry;
+  }
+
+  function updateStagingNoEan(id, updates) {
+    const idx = _stagingNoEan.findIndex(e => e.id === id);
+    if (idx !== -1) {
+      _stagingNoEan[idx] = { ..._stagingNoEan[idx], ...updates };
+      localStorage.setItem(STAGING_NO_EAN_KEY, JSON.stringify(_stagingNoEan));
+      return _stagingNoEan[idx];
+    }
+    return null;
+  }
+
+  function removeStagingNoEan(id) {
+    _stagingNoEan = _stagingNoEan.filter(e => e.id !== id);
+    localStorage.setItem(STAGING_NO_EAN_KEY, JSON.stringify(_stagingNoEan));
+  }
+
+  function clearStagingNoEan() {
+    _stagingNoEan = [];
+    localStorage.setItem(STAGING_NO_EAN_KEY, JSON.stringify([]));
+  }
+
   // ── Vispera Submission Batch ─────────────────
   function getVisperaBatch() { return _visperaBatch; }
 
@@ -663,6 +697,7 @@ const DB = (() => {
     localStorage.removeItem(PLANOGRAMS_KEY);
     localStorage.removeItem(STAGING_LEVANTAMIENTO_KEY);
     localStorage.removeItem(STAGING_UNMATCHED_KEY);
+    localStorage.removeItem(STAGING_NO_EAN_KEY);
     localStorage.removeItem(VISPERA_BATCH_KEY);
     localStorage.removeItem(BRANDS_PRODUCERS_KEY);
     localStorage.removeItem(CATEGORY_MAPPING_KEY);
@@ -672,6 +707,7 @@ const DB = (() => {
     _undoStack = [];
     _stagingLevantamiento = [];
     _stagingUnmatched = [];
+    _stagingNoEan = [];
     _visperaBatch = [];
     _brandsProducers = [];
     _categoryMapping = [];
@@ -954,6 +990,7 @@ const DB = (() => {
     getStagingUnmatched, addStagingUnmatched, updateStagingUnmatched, updateStagingUnmatchedBatch,
     removeStagingUnmatched,
     clearStagingUnmatched,
+    getStagingNoEan, addStagingNoEan, updateStagingNoEan, removeStagingNoEan, clearStagingNoEan,
     getVisperaBatch,
     addVisperaBatchItem,
     updateVisperaBatchItem,
