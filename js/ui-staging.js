@@ -4,23 +4,21 @@ const UIStaging = (() => {
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   let _enriching = false;
-  let _activeTab = 'no_ean'; // 'no_ean' | 'batch'
+  let _activeTab = 'matches'; // 'matches' | 'no_ean' | 'batch'
 
   function render() {
     const el = document.getElementById('view-auditoria');
     if (!el) return;
 
+    const matches = DB.getRecentMatches ? DB.getRecentMatches() : [];
     const noEan = DB.getStagingNoEan();
     const batch = DB.getVisperaBatch();
 
     el.innerHTML = `
 <header class="view-header">
   <div>
-    <h1 class="view-title">Bandejas de Colaboración</h1>
-    <p class="view-sub">Asigna EANs a productos de terreno y gestiona Tickets para Vispera.</p>
-  </div>
-  <div class="view-actions">
-    <button class="btn-outline" onclick="UIStaging.clearBatch()">Limpiar Lotes Completados</button>
+    <h1 class="view-title">Auditoría de Terreno</h1>
+    <p class="view-sub">Visualiza y exporta los resultados automáticos del procesamiento de SKUs.</p>
   </div>
 </header>
 
@@ -37,17 +35,21 @@ const UIStaging = (() => {
 
 <!-- Tabs -->
 <div class="staging-tabs">
-  <button class="staging-tab ${_activeTab === 'no_ean' ? 'active' : ''}" onclick="UIStaging.setTab('no_ean')">
-    Por Identificar (Sin EAN)
-    <span class="staging-tab-count">${noEan.length}</span>
+  <button class="staging-tab ${_activeTab === 'matches' ? 'active' : ''}" onclick="UIStaging.setTab('matches')">
+    Matches Exitosos
+    <span class="staging-tab-count">${matches.length}</span>
   </button>
   <button class="staging-tab ${_activeTab === 'batch' ? 'active' : ''}" onclick="UIStaging.setTab('batch')">
-    Tickets a Vispera
+    EANs sin Vispera ID
     <span class="staging-tab-count">${batch.length}</span>
+  </button>
+  <button class="staging-tab ${_activeTab === 'no_ean' ? 'active' : ''}" onclick="UIStaging.setTab('no_ean')">
+    SKUs sin EAN
+    <span class="staging-tab-count">${noEan.length}</span>
   </button>
 </div>
 
-${_activeTab === 'no_ean' ? renderNoEan(noEan) : renderBatch(batch)}
+${_activeTab === 'matches' ? renderMatches(matches) : _activeTab === 'no_ean' ? renderNoEan(noEan) : renderBatch(batch)}
 `;
 
     setTimeout(_drawCharts, 50);
@@ -97,6 +99,58 @@ ${_activeTab === 'no_ean' ? renderNoEan(noEan) : renderBatch(batch)}
     }
   }
 
+  function renderMatches(items) {
+    if (items.length === 0) {
+      return `
+<div class="empty-state" style="padding:40px;">
+  <div class="empty-icon">✨</div>
+  <h3>No hay matches recientes</h3>
+  <p>Los productos que crucen exitosamente al descargar datos de Firebase aparecerán aquí.</p>
+</div>`;
+    }
+
+    return `
+<div class="staging-info-bar">
+  <div class="staging-info-left">
+    <span class="staging-info-label">Total: <strong>${items.length}</strong> matches recientes</span>
+  </div>
+  <button class="btn-primary" onclick="UIStaging.exportToExcel('matches')">Exportar a Excel</button>
+  <button class="btn-clear" onclick="UIStaging.clearMatches()">Limpiar historial</button>
+</div>
+
+<div class="preview-table-wrap" style="max-height:60vh;">
+  <table class="preview-table">
+    <thead>
+      <tr>
+        <th>EAN</th>
+        <th>Nombre Master</th>
+        <th>Categoría Vispera</th>
+        <th>Holding / DMU</th>
+        <th>Tipo de Match</th>
+        <th>Fecha / Auditor</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map(item => `
+      <tr>
+        <td class="mono">${esc(item.ean)}</td>
+        <td style="font-weight:500;">${esc(item.name)}</td>
+        <td><span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS[item.category] || '#888'}">${esc(item.category)}</span></td>
+        <td>
+          <span class="holding-badge-sm">${esc(item.holdingId)}</span><br>
+          <span style="font-size:12px; color:var(--text-sec)">DMU: ${esc(item.dmu)}</span>
+        </td>
+        <td><span class="status-badge ${item.type === 'NUEVO_SKU' ? 'new' : 'active'}">${esc(item.type)}</span></td>
+        <td style="font-size:12px;">
+          ${new Date(item.matchDate).toLocaleString('es-CL')}<br>
+          <span style="color:var(--text-muted)">${esc(item.auditor)}</span>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>`;
+  }
+
   function renderNoEan(items) {
     if (items.length === 0) {
       return `
@@ -112,6 +166,7 @@ ${_activeTab === 'no_ean' ? renderNoEan(noEan) : renderBatch(batch)}
   <div class="staging-info-left">
     <span class="staging-info-label">Total: <strong>${items.length}</strong> productos sin EAN</span>
   </div>
+  <button class="btn-primary" onclick="UIStaging.exportToExcel('no_ean')">Exportar a Excel</button>
   <button class="btn-clear" onclick="UIStaging.clearNoEan()">Limpiar todo</button>
 </div>
 
@@ -168,6 +223,7 @@ ${_activeTab === 'no_ean' ? renderNoEan(noEan) : renderBatch(batch)}
     <span class="staging-info-label">Pendientes: <strong>${items.filter(i => i.status === 'PENDING_REVIEW').length}</strong></span>
     <span class="staging-info-label" style="color:var(--success)">Enviados: <strong>${items.filter(i => i.status === 'SENT_TO_VISPERA').length}</strong></span>
   </div>
+  <button class="btn-primary" onclick="UIStaging.exportToExcel('batch')">Exportar a Excel</button>
   <button class="btn-clear" onclick="UIStaging.clearBatch()">Limpiar lista completa</button>
 </div>
 
@@ -367,14 +423,84 @@ ${_activeTab === 'no_ean' ? renderNoEan(noEan) : renderBatch(batch)}
     render();
   }
 
+  function clearMatches() {
+    if (!confirm('¿Seguro que deseas limpiar el historial de matches? Esto no afectará a los productos de la Master Data.')) return;
+    DB.clearRecentMatches();
+    render();
+  }
+
+  function exportToExcel(type) {
+    let data = [];
+    let filename = '';
+    
+    if (type === 'matches') {
+      const items = DB.getRecentMatches();
+      data = items.map(i => ({
+        EAN: i.ean,
+        Nombre: i.name,
+        Categoria: i.category,
+        Holding: i.holdingId,
+        DMU: i.dmu,
+        Auditor: i.auditor,
+        Fecha: new Date(i.matchDate).toLocaleString('es-CL'),
+        Tipo: i.type
+      }));
+      filename = 'auditoria_matches.csv';
+    } else if (type === 'no_ean') {
+      const items = DB.getStagingNoEan();
+      data = items.map(i => ({
+        Holding: i.holdingId,
+        DMU: i.dmu,
+        Categoria: i.category,
+        Auditor: i.auditor,
+        Fecha: new Date(i.timestamp).toLocaleString('es-CL'),
+        NombreApp: i.firebaseName
+      }));
+      filename = 'auditoria_sin_ean.csv';
+    } else if (type === 'batch') {
+      const items = DB.getVisperaBatch();
+      data = items.map(i => ({
+        EAN: i.ean,
+        Nombre: i.name,
+        Categoria: i.dmuCategory,
+        Motivo: i.reason,
+        Status: i.status,
+        Fecha: new Date(i.createdAt).toLocaleString('es-CL')
+      }));
+      filename = 'auditoria_tickets_vispera.csv';
+    }
+
+    if (data.length === 0) {
+      App.showToast('No hay datos para exportar', 'warning');
+      return;
+    }
+
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   return {
     render,
     setTab,
     identifyEan,
     removeNoEan,
     clearNoEan,
-    clearBatch,
     sendToVispera,
-    rejectBatch
+    rejectBatch,
+    clearBatch,
+    enrichAll,
+    clearMatches,
+    exportToExcel
   };
 })();

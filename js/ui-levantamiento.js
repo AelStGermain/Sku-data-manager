@@ -44,13 +44,6 @@ const UILevantamiento = (() => {
     <h1 class="view-title">App de Levantamiento</h1>
     <p class="view-sub">Escanear datos de productos y asociarlos con un DMU (Góndola/Category ID)</p>
   </div>
-  <div class="view-actions" style="display:flex; align-items:center; gap:8px;">
-    <span class="badge" style="background:var(--accent)">${staging.length} registros en Staging</span>
-    <button class="btn-teal" onclick="UILevantamiento.processStaging()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      Ejecutar Auditoría Matching
-    </button>
-  </div>
 </header>
 
 <div class="levantamiento-layout">
@@ -399,10 +392,12 @@ const UILevantamiento = (() => {
       
       _hasSyncedFirebase = true;
       if (agregados > 0 || agregadosNoEan > 0) {
-        App.showToast(`Se descargaron ${agregados} completos y ${agregadosNoEan} sin EAN 🔥`, 'success');
-      } else if (force) {
-        App.showToast('No se encontraron nuevos levantamientos.', 'info');
+        if (!force) App.showToast(`Se descargaron ${agregados} completos y ${agregadosNoEan} sin EAN 🔥`, 'success');
       }
+      
+      // AUTO MATCHING: Process directly to master catalog
+      await processStaging(true);
+      
     } catch (err) {
       console.error("Firebase sync error:", err);
       if (force) App.showToast('Error conectando con Firebase. Ver consola.', 'error');
@@ -411,16 +406,16 @@ const UILevantamiento = (() => {
     }
   }
 
-  async function processStaging() {
+  async function processStaging(silent = false) {
     const staging = DB.getStagingLevantamiento();
     const pending = staging.filter(s => s.status === 'PENDING' || !s.status);
     
     if (pending.length === 0) {
-      App.showToast('No hay registros pendientes en staging para procesar', 'warning');
+      if (!silent) App.showToast('No hay registros pendientes en staging para procesar', 'warning');
       return;
     }
 
-    App.showToast(`Procesando ${pending.length} registros a través del Pipeline...`, 'info');
+    if (!silent) App.showToast(`Procesando ${pending.length} registros a través del Pipeline...`, 'info');
 
     let matched = 0;
     let unmatched = 0;
@@ -449,6 +444,16 @@ const UILevantamiento = (() => {
           existing.holdings = holdings;
           await DB.saveProduct(existing, true);
         }
+        
+        DB.addRecentMatch({
+          ean: entry.ean,
+          name: existing.name,
+          category: entry.category || existing.universalCategory,
+          dmu: entry.dmu,
+          auditor: entry.auditor,
+          holdingId: entry.holdingId,
+          type: 'MATCH_EXISTENTE'
+        });
         
         // Vispera Check: si el producto existe pero no tiene ID de Vispera
         if (!existing.visperaId) {
@@ -494,6 +499,16 @@ const UILevantamiento = (() => {
         // Guardar asíncronamente
         DB.saveProduct(newProduct, true);
         
+        DB.addRecentMatch({
+          ean: entry.ean,
+          name: newProduct.name,
+          category: newProduct.universalCategory,
+          dmu: entry.dmu,
+          auditor: entry.auditor,
+          holdingId: entry.holdingId,
+          type: 'NUEVO_SKU'
+        });
+        
         // 2. Enviar a Tickets Vispera (Nuevos SKUs)
         DB.addVisperaBatchItem({
           ean: entry.ean,
@@ -512,7 +527,11 @@ const UILevantamiento = (() => {
     // Save status changes without clearing staging
     localStorage.setItem('ss_staging_levantamiento', JSON.stringify(staging));
 
-    App.showToast(`Completado: ${matched} matches, ${unmatched} catalogados. ${visperaTickets} tickets creados.`, 'success');
+    if (matched > 0 || unmatched > 0) {
+      App.showToast(`Auditoría Automática: ${matched} matches, ${unmatched} nuevos SKUs. ${visperaTickets} tickets a Vispera.`, 'success');
+    } else if (silent) {
+      App.showToast('Búsqueda finalizada. No hubo nuevos matches que procesar.', 'info');
+    }
     render();
   }
 

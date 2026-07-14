@@ -63,6 +63,7 @@ const DB = (() => {
   const VISPERA_BATCH_KEY = 'ss_vispera_batch';
   const BRANDS_PRODUCERS_KEY = 'ss_brands_producers';
   const CATEGORY_MAPPING_KEY = 'ss_category_mapping';
+  const RECENT_MATCHES_KEY = 'ss_recent_matches';
 
   const DEFAULT_HOLDINGS = [
     { id: 'tottus',  name: 'Tottus',  color: '#E8001C', logoUrl: 'tottus_logo.png' },
@@ -90,6 +91,7 @@ const DB = (() => {
   let _visperaBatch = [];
   let _brandsProducers = [];
   let _categoryMapping = [];
+  let _recentMatches = [];
 
   async function init() {
      // Intentar inicializar Supabase solo si el SDK está disponible (opcional, no bloquea)
@@ -152,6 +154,7 @@ const DB = (() => {
      _visperaBatch = JSON.parse(localStorage.getItem(VISPERA_BATCH_KEY) || '[]');
      _brandsProducers = JSON.parse(localStorage.getItem(BRANDS_PRODUCERS_KEY) || '[]');
      _categoryMapping = JSON.parse(localStorage.getItem(CATEGORY_MAPPING_KEY) || '[]');
+     _recentMatches = JSON.parse(localStorage.getItem(RECENT_MATCHES_KEY) || '[]');
 
      // Cargar productos (siempre, independientemente de Supabase)
      await fetchProducts();
@@ -677,6 +680,21 @@ const DB = (() => {
     return entry;
   }
 
+  function getRecentMatches() {
+    return [..._recentMatches];
+  }
+
+  function addRecentMatch(match) {
+    _recentMatches.unshift({ ...match, matchDate: new Date().toISOString() });
+    if (_recentMatches.length > 500) _recentMatches = _recentMatches.slice(0, 500);
+    localStorage.setItem(RECENT_MATCHES_KEY, JSON.stringify(_recentMatches));
+  }
+
+  function clearRecentMatches() {
+    _recentMatches = [];
+    localStorage.setItem(RECENT_MATCHES_KEY, JSON.stringify(_recentMatches));
+  }
+
   // ── backup / restore ───────────────────────
   function exportBackup() {
     return JSON.stringify(getProductsArray(), null, 2);
@@ -1001,6 +1019,10 @@ const DB = (() => {
     addBrandProducer,
     // Category Mapping
     getCategoryMapping,
-    addCategoryMapping
+    addCategoryMapping,
+    // Recent Matches
+    getRecentMatches,
+    addRecentMatch,
+    clearRecentMatches
   };
 })();
