@@ -9,6 +9,7 @@ const UILevantamiento = (() => {
   let _filterDateTo = '';
   let _filterAuditor = '';
   let _filterDmu = '';
+  let _filterCategoria = '';
   let _auditoresOpts = '';
   let _dmusOpts = '';
   
@@ -75,10 +76,19 @@ const UILevantamiento = (() => {
         <input type="text" list="fb-auditores-list" id="fb-filter-auditor" class="form-input" placeholder="Todos los Auditores..." value="${_filterAuditor}" onchange="UILevantamiento.setFilters()">
         <datalist id="fb-auditores-list">${_auditoresOpts}</datalist>
       </div>
-      <div class="form-group">
-        <label>DMU / Góndola</label>
-        <input type="text" list="fb-dmus-list" id="fb-filter-dmu" class="form-input" placeholder="Todos los DMUs..." value="${_filterDmu}" onchange="UILevantamiento.setFilters()">
-        <datalist id="fb-dmus-list">${_dmusOpts}</datalist>
+      <div class="form-row">
+        <div class="form-group" style="flex:1">
+          <label>DMU / Góndola</label>
+          <input type="text" list="fb-dmus-list" id="fb-filter-dmu" class="form-input" placeholder="Todos los DMUs..." value="${_filterDmu}" onchange="UILevantamiento.setFilters()">
+          <datalist id="fb-dmus-list">${_dmusOpts}</datalist>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>Categoría</label>
+          <select id="fb-filter-cat" class="form-select" onchange="UILevantamiento.setFilters()">
+            <option value="">Todas las Categorías</option>
+            ${catOpts}
+          </select>
+        </div>
       </div>
       <div style="margin-top:16px;">
         <button class="btn-primary" style="width:100%; justify-content:center; padding:12px;" onclick="UILevantamiento.syncFirebase(true)">
@@ -219,8 +229,11 @@ const UILevantamiento = (() => {
   }
 
   function setFilters() {
-    _filterDate = document.getElementById('fb-filter-date')?.value || '';
+    _filterDateFrom = document.getElementById('fb-filter-date-from')?.value || '';
+    _filterDateTo = document.getElementById('fb-filter-date-to')?.value || '';
     _filterAuditor = document.getElementById('fb-filter-auditor')?.value || '';
+    _filterDmu = document.getElementById('fb-filter-dmu')?.value || '';
+    _filterCategoria = document.getElementById('fb-filter-cat')?.value || '';
   }
 
   function addEntry() {
@@ -297,7 +310,12 @@ const UILevantamiento = (() => {
       if (_filterDateTo) opts.fechaFin = _filterDateTo;
       if (_filterAuditor) opts.auditor = _filterAuditor;
       if (_filterDmu) opts.dmu = _filterDmu;
+      if (_filterCategoria) opts.categoria = _filterCategoria;
       const datos = await window.FirebaseAPI.obtenerLevantamientos(opts);
+      
+      if (force) {
+         DB.clearStagingLevantamiento();
+      }
       
       let agregados = 0;
       let agregadosNoEan = 0;
@@ -345,15 +363,13 @@ const UILevantamiento = (() => {
         const chunkSize = 10;
         for (let i = 0; i < nuevos.length; i += chunkSize) {
           const chunk = nuevos.slice(i, i + chunkSize);
-          
           await Promise.all(chunk.map(async (reg) => {
              const apiData = await API.enrichProduct(reg.ean);
-             const fallbackName = reg.productoWeb || reg.nombreProductoOCR || '';
              
-             let mappedName = fallbackName;
+             let mappedName = 'Desconocido';
              let mappedCategory = reg.categoria || '';
-             if (apiData) {
-               mappedName = apiData.name || fallbackName;
+             if (apiData && apiData.name) {
+               mappedName = apiData.name;
                if (apiData.masterCategory) mappedCategory = apiData.masterCategory;
              }
              
