@@ -54,6 +54,14 @@ const DB = (() => {
   const SUPABASE_KEY = window.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_-5KjPgzE1FNDtoZyf8DbJA_cENpDqPV';
   
   const PRODUCTS_CACHE_KEY = 'ss_products_cache';
+
+  function _safeSetItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn(LocalStorage quota exceeded for . Keeping in memory only.);
+    }
+  }
   const HOLDINGS_KEY = 'ss_holdings';
   const STORES_KEY = 'ss_physical_stores';
   const PLANOGRAMS_KEY = 'ss_planograms';
@@ -112,18 +120,18 @@ const DB = (() => {
        if (res.ok) {
          const serverHoldings = await res.json();
          if (Array.isArray(serverHoldings) && serverHoldings.length > 0) {
-           localStorage.setItem(HOLDINGS_KEY, JSON.stringify(serverHoldings));
+           _safeSetItem(, );
            console.log(`⚡ Holdings cargados desde servidor: ${serverHoldings.length}`);
          } else if (!localStorage.getItem(HOLDINGS_KEY)) {
-           localStorage.setItem(HOLDINGS_KEY, JSON.stringify(DEFAULT_HOLDINGS));
+           _safeSetItem(, );
          }
        } else if (!localStorage.getItem(HOLDINGS_KEY)) {
-         localStorage.setItem(HOLDINGS_KEY, JSON.stringify(DEFAULT_HOLDINGS));
+         _safeSetItem(, );
        }
      } catch (_) {
        // Servidor offline — inicializar desde localStorage o defaults
        if (!localStorage.getItem(HOLDINGS_KEY)) {
-         localStorage.setItem(HOLDINGS_KEY, JSON.stringify(DEFAULT_HOLDINGS));
+         _safeSetItem(, );
        }
      }
 
@@ -133,17 +141,17 @@ const DB = (() => {
        if (res.ok) {
          const serverStores = await res.json();
          if (Array.isArray(serverStores) && serverStores.length > 0) {
-           localStorage.setItem(STORES_KEY, JSON.stringify(serverStores));
+           _safeSetItem(, );
            console.log(`⚡ Stores cargados desde servidor: ${serverStores.length}`);
          } else if (!localStorage.getItem(STORES_KEY)) {
-           localStorage.setItem(STORES_KEY, JSON.stringify(DEFAULT_STORES));
+           _safeSetItem(, );
          }
        } else if (!localStorage.getItem(STORES_KEY)) {
-         localStorage.setItem(STORES_KEY, JSON.stringify(DEFAULT_STORES));
+         _safeSetItem(, );
        }
      } catch (_) {
        if (!localStorage.getItem(STORES_KEY)) {
-         localStorage.setItem(STORES_KEY, JSON.stringify(DEFAULT_STORES));
+         _safeSetItem(, );
        }
      }
 
@@ -245,7 +253,7 @@ const DB = (() => {
       });
 
       // Save merged database back to localStorage cache to align it
-      localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(_memoryProducts));
+      _safeSetItem(, );
     } catch (err) {
       console.error('fetchProducts failed:', err);
     }
@@ -273,7 +281,7 @@ const DB = (() => {
     // Save to LocalStorage cache
     const localCache = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || '{}');
     localCache[product.ean] = product;
-    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
+    _safeSetItem(, );
     
     // Build Universal Products (master_catalog) payload
     const payload = {
@@ -346,7 +354,7 @@ const DB = (() => {
   function getRetailers() { return getHoldings(); }
   
   function saveHoldings(h) {
-    localStorage.setItem(HOLDINGS_KEY, JSON.stringify(h));
+    _safeSetItem(, );
     // Sincronizar con servidor local (best-effort, no bloquea)
     fetch('http://localhost:3000/api/holdings', {
       method: 'POST',
@@ -425,7 +433,7 @@ const DB = (() => {
     // Update local cache
     const localCache = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || '{}');
     delete localCache[ean];
-    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
+    _safeSetItem(, );
 
     try {
       await fetch('http://localhost:3000/api/products', {
@@ -453,7 +461,7 @@ const DB = (() => {
     // Update local cache
     const localCache = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || '{}');
     eans.forEach(ean => delete localCache[ean]);
-    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
+    _safeSetItem(, );
 
     try {
       await fetch('http://localhost:3000/api/products', {
@@ -480,7 +488,7 @@ const DB = (() => {
       _memoryProducts[p.ean] = p;
       localCache[p.ean] = p;
     });
-    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
+    _safeSetItem(, );
 
     // 2. Prepare payload for bulk upsert to master_catalog (Universal Products)
     const payload = productsArray.map(p => {
@@ -542,13 +550,13 @@ const DB = (() => {
     entry.id = entry.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36));
     entry.timestamp = entry.timestamp || new Date().toISOString();
     _stagingLevantamiento.push(entry);
-    localStorage.setItem(STAGING_LEVANTAMIENTO_KEY, JSON.stringify(_stagingLevantamiento));
+    _safeSetItem(, );
     return entry;
   }
 
   function clearStagingLevantamiento() {
     _stagingLevantamiento = [];
-    localStorage.setItem(STAGING_LEVANTAMIENTO_KEY, JSON.stringify([]));
+    _safeSetItem(, );
   }
 
   // ── Staging: Unmatched EANs ─────────────────
@@ -557,7 +565,7 @@ const DB = (() => {
   function addStagingUnmatched(entry) {
     entry.id = entry.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36));
     _stagingUnmatched.push(entry);
-    localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify(_stagingUnmatched));
+    _safeSetItem(, );
     return entry;
   }
 
@@ -565,7 +573,7 @@ const DB = (() => {
     const idx = _stagingUnmatched.findIndex(e => e.id === id);
     if (idx !== -1) {
       _stagingUnmatched[idx] = { ..._stagingUnmatched[idx], ...updates };
-      localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify(_stagingUnmatched));
+      _safeSetItem(, );
       return _stagingUnmatched[idx];
     }
     return null;
@@ -581,18 +589,18 @@ const DB = (() => {
       }
     }
     if (changed) {
-      localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify(_stagingUnmatched));
+      _safeSetItem(, );
     }
   }
 
   function removeStagingUnmatched(id) {
     _stagingUnmatched = _stagingUnmatched.filter(e => e.id !== id);
-    localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify(_stagingUnmatched));
+    _safeSetItem(, );
   }
 
   function clearStagingUnmatched() {
     _stagingUnmatched = [];
-    localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify([]));
+    _safeSetItem(, );
   }
 
   // ── Staging: Por Identificar (Sin EAN / Terreno) ───────
@@ -603,7 +611,7 @@ const DB = (() => {
     entry.timestamp = entry.timestamp || new Date().toISOString();
     entry.status = entry.status || 'PENDING_EAN';
     _stagingNoEan.push(entry);
-    localStorage.setItem(STAGING_NO_EAN_KEY, JSON.stringify(_stagingNoEan));
+    _safeSetItem(, );
     return entry;
   }
 
@@ -611,7 +619,7 @@ const DB = (() => {
     const idx = _stagingNoEan.findIndex(e => e.id === id);
     if (idx !== -1) {
       _stagingNoEan[idx] = { ..._stagingNoEan[idx], ...updates };
-      localStorage.setItem(STAGING_NO_EAN_KEY, JSON.stringify(_stagingNoEan));
+      _safeSetItem(, );
       return _stagingNoEan[idx];
     }
     return null;
@@ -619,12 +627,12 @@ const DB = (() => {
 
   function removeStagingNoEan(id) {
     _stagingNoEan = _stagingNoEan.filter(e => e.id !== id);
-    localStorage.setItem(STAGING_NO_EAN_KEY, JSON.stringify(_stagingNoEan));
+    _safeSetItem(, );
   }
 
   function clearStagingNoEan() {
     _stagingNoEan = [];
-    localStorage.setItem(STAGING_NO_EAN_KEY, JSON.stringify([]));
+    _safeSetItem(, );
   }
 
   // ── Vispera Submission Batch ─────────────────
@@ -635,7 +643,7 @@ const DB = (() => {
     item.status = item.status || 'PENDING_REVIEW';
     item.createdAt = item.createdAt || new Date().toISOString();
     _visperaBatch.push(item);
-    localStorage.setItem(VISPERA_BATCH_KEY, JSON.stringify(_visperaBatch));
+    _safeSetItem(, );
     return item;
   }
 
@@ -643,7 +651,7 @@ const DB = (() => {
     const idx = _visperaBatch.findIndex(b => b.batchId === batchId);
     if (idx !== -1) {
       _visperaBatch[idx] = { ..._visperaBatch[idx], ...updates };
-      localStorage.setItem(VISPERA_BATCH_KEY, JSON.stringify(_visperaBatch));
+      _safeSetItem(, );
       return _visperaBatch[idx];
     }
     return null;
@@ -651,7 +659,7 @@ const DB = (() => {
 
   function clearVisperaBatch() {
     _visperaBatch = [];
-    localStorage.setItem(VISPERA_BATCH_KEY, JSON.stringify([]));
+    _safeSetItem(, );
   }
 
   // ── Brands & Producers ──────────────────────
@@ -661,7 +669,7 @@ const DB = (() => {
     const existing = _brandsProducers.find(b => b.brandId === entry.brandId);
     if (existing) return existing;
     _brandsProducers.push(entry);
-    localStorage.setItem(BRANDS_PRODUCERS_KEY, JSON.stringify(_brandsProducers));
+    _safeSetItem(, );
     return entry;
   }
 
@@ -676,7 +684,7 @@ const DB = (() => {
     } else {
       _categoryMapping.push(entry);
     }
-    localStorage.setItem(CATEGORY_MAPPING_KEY, JSON.stringify(_categoryMapping));
+    _safeSetItem(, );
     return entry;
   }
 
@@ -687,12 +695,12 @@ const DB = (() => {
   function addRecentMatch(match) {
     _recentMatches.unshift({ ...match, matchDate: new Date().toISOString() });
     if (_recentMatches.length > 500) _recentMatches = _recentMatches.slice(0, 500);
-    localStorage.setItem(RECENT_MATCHES_KEY, JSON.stringify(_recentMatches));
+    _safeSetItem(, );
   }
 
   function clearRecentMatches() {
     _recentMatches = [];
-    localStorage.setItem(RECENT_MATCHES_KEY, JSON.stringify(_recentMatches));
+    _safeSetItem(, );
   }
 
   // ── backup / restore ───────────────────────
@@ -720,8 +728,8 @@ const DB = (() => {
     localStorage.removeItem(VISPERA_BATCH_KEY);
     localStorage.removeItem(BRANDS_PRODUCERS_KEY);
     localStorage.removeItem(CATEGORY_MAPPING_KEY);
-    localStorage.setItem(HOLDINGS_KEY, JSON.stringify(DEFAULT_HOLDINGS));
-    localStorage.setItem(STORES_KEY, JSON.stringify(DEFAULT_STORES));
+    _safeSetItem(, );
+    _safeSetItem(, );
     _memoryProducts = {};
     _undoStack = [];
     _stagingLevantamiento = [];
@@ -756,7 +764,7 @@ const DB = (() => {
     } else {
       list.push(store);
     }
-    localStorage.setItem(STORES_KEY, JSON.stringify(list));
+    _safeSetItem(, );
     // Sincronizar con servidor local (best-effort)
     fetch('http://localhost:3000/api/stores', {
       method: 'POST',
@@ -768,7 +776,7 @@ const DB = (() => {
 
   function deleteStore(storeId) {
     const list = getStores().filter(s => s.storeId !== storeId);
-    localStorage.setItem(STORES_KEY, JSON.stringify(list));
+    _safeSetItem(, );
     // Sincronizar con servidor local (best-effort)
     fetch('http://localhost:3000/api/stores', {
       method: 'POST',
@@ -878,7 +886,7 @@ const DB = (() => {
     } else {
       list.push(session);
     }
-    localStorage.setItem('ss_capture_sessions', JSON.stringify(list));
+    _safeSetItem(, );
   }
 
   // ── undo/redo stack ────────────────────────
@@ -918,7 +926,7 @@ const DB = (() => {
         list.push(item);
       }
     });
-    localStorage.setItem(PLANOGRAMS_KEY, JSON.stringify(list));
+    _safeSetItem(, );
   }
 
   // Convierte un Blob a Data URL (base64) — funciona siempre offline

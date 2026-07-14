@@ -265,7 +265,7 @@ const UILevantamiento = (() => {
   function removeEntry(idx) {
     const staging = DB.getStagingLevantamiento();
     staging.splice(idx, 1);
-    localStorage.setItem('ss_staging_levantamiento', JSON.stringify(staging));
+    try { localStorage.setItem(, ); } catch (e) { console.warn('QuotaExceededError in ui-levantamiento'); }
     render();
   }
 
@@ -525,7 +525,7 @@ const UILevantamiento = (() => {
     }
 
     // Save status changes without clearing staging
-    localStorage.setItem('ss_staging_levantamiento', JSON.stringify(staging));
+    try { localStorage.setItem(, ); } catch (e) { console.warn('QuotaExceededError in ui-levantamiento'); }
 
     if (matched > 0 || unmatched > 0) {
       App.showToast(`Auditoría Automática: ${matched} matches, ${unmatched} nuevos SKUs. ${visperaTickets} tickets a Vispera.`, 'success');
