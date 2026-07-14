@@ -4,6 +4,8 @@ const UILevantamiento = (() => {
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   
   let _hasSyncedFirebase = false;
+  let _filterDate = '';
+  let _filterAuditor = '';
 
   function render() {
     const el = document.getElementById('view-levantamiento');
@@ -20,10 +22,13 @@ const UILevantamiento = (() => {
     <h1 class="view-title">App de Levantamiento</h1>
     <p class="view-sub">Escanear datos de productos y asociarlos con un DMU (Góndola/Category ID)</p>
   </div>
-  <div class="view-actions">
-    <button class="btn-outline" onclick="UILevantamiento.syncFirebase(true)" style="margin-right: 8px;">
-      <span class="spin-ico" id="fb-sync-icon">🔥</span> Sincronizar Firebase
+  <div class="view-actions" style="display:flex; align-items:center; gap:8px;">
+    <input type="date" id="fb-filter-date" class="form-input" style="width:130px;" title="Fecha" value="${_filterDate}" onchange="UILevantamiento.setFilters()">
+    <input type="text" id="fb-filter-auditor" class="form-input" placeholder="Auditor..." style="width:120px;" value="${_filterAuditor}" onchange="UILevantamiento.setFilters()">
+    <button class="btn-outline" onclick="UILevantamiento.syncFirebase(true)">
+      <span class="spin-ico" id="fb-sync-icon">🔥</span> Descargar
     </button>
+    <div style="width:1px; height:24px; background:var(--border); margin:0 4px;"></div>
     <span class="badge" style="background:var(--accent)">${staging.length} registros en Staging</span>
     <button class="btn-teal" onclick="UILevantamiento.processStaging()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -86,22 +91,26 @@ const UILevantamiento = (() => {
               <tr>
                 <th>EAN</th>
                 <th>Holding</th>
-                <th>DMU</th>
+                <th>Nombre Identificado</th>
                 <th>Categoría</th>
                 <th>Auditor</th>
-                <th>Timestamp</th>
+                <th>Status</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               ${staging.map((s, i) => `
-              <tr>
+              <tr style="background:${s.status === 'MATCHED' ? '#d4edda' : (s.status === 'UNDEFINED' ? '#fff3cd' : 'transparent')}">
                 <td class="mono" style="font-weight:600;">${esc(s.ean)}</td>
                 <td><span class="holding-badge-sm">${esc(s.holdingId)}</span></td>
-                <td>${esc(s.dmu || '—')}</td>
+                <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(s.firebaseName || s.dmu)}">${esc(s.firebaseName || s.dmu || '—')}</td>
                 <td><span class="vispera-cat-badge" style="--cat-color:${VISPERA_CATEGORY_COLORS[s.category] || '#888'}">${esc(s.category)}</span></td>
                 <td>${esc(s.auditor)}</td>
-                <td style="font-size:11px; color:var(--text-muted)">${new Date(s.timestamp).toLocaleString('es-CL')}</td>
+                <td>
+                  <span class="badge" style="background:${s.status === 'MATCHED' ? '#28a745' : (s.status === 'UNDEFINED' ? '#ffc107' : 'var(--border)')}; color:${s.status === 'UNDEFINED' ? '#000' : '#fff'}">
+                    ${s.status === 'MATCHED' ? '✔️ Matched' : (s.status === 'UNDEFINED' ? '⚠️ Indefinido' : 'Pendiente')}
+                  </span>
+                </td>
                 <td><button class="btn-mini" style="color:var(--danger)" onclick="UILevantamiento.removeEntry(${i})">✕</button></td>
               </tr>`).join('')}
             </tbody>
@@ -157,6 +166,11 @@ const UILevantamiento = (() => {
     if (!_hasSyncedFirebase) {
       setTimeout(() => syncFirebase(false), 500); // Auto sync once on first render
     }
+  }
+
+  function setFilters() {
+    _filterDate = document.getElementById('fb-filter-date')?.value || '';
+    _filterAuditor = document.getElementById('fb-filter-auditor')?.value || '';
   }
 
   function addEntry() {
@@ -215,44 +229,74 @@ const UILevantamiento = (() => {
     if (icon) icon.style.animation = 'spin 1s linear infinite';
 
     try {
-      const datos = await window.FirebaseAPI.obtenerLevantamientos(25); // Traer los últimos 25 por defecto
+      const opts = { limitCount: 150 };
+      if (_filterDate) {
+        opts.fechaInicio = _filterDate;
+        opts.fechaFin = _filterDate;
+      }
+      if (_filterAuditor) {
+        opts.auditor = _filterAuditor;
+      }
+      const datos = await window.FirebaseAPI.obtenerLevantamientos(opts);
+      
       let agregados = 0;
       const staging = DB.getStagingLevantamiento();
+      let nuevos = [];
 
       for (const reg of datos) {
         if (!reg.ean) continue;
-        
-        // Evitar duplicar el mismo registro de Firebase
         const exists = staging.find(s => s.firebaseId === reg.id);
-        if (!exists) {
-           const mappedName = reg.productoWeb || reg.nombreProductoOCR || '';
-           const mappedCategory = reg.categoria || ''; 
-           const holding = reg.holding || document.getElementById('lev-holding')?.value || 'TOTTUS';
-           const timestamp = reg.fecha?.toDate ? reg.fecha.toDate().toISOString() : new Date().toISOString();
+        if (!exists) nuevos.push(reg);
+      }
 
-           DB.addStagingLevantamiento({
-             firebaseId: reg.id,
-             ean: reg.ean,
-             holdingId: holding,
-             dmu: reg.dmu || reg.pasillo || mappedCategory,
-             category: mappedCategory,
-             auditor: reg.auditor || 'App Terreno',
-             timestamp: timestamp,
-             // Guardamos la info extra descubierta
-             firebaseName: mappedName,
-             firebasePrice: reg.precioWeb || reg.precioOCR,
-             firebaseInternalCode: reg.codigoInternoOCR
-           });
-           agregados++;
+      if (nuevos.length > 0) {
+        App.showToast(`Encontrados ${nuevos.length} registros. Triangulando con Open Products...`, 'info');
+        
+        // Auto-enriquecimiento rápido (Lotes de 10)
+        const chunkSize = 10;
+        for (let i = 0; i < nuevos.length; i += chunkSize) {
+          const chunk = nuevos.slice(i, i + chunkSize);
+          
+          await Promise.all(chunk.map(async (reg) => {
+             const apiData = await API.enrichProduct(reg.ean);
+             const fallbackName = reg.productoWeb || reg.nombreProductoOCR || '';
+             
+             let mappedName = fallbackName;
+             let mappedCategory = reg.categoria || '';
+             if (apiData) {
+               mappedName = apiData.name || fallbackName;
+               if (apiData.masterCategory) mappedCategory = apiData.masterCategory;
+             }
+             
+             const holding = reg.holding || document.getElementById('lev-holding')?.value || 'TOTTUS';
+             const timestamp = reg.fecha?.toDate ? reg.fecha.toDate().toISOString() : new Date().toISOString();
+  
+             DB.addStagingLevantamiento({
+               firebaseId: reg.id,
+               ean: reg.ean,
+               holdingId: holding,
+               dmu: reg.dmu || reg.pasillo || mappedCategory,
+               category: mappedCategory,
+               auditor: reg.auditor || 'App Terreno',
+               timestamp: timestamp,
+               firebaseName: mappedName,
+               firebasePrice: reg.precioWeb || reg.precioOCR,
+               firebaseInternalCode: reg.codigoInternoOCR,
+               status: 'PENDING'
+             });
+             agregados++;
+          }));
+          
+          render(); // Refrescar para ver cómo van apareciendo
+          await new Promise(r => setTimeout(r, 1000)); // Pausa anti-spam
         }
       }
       
       _hasSyncedFirebase = true;
       if (agregados > 0) {
-        App.showToast(`Se importaron ${agregados} levantamientos desde Firebase 🔥`, 'success');
-        render();
+        App.showToast(`Se descargaron y enriquecieron ${agregados} levantamientos 🔥`, 'success');
       } else if (force) {
-        App.showToast('No se encontraron nuevos levantamientos en Firebase.', 'info');
+        App.showToast('No se encontraron nuevos levantamientos.', 'info');
       }
     } catch (err) {
       console.error("Firebase sync error:", err);
@@ -264,17 +308,20 @@ const UILevantamiento = (() => {
 
   async function processStaging() {
     const staging = DB.getStagingLevantamiento();
-    if (staging.length === 0) {
-      App.showToast('No hay registros en staging para procesar', 'warning');
+    const pending = staging.filter(s => s.status === 'PENDING' || !s.status);
+    
+    if (pending.length === 0) {
+      App.showToast('No hay registros pendientes en staging para procesar', 'warning');
       return;
     }
 
-    App.showToast(`Procesando ${staging.length} registros a través del Pipeline...`, 'info');
+    App.showToast(`Procesando ${pending.length} registros a través del Pipeline...`, 'info');
 
     let matched = 0;
     let unmatched = 0;
+    let visperaTickets = 0;
 
-    for (const entry of staging) {
+    for (const entry of pending) {
       // Step 1: Compare against Master SKU EAN index
       const existing = DB.getProduct(entry.ean);
 
@@ -297,6 +344,20 @@ const UILevantamiento = (() => {
           existing.holdings = holdings;
           await DB.saveProduct(existing, true);
         }
+        
+        // Vispera Check: si el producto existe pero no tiene ID de Vispera
+        if (!existing.visperaId) {
+          DB.addVisperaBatchItem({
+            ean: entry.ean,
+            name: existing.name || entry.firebaseName || 'Desconocido',
+            dmuCategory: entry.dmu || entry.category || 'General',
+            reason: 'SKU Existente sin Vispera ID detectado por Auditor en terreno.',
+            source: 'App de Levantamiento'
+          });
+          visperaTickets++;
+        }
+        
+        entry.status = 'MATCHED';
         matched++;
       } else {
         // Step 2: Unmatched → send to staging_unmatched_eans
@@ -304,28 +365,23 @@ const UILevantamiento = (() => {
           ean: entry.ean,
           holdingId: entry.holdingId,
           dmuCategory: entry.dmu || entry.category,
-          apiRawName: null,
+          apiRawName: entry.firebaseName || null,
           apiBrand: null,
           apiWeight: null,
           apiUniversalCategory: null,
           confidenceScore: null,
           status: 'PENDING_ENRICHMENT'
         });
+        entry.status = 'UNDEFINED';
         unmatched++;
       }
     }
 
-    // Clear staging after processing
-    DB.clearStagingLevantamiento();
+    // Save status changes without clearing staging
+    localStorage.setItem('ss_staging_levantamiento', JSON.stringify(staging));
 
-    App.showToast(`Pipeline completado: ${matched} matcheados, ${unmatched} enviados a staging`, 'success');
-
-    // Navigate to staging view if there are unmatched
-    if (unmatched > 0) {
-      App.navigateTo('staging');
-    } else {
-      render();
-    }
+    App.showToast(`Completado: ${matched} matcheados, ${unmatched} a auditoría. ${visperaTickets} tickets a Vispera.`, 'success');
+    render();
   }
 
   return {
@@ -335,6 +391,7 @@ const UILevantamiento = (() => {
     clearForm,
     clearStaging,
     processStaging,
-    syncFirebase
+    syncFirebase,
+    setFilters
   };
 })();

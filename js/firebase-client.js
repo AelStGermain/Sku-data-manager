@@ -13,18 +13,42 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-async function obtenerLevantamientos(cantidad = 25) {
-  const consulta = query(
-    collection(db, "levantamientos"),
-    orderBy("fecha", "desc"),
-    limit(cantidad)
-  );
+async function obtenerLevantamientos(filtros = {}) {
+  const { limitCount = 100, fechaInicio, fechaFin, auditor } = filtros;
+  
+  let condiciones = [collection(db, "levantamientos")];
+  
+  if (auditor && auditor.trim() !== "") {
+    condiciones.push(where("auditor", "==", auditor.trim()));
+  }
+  
+  if (fechaInicio) {
+    condiciones.push(where("fecha", ">=", new Date(fechaInicio + "T00:00:00")));
+  }
+  if (fechaFin) {
+    condiciones.push(where("fecha", "<=", new Date(fechaFin + "T23:59:59")));
+  }
 
-  const resultado = await getDocs(consulta);
-  return resultado.docs.map((documento) => ({
-    id: documento.id,
-    ...documento.data(),
-  }));
+  // Si filtramos por fecha, firestore requiere ordenar por ese campo primero
+  condiciones.push(orderBy("fecha", "desc"));
+  
+  if (limitCount > 0) {
+    condiciones.push(limit(limitCount));
+  }
+
+  const consulta = query(...condiciones);
+
+  try {
+    const resultado = await getDocs(consulta);
+    return resultado.docs.map((documento) => ({
+      id: documento.id,
+      ...documento.data(),
+    }));
+  } catch (error) {
+    // Si falla por índice faltante, Firestore arrojará el link para crearlo.
+    console.error("Error consultando Firebase. Podría faltar un índice compuesto:", error);
+    throw error;
+  }
 }
 
 async function buscarPorEan(ean) {
