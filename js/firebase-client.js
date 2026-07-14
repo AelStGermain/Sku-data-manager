@@ -14,12 +14,16 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 async function obtenerLevantamientos(filtros = {}) {
-  const { limitCount = 100, fechaInicio, fechaFin, auditor } = filtros;
+  const { limitCount = 100, fechaInicio, fechaFin, auditor, dmu } = filtros;
   
   let condiciones = [collection(db, "levantamientos")];
   
   if (auditor && auditor.trim() !== "") {
     condiciones.push(where("auditor", "==", auditor.trim()));
+  }
+  if (dmu && dmu.trim() !== "") {
+    // Note: Firebase might require composite indexes if querying by multiple fields and ordering by date.
+    condiciones.push(where("dmu", "==", dmu.trim()));
   }
   
   if (fechaInicio) {

@@ -5,8 +5,10 @@ const UILevantamiento = (() => {
   
   let _hasSyncedFirebase = false;
   let _auditoresFetched = false;
-  let _filterDate = '';
+  let _filterDateFrom = '';
+  let _filterDateTo = '';
   let _filterAuditor = '';
+  let _filterDmu = '';
   let _auditoresOpts = '';
   let _dmusOpts = '';
   
@@ -42,13 +44,6 @@ const UILevantamiento = (() => {
     <p class="view-sub">Escanear datos de productos y asociarlos con un DMU (Góndola/Category ID)</p>
   </div>
   <div class="view-actions" style="display:flex; align-items:center; gap:8px;">
-    <input type="date" id="fb-filter-date" class="form-input" style="width:130px;" title="Fecha" value="${_filterDate}" onchange="UILevantamiento.setFilters()">
-    <input type="text" list="fb-auditores-list" id="fb-filter-auditor" class="form-input" placeholder="Auditor..." style="width:120px;" value="${_filterAuditor}" onchange="UILevantamiento.setFilters()">
-    <datalist id="fb-auditores-list">${_auditoresOpts}</datalist>
-    <button class="btn-outline" onclick="UILevantamiento.syncFirebase(true)">
-      <span class="spin-ico" id="fb-sync-icon">🔥</span> Descargar
-    </button>
-    <div style="width:1px; height:24px; background:var(--border); margin:0 4px;"></div>
     <span class="badge" style="background:var(--accent)">${staging.length} registros en Staging</span>
     <button class="btn-teal" onclick="UILevantamiento.processStaging()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -58,44 +53,76 @@ const UILevantamiento = (() => {
 </header>
 
 <div class="levantamiento-layout">
-  <!-- Input Panel -->
+  <!-- Search / Filter Panel -->
   <div class="lev-panel lev-input-panel">
     <div class="lev-panel-header">
-      <h3> Staging_Levantamiento</h3>
-      <p class="lev-panel-sub">Capturar datos de levantamiento (DMU, EAN)</p>
+      <h3> Búsqueda de Levantamientos</h3>
+      <p class="lev-panel-sub">Buscar en Firebase por fecha, auditor o DMU</p>
     </div>
     <div class="lev-form">
-      <div class="form-group">
-        <label>Holding</label>
-        <select class="form-select" id="lev-holding">${holdingOpts}</select>
-      </div>
-      <div class="form-group">
-        <label>EAN (Código de Barra)</label>
-        <input type="text" class="form-input" id="lev-ean" placeholder="7801320242247" maxlength="14">
-      </div>
       <div class="form-row">
         <div class="form-group" style="flex:1">
-          <label>DMU / Góndola</label>
-          <input type="text" list="lev-dmus-list" class="form-input" id="lev-dmu" placeholder="Ej: ACEITES">
-          <datalist id="lev-dmus-list">${_dmusOpts}</datalist>
+          <label>Desde Fecha</label>
+          <input type="date" id="fb-filter-date-from" class="form-input" value="${_filterDateFrom}" onchange="UILevantamiento.setFilters()">
         </div>
         <div class="form-group" style="flex:1">
-          <label>Categoría Levantamiento</label>
-          <select class="form-select" id="lev-cat">${catOpts}</select>
+          <label>Hasta Fecha</label>
+          <input type="date" id="fb-filter-date-to" class="form-input" value="${_filterDateTo}" onchange="UILevantamiento.setFilters()">
         </div>
       </div>
       <div class="form-group">
         <label>Auditor</label>
-        <input type="text" list="lev-auditores-list" class="form-input" id="lev-auditor" placeholder="Nombre del auditor">
-        <datalist id="lev-auditores-list">${_auditoresOpts}</datalist>
+        <input type="text" list="fb-auditores-list" id="fb-filter-auditor" class="form-input" placeholder="Todos los Auditores..." value="${_filterAuditor}" onchange="UILevantamiento.setFilters()">
+        <datalist id="fb-auditores-list">${_auditoresOpts}</datalist>
       </div>
-      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
-        <button class="btn-outline" onclick="UILevantamiento.clearForm()">Limpiar</button>
-        <button class="btn-primary" onclick="UILevantamiento.addEntry()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Agregar a Staging
+      <div class="form-group">
+        <label>DMU / Góndola</label>
+        <input type="text" list="fb-dmus-list" id="fb-filter-dmu" class="form-input" placeholder="Todos los DMUs..." value="${_filterDmu}" onchange="UILevantamiento.setFilters()">
+        <datalist id="fb-dmus-list">${_dmusOpts}</datalist>
+      </div>
+      <div style="margin-top:16px;">
+        <button class="btn-primary" style="width:100%; justify-content:center; padding:12px;" onclick="UILevantamiento.syncFirebase(true)">
+          <span class="spin-ico" id="fb-sync-icon">🔥</span> Descargar Resultados
         </button>
       </div>
+    </div>
+    
+    <div style="margin-top:24px; border-top:1px solid var(--border); padding-top:16px;">
+       <details>
+         <summary style="cursor:pointer; font-weight:600; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
+           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+           Agregar SKU Manualmente
+         </summary>
+         <div class="lev-form" style="margin-top:12px;">
+            <div class="form-group">
+              <label>Holding</label>
+              <select class="form-select" id="lev-holding">${holdingOpts}</select>
+            </div>
+            <div class="form-group">
+              <label>EAN (Código de Barra)</label>
+              <input type="text" class="form-input" id="lev-ean" placeholder="7801320242247" maxlength="14">
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:1">
+                <label>DMU / Góndola</label>
+                <input type="text" list="lev-dmus-list" class="form-input" id="lev-dmu" placeholder="Ej: ACEITES">
+                <datalist id="lev-dmus-list">${_dmusOpts}</datalist>
+              </div>
+              <div class="form-group" style="flex:1">
+                <label>Categoría</label>
+                <select class="form-select" id="lev-cat">${catOpts}</select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Auditor</label>
+              <input type="text" list="lev-auditores-list" class="form-input" id="lev-auditor" placeholder="Nombre del auditor">
+              <datalist id="lev-auditores-list">${_auditoresOpts}</datalist>
+            </div>
+            <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+              <button class="btn-outline" onclick="UILevantamiento.addEntry()">Agregar al Staging</button>
+            </div>
+         </div>
+       </details>
     </div>
   </div>
 
@@ -259,15 +286,17 @@ const UILevantamiento = (() => {
     const icon = document.getElementById('fb-sync-icon');
     if (icon) icon.style.animation = 'spin 1s linear infinite';
 
+    function cleanOCRName(rawName) {
+      if (!rawName) return 'Desconocido';
+      return String(rawName).replace(/\$?\d+(?:[.,]\d+)?\s*POR\s*KG/gi, '').trim() || 'Desconocido';
+    }
+
     try {
       const opts = { limitCount: 150 };
-      if (_filterDate) {
-        opts.fechaInicio = _filterDate;
-        opts.fechaFin = _filterDate;
-      }
-      if (_filterAuditor) {
-        opts.auditor = _filterAuditor;
-      }
+      if (_filterDateFrom) opts.fechaInicio = _filterDateFrom;
+      if (_filterDateTo) opts.fechaFin = _filterDateTo;
+      if (_filterAuditor) opts.auditor = _filterAuditor;
+      if (_filterDmu) opts.dmu = _filterDmu;
       const datos = await window.FirebaseAPI.obtenerLevantamientos(opts);
       
       let agregados = 0;
@@ -297,7 +326,7 @@ const UILevantamiento = (() => {
                  category: mappedCategory,
                  auditor: reg.auditor || 'App Terreno',
                  timestamp: reg.fecha?.toDate ? reg.fecha.toDate().toISOString() : new Date().toISOString(),
-                 firebaseName: reg.productoWeb || reg.nombreProductoOCR || 'Desconocido',
+                 firebaseName: cleanOCRName(reg.productoWeb || reg.nombreProductoOCR),
                  firebasePrice: reg.precioWeb || reg.precioOCR
               });
               agregadosNoEan++;
@@ -339,7 +368,7 @@ const UILevantamiento = (() => {
                category: mappedCategory,
                auditor: reg.auditor || 'App Terreno',
                timestamp: timestamp,
-               firebaseName: mappedName,
+               firebaseName: cleanOCRName(mappedName),
                firebasePrice: reg.precioWeb || reg.precioOCR,
                firebaseInternalCode: reg.codigoInternoOCR,
                status: 'PENDING'
