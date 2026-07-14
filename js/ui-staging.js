@@ -297,27 +297,45 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
     App.showToast(`Step 3: Enriqueciendo ${unmatched.length} EANs con APIs externas…`, 'info');
 
     let enriched = 0;
+    let batch = [];
     for (const item of unmatched) {
       const apiData = await API.enrichProduct(item.ean);
       if (apiData) {
         // Map to universal category
         const universalCat = _mapToVisperaCategory(apiData.masterCategory || apiData.name || '');
 
-        DB.updateStagingUnmatched(item.id, {
-          apiRawName: apiData.name || null,
-          apiBrand: apiData.brand || null,
-          apiWeight: apiData.weight_g ? `${apiData.weight_g}g` : null,
-          apiUniversalCategory: universalCat,
-          status: 'ENRICHED'
+        batch.push({
+          id: item.id,
+          updates: {
+            apiRawName: apiData.name || null,
+            apiBrand: apiData.brand || null,
+            apiWeight: apiData.weight_g ? `${apiData.weight_g}g` : null,
+            apiUniversalCategory: universalCat,
+            status: 'ENRICHED'
+          }
         });
         enriched++;
       } else {
-        DB.updateStagingUnmatched(item.id, {
-          status: 'ENRICHED',
-          apiUniversalCategory: item.dmuCategory ? _mapToVisperaCategory(item.dmuCategory) : null
+        batch.push({
+          id: item.id,
+          updates: {
+            status: 'ENRICHED',
+            apiUniversalCategory: item.dmuCategory ? _mapToVisperaCategory(item.dmuCategory) : null
+          }
         });
       }
+      
+      if (batch.length >= 20) {
+        DB.updateStagingUnmatchedBatch([...batch]);
+        batch = [];
+        render(); // optional to show progress
+      }
+      
       await new Promise(r => setTimeout(r, 600));
+    }
+    
+    if (batch.length > 0) {
+      DB.updateStagingUnmatchedBatch(batch);
     }
 
     _enriching = false;

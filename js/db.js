@@ -565,6 +565,20 @@ const DB = (() => {
     return null;
   }
 
+  function updateStagingUnmatchedBatch(updatesArray) {
+    let changed = false;
+    for (const { id, updates } of updatesArray) {
+      const idx = _stagingUnmatched.findIndex(e => e.id === id);
+      if (idx !== -1) {
+        _stagingUnmatched[idx] = { ..._stagingUnmatched[idx], ...updates };
+        changed = true;
+      }
+    }
+    if (changed) {
+      localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify(_stagingUnmatched));
+    }
+  }
+
   function removeStagingUnmatched(id) {
     _stagingUnmatched = _stagingUnmatched.filter(e => e.id !== id);
     localStorage.setItem(STAGING_UNMATCHED_KEY, JSON.stringify(_stagingUnmatched));
@@ -937,9 +951,7 @@ const DB = (() => {
     getStagingLevantamiento,
     addStagingLevantamiento,
     clearStagingLevantamiento,
-    getStagingUnmatched,
-    addStagingUnmatched,
-    updateStagingUnmatched,
+    getStagingUnmatched, addStagingUnmatched, updateStagingUnmatched, updateStagingUnmatchedBatch,
     removeStagingUnmatched,
     clearStagingUnmatched,
     getVisperaBatch,

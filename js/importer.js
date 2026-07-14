@@ -229,6 +229,7 @@ const Importer = (() => {
   function importWithMode(mappedProducts, mode) {
     let created = 0, updated = 0, skipped = 0;
     const conflictLog = [];
+    const prodsToSave = [];
 
     mappedProducts.forEach(incoming => {
       const existing = DB.getProduct(incoming.ean);
@@ -240,14 +241,18 @@ const Importer = (() => {
         }
         const merged = mergeWithMode(existing, incoming, mode);
         if (!merged) { skipped++; return; }
-        DB.saveProduct(merged);
+        prodsToSave.push(merged);
         updated++;
         conflictLog.push({ ean: incoming.ean, name: merged.name || incoming.name, action: 'updated' });
       } else {
-        DB.saveProduct({ ...incoming, createdAt: new Date().toISOString() });
+        prodsToSave.push({ ...incoming, createdAt: new Date().toISOString() });
         created++;
       }
     });
+
+    if (prodsToSave.length > 0) {
+      DB.saveProducts(prodsToSave);
+    }
 
     return { created, updated, skipped, conflictLog };
   }

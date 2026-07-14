@@ -417,22 +417,34 @@ ${renderPagination(filtered.length)}`;
     // Desacoplar la ejecución para que sobreviva la navegación de vistas
     (async () => {
       let done = 0, found = 0;
+      let batch = [];
       for (const product of toEnrich) {
         const apiData = await API.enrichProduct(product.ean);
         if (apiData) {
           const merged = API.mergeEnriched(product, apiData);
-          DB.saveProduct(merged);
+          batch.push(merged);
           found++;
           const imgEl = document.querySelector(`[data-ean="${product.ean}"] .card-img`);
           if (imgEl && merged.imageUrl) imgEl.src = merged.imageUrl;
         }
         done++;
         
+        // Save batch every 20 items to prevent huge network stalls and memory spikes
+        if (batch.length >= 20) {
+          await DB.saveProducts([...batch]);
+          batch = [];
+        }
+        
         // Actualizar botón si existe en el DOM (si el usuario sigue en Catalog)
         const btn = document.getElementById('enrich-all-btn');
         if (btn) btn.innerHTML = `<span class="spin-ico">↻</span> Enriqueciendo (${done}/${toEnrich.length})…`;
         
         await new Promise(r => setTimeout(r, 600)); // Intervalo generoso para no saturar API
+      }
+      
+      // Save remaining
+      if (batch.length > 0) {
+        await DB.saveProducts(batch);
       }
 
       _enriching = false;
