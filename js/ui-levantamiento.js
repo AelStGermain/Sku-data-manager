@@ -2,6 +2,8 @@
 
 const UILevantamiento = (() => {
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  
+  let _hasSyncedFirebase = false;
 
   function render() {
     const el = document.getElementById('view-levantamiento');
@@ -19,6 +21,9 @@ const UILevantamiento = (() => {
     <p class="view-sub">Escanear datos de productos y asociarlos con un DMU (Góndola/Category ID)</p>
   </div>
   <div class="view-actions">
+    <button class="btn-outline" onclick="UILevantamiento.syncFirebase(true)" style="margin-right: 8px;">
+      <span class="spin-ico" id="fb-sync-icon">🔥</span> Sincronizar Firebase
+    </button>
     <span class="badge" style="background:var(--accent)">${staging.length} registros en Staging</span>
     <button class="btn-teal" onclick="UILevantamiento.processStaging()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -148,6 +153,10 @@ const UILevantamiento = (() => {
     </div>
   </div>
 </div>`;
+
+    if (!_hasSyncedFirebase) {
+      setTimeout(() => syncFirebase(false), 500); // Auto sync once on first render
+    }
   }
 
   function addEntry() {
@@ -192,6 +201,65 @@ const UILevantamiento = (() => {
     DB.clearStagingLevantamiento();
     App.showToast('Staging limpiado', 'info');
     render();
+  }
+
+  async function syncFirebase(force = false) {
+    if (!window.FirebaseAPI) {
+      if (force) App.showToast('SDK de Firebase no cargado aún.', 'warning');
+      return;
+    }
+    if (_hasSyncedFirebase && !force) return;
+
+    if (force) App.showToast('Buscando levantamientos en Firebase...', 'info');
+    const icon = document.getElementById('fb-sync-icon');
+    if (icon) icon.style.animation = 'spin 1s linear infinite';
+
+    try {
+      const datos = await window.FirebaseAPI.obtenerLevantamientos(25); // Traer los últimos 25 por defecto
+      let agregados = 0;
+      const staging = DB.getStagingLevantamiento();
+
+      for (const reg of datos) {
+        if (!reg.ean) continue;
+        
+        // Evitar duplicar el mismo registro de Firebase
+        const exists = staging.find(s => s.firebaseId === reg.id);
+        if (!exists) {
+           const mappedName = reg.productoWeb || reg.nombreProductoOCR || '';
+           const mappedCategory = reg.categoria || ''; 
+           const holding = reg.holding || document.getElementById('lev-holding')?.value || 'TOTTUS';
+           const timestamp = reg.fecha?.toDate ? reg.fecha.toDate().toISOString() : new Date().toISOString();
+
+           DB.addStagingLevantamiento({
+             firebaseId: reg.id,
+             ean: reg.ean,
+             holdingId: holding,
+             dmu: reg.dmu || reg.pasillo || mappedCategory,
+             category: mappedCategory,
+             auditor: reg.auditor || 'App Terreno',
+             timestamp: timestamp,
+             // Guardamos la info extra descubierta
+             firebaseName: mappedName,
+             firebasePrice: reg.precioWeb || reg.precioOCR,
+             firebaseInternalCode: reg.codigoInternoOCR
+           });
+           agregados++;
+        }
+      }
+      
+      _hasSyncedFirebase = true;
+      if (agregados > 0) {
+        App.showToast(`Se importaron ${agregados} levantamientos desde Firebase 🔥`, 'success');
+        render();
+      } else if (force) {
+        App.showToast('No se encontraron nuevos levantamientos en Firebase.', 'info');
+      }
+    } catch (err) {
+      console.error("Firebase sync error:", err);
+      if (force) App.showToast('Error conectando con Firebase. Ver consola.', 'error');
+    } finally {
+      if (icon) icon.style.animation = '';
+    }
   }
 
   async function processStaging() {
@@ -266,6 +334,7 @@ const UILevantamiento = (() => {
     removeEntry,
     clearForm,
     clearStaging,
-    processStaging
+    processStaging,
+    syncFirebase
   };
 })();
