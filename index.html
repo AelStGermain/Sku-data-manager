@@ -50,10 +50,18 @@
 
     <!-- Navigation -->
     <nav class="sidebar-nav">
+      <button class="nav-item" data-view="dashboard" id="nav-dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        <span>Dashboard</span>
+      </button>
       <button class="nav-item" data-view="catalog" id="nav-catalog">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/>
         </svg>
         <span>Catálogo</span>
       </button>
@@ -112,6 +120,11 @@
 
     <!-- Footer -->
     <div class="sidebar-footer">
+      <!-- Server Status Indicator -->
+      <div id="server-status" class="server-status-bar">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-label">Verificando conexión…</span>
+      </div>
       <!-- Backup / Restore -->
       <div class="sidebar-backup-btns">
         <button class="sidebar-action-btn" onclick="App.exportBackup()" title="Descargar backup JSON">
@@ -142,8 +155,13 @@
   <!-- ── MAIN CONTENT ──────────────────────────── -->
   <main class="main-content">
 
-    <!-- CATALOG VIEW -->
-    <section id="view-catalog" class="view">
+    <!-- DASHBOARD VIEW -->
+  <section id="view-dashboard" class="view">
+    <!-- Rendered by UIDashboard.render() -->
+  </section>
+
+  <!-- CATALOG VIEW -->
+  <section id="view-catalog" class="view">
       <!-- Rendered by UICatalog.render() -->
     </section>
 
@@ -199,19 +217,20 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- App Scripts -->
-<script src="js/db.js?v=6"></script>
-<script src="js/api.js?v=6"></script>
-<script src="js/excel-image-parser.js?v=6"></script>
-<script src="js/importer.js?v=6"></script>
-<script src="js/ui-catalog.js?v=6"></script>
-<script src="js/ui-sheet.js?v=6"></script>
-<script src="js/ui-import.js?v=6"></script>
-<script src="js/ui-bulk.js?v=6"></script>
-<script src="js/ui-retailers.js?v=6"></script>
-<script src="js/ui-levantamiento.js?v=6"></script>
-<script src="js/ui-staging.js?v=6"></script>
+<script src="js/db.js?v=7"></script>
+<script src="js/api.js?v=7"></script>
+<script src="js/excel-image-parser.js?v=7"></script>
+<script src="js/importer.js?v=7"></script>
+<script src="js/ui-dashboard.js?v=7"></script>
+<script src="js/ui-catalog.js?v=7"></script>
+<script src="js/ui-sheet.js?v=7"></script>
+<script src="js/ui-import.js?v=7"></script>
+<script src="js/ui-bulk.js?v=7"></script>
+<script src="js/ui-retailers.js?v=7"></script>
+<script src="js/ui-levantamiento.js?v=7"></script>
+<script src="js/ui-staging.js?v=7"></script>
 
-<script src="js/app.js?v=6"></script>
+<script src="js/app.js?v=7"></script>
 
 </body>
 </html>

@@ -56,7 +56,7 @@ const App = {
     if (view === 'holdings')       { if (typeof UIHoldings !== 'undefined') UIHoldings.render(); else if (typeof UIRetailers !== 'undefined') UIRetailers.render(); }
     if (view === 'levantamiento')  UILevantamiento.render();
     if (view === 'staging')        UIStaging.render();
-    if (view === 'api')            UIApi.render();
+    if (view === 'dashboard')      UIDashboard.render();
   },
 
   // ── Technical Sheet modal ──────────────────
@@ -112,6 +112,22 @@ const App = {
     if (btn) btn.innerHTML = saved === 'dark'
       ? `<span class="theme-icon">☀️</span> Modo claro`
       : `<span class="theme-icon">🌙</span> Modo oscuro`;
+  },
+
+  // ── server status ──────────────────────────
+  async checkServerStatus() {
+    const dot = document.getElementById('status-dot');
+    const lbl = document.getElementById('status-label');
+    try {
+      const res = await fetch('http://localhost:3000/api/holdings', { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        if (dot) { dot.className = 'status-dot online'; }
+        if (lbl) lbl.textContent = 'Servidor local activo';
+      } else { throw new Error('not ok'); }
+    } catch {
+      if (dot) { dot.className = 'status-dot offline'; }
+      if (lbl) lbl.textContent = 'Modo offline (localStorage)';
+    }
   },
 
   // ── add product (create mode) ──────────────
@@ -368,17 +384,21 @@ const App = {
     });
 
     // Hash tracking for F5 refreshes
-    const validViews = ['catalog', 'import', 'holdings', 'bulk', 'levantamiento', 'staging', 'api'];
+    const validViews = ['dashboard', 'catalog', 'import', 'holdings', 'bulk', 'levantamiento', 'staging'];
     window.addEventListener('hashchange', () => {
       let hash = window.location.hash.replace('#', '');
       if (hash === 'retailers') hash = 'holdings'; // legacy redirect
-      this.navigateTo(validViews.includes(hash) ? hash : 'catalog');
+      this.navigateTo(validViews.includes(hash) ? hash : 'dashboard');
     });
 
-    // Start on requested hash or default to catalog
+    // Start on requested hash or default to dashboard
     let startHash = window.location.hash.replace('#', '');
     if (startHash === 'retailers') startHash = 'holdings';
-    this.navigateTo(validViews.includes(startHash) ? startHash : 'catalog');
+    this.navigateTo(validViews.includes(startHash) ? startHash : 'dashboard');
+
+    // Server status check (immediate + every 30s)
+    this.checkServerStatus();
+    setInterval(() => this.checkServerStatus(), 30000);
   }
 };
 

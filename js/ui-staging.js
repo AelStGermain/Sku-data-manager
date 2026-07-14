@@ -16,14 +16,14 @@ const UIStaging = (() => {
     el.innerHTML = `
 <header class="view-header">
   <div>
-    <h1 class="view-title">Matching & Enrichment Pipeline</h1>
-    <p class="view-sub">Staging de EANs no matcheados y lotes de envío a Vispera</p>
+    <h1 class="view-title">Matching &amp; Enrichment Pipeline</h1>
+    <p class="view-sub">Revisión de EANs no identificados y envío de lotes a Vispera</p>
   </div>
   <div class="view-actions">
     <button class="btn-teal" onclick="UIStaging.enrichAll()" ${_enriching ? 'disabled' : ''}>
       ${_enriching
         ? '<span class="spin-ico">↻</span> Enriqueciendo…'
-        : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg> Step 3: Enriquecer con APIs`
+        : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg> Paso 3: Enriquecer con APIs`
       }
     </button>
     <button class="btn-primary" onclick="UIStaging.groupAndBatch()">
@@ -32,6 +32,33 @@ const UIStaging = (() => {
     </button>
   </div>
 </header>
+
+<!-- Pipeline Flow Banner -->
+<div class="pipeline-flow-banner">
+  <div class="pf-step active">
+    <div class="pf-step-num">1</div>
+    <div class="pf-step-info">
+      <strong>Levantamiento</strong>
+      <span>Escaneo de EANs en tienda</span>
+    </div>
+  </div>
+  <div class="pf-arrow">→</div>
+  <div class="pf-step ${unmatched.length > 0 ? 'active' : ''}">
+    <div class="pf-step-num">2</div>
+    <div class="pf-step-info">
+      <strong>EANs sin Identificar</strong>
+      <span>${unmatched.length} pendientes de revisión</span>
+    </div>
+  </div>
+  <div class="pf-arrow">→</div>
+  <div class="pf-step ${batch.length > 0 ? 'active' : ''}">
+    <div class="pf-step-num">3</div>
+    <div class="pf-step-info">
+      <strong>Lote para Vispera</strong>
+      <span>${batch.length} SKUs listos para enviar</span>
+    </div>
+  </div>
+</div>
 
 <div class="dashboard-row stagger-in" style="display:flex; gap:16px; margin-bottom: 24px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow);">
   <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
@@ -47,11 +74,11 @@ const UIStaging = (() => {
 <!-- Tabs -->
 <div class="staging-tabs">
   <button class="staging-tab ${_activeTab === 'unmatched' ? 'active' : ''}" onclick="UIStaging.setTab('unmatched')">
-    staging_unmatched_eans
+    EANs sin Identificar
     <span class="staging-tab-count">${unmatched.length}</span>
   </button>
   <button class="staging-tab ${_activeTab === 'batch' ? 'active' : ''}" onclick="UIStaging.setTab('batch')">
-    vispera_submission_batch
+    Lote para Vispera
     <span class="staging-tab-count">${batch.length}</span>
   </button>
 </div>

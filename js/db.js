@@ -387,6 +387,24 @@ const DB = (() => {
     return Math.min(score, 100);
   }
 
+  // ── EAN-13 checksum validation ─────────────
+  function validateEAN(ean) {
+    const s = String(ean || '').trim().replace(/\D/g, '');
+    if (s.length !== 13 && s.length !== 8) return { valid: false, reason: 'El EAN debe tener 8 o 13 dígitos' };
+    // EAN-8 or EAN-13 checksum
+    const digits = s.split('').map(Number);
+    const len = digits.length;
+    let sum = 0;
+    for (let i = 0; i < len - 1; i++) {
+      sum += digits[i] * (len === 13 ? (i % 2 === 0 ? 1 : 3) : (i % 2 === 0 ? 3 : 1));
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    if (checkDigit !== digits[len - 1]) {
+      return { valid: false, reason: `Dígito de control incorrecto (esperado ${checkDigit})` };
+    }
+    return { valid: true, reason: null };
+  }
+
   async function deleteProduct(ean, skipUndo = false) {
     if (!ean) return;
     
@@ -897,6 +915,7 @@ const DB = (() => {
     deleteProduct,
     deleteProducts,
     computeCompleteness,
+    validateEAN,
     exportBackup,
     importBackup,
     resetToDefaults,

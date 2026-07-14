@@ -1,7 +1,7 @@
 'use strict';
 
 const UILevantamiento = (() => {
-  const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   function render() {
     const el = document.getElementById('view-levantamiento');
@@ -31,7 +31,7 @@ const UILevantamiento = (() => {
   <!-- Input Panel -->
   <div class="lev-panel lev-input-panel">
     <div class="lev-panel-header">
-      <h3>📱 Staging_Levantamiento</h3>
+      <h3> Staging_Levantamiento</h3>
       <p class="lev-panel-sub">Capturar datos de levantamiento (DMU, EAN)</p>
     </div>
     <div class="lev-form">
@@ -55,7 +55,7 @@ const UILevantamiento = (() => {
       </div>
       <div class="form-group">
         <label>Auditor</label>
-        <input type="text" class="form-input" id="lev-auditor" placeholder="Nombre del auditor" value="Gabriel Hermosilla">
+        <input type="text" class="form-input" id="lev-auditor" placeholder="Nombre del auditor">
       </div>
       <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
         <button class="btn-outline" onclick="UILevantamiento.clearForm()">Limpiar</button>
@@ -70,7 +70,7 @@ const UILevantamiento = (() => {
   <!-- Raw Data Panel -->
   <div class="lev-panel lev-raw-panel">
     <div class="lev-panel-header">
-      <h3>📋 Levantamiento Raw Data</h3>
+      <h3> Levantamiento Raw Data</h3>
       <p class="lev-panel-sub">DMU, EAN, Categoría, Auditor, Timestamp</p>
     </div>
     <div class="lev-raw-table-wrap">
@@ -160,6 +160,12 @@ const UILevantamiento = (() => {
     if (!ean || ean.length < 6) {
       App.showToast('EAN debe tener al menos 6 dígitos', 'error');
       return;
+    }
+
+    // EAN checksum warning (non-blocking)
+    const eanCheck = DB.validateEAN(ean);
+    if (!eanCheck.valid) {
+      App.showToast(`⚠️ EAN ${ean}: ${eanCheck.reason}`, 'warning');
     }
 
     DB.addStagingLevantamiento({ ean, holdingId, dmu, category, auditor });

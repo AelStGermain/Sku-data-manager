@@ -140,6 +140,12 @@ const UISheet = (() => {
     if (!_data || !_data.ean) { App.showToast('El EAN es requerido', 'error'); return; }
     if (_isCreate && DB.getProduct(_data.ean)) { App.showToast('Ya existe un producto con el EAN ' + _data.ean, 'error'); return; }
     
+    // EAN validation warning (non-blocking)
+    if (_isCreate) {
+      const v = DB.validateEAN(_data.ean);
+      if (!v.valid) App.showToast(`⚠️ EAN posiblemente inválido: ${v.reason}`, 'warning');
+    }
+    
     DB.saveProduct(_data);
     _original = JSON.parse(JSON.stringify(_data));
     _dirty = false;
@@ -478,7 +484,11 @@ const UISheet = (() => {
         </div>
         <div class="form-group">
           <label>EAN-13 / master_product_id</label>
-          <input type="text" class="form-input ${_isCreate ? '' : 'readonly-inp'}" value="${esc(_data.ean)}" ${_isCreate ? '' : 'readonly'} oninput="UISheet.updateField('ean', this.value)">
+          <div style="position:relative;">
+            <input type="text" class="form-input ${_isCreate ? '' : 'readonly-inp'}" id="sheet-ean-inp" value="${esc(_data.ean)}" ${_isCreate ? 'maxlength="13" oninput="UISheet.validateEANInput(this.value)"' : 'readonly'} oninput="UISheet.updateField('ean', this.value)">
+            ${_isCreate ? `<span id="ean-validation-badge" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;"></span>` : ''}
+          </div>
+          ${_isCreate ? '<p class="form-hint" id="ean-hint">Introduce el EAN para validar el dígito de control.</p>' : ''}
         </div>
         <div class="form-group">
           <label>Peso neto (g)</label>
@@ -571,6 +581,28 @@ const UISheet = (() => {
 `;
   }
 
+  function validateEANInput(ean) {
+    updateField('ean', ean);
+    const badge = document.getElementById('ean-validation-badge');
+    const hint  = document.getElementById('ean-hint');
+    if (!badge) return;
+    if (!ean || ean.length < 8) {
+      badge.textContent = '';
+      if (hint) hint.textContent = 'Introduce el EAN para validar el dígito de control.';
+      return;
+    }
+    const v = DB.validateEAN(ean);
+    if (v.valid) {
+      badge.textContent = '✓ Válido';
+      badge.style.color = 'var(--success, #4ac99b)';
+      if (hint) hint.textContent = 'EAN válido.';
+    } else {
+      badge.textContent = '✗ Inválido';
+      badge.style.color = 'var(--danger, #e55)';
+      if (hint) hint.textContent = v.reason;
+    }
+  }
+
   // Legacy aliases for backward compatibility with external calls
   function updateRetailerField(field, value) { updateHoldingField(field, value); }
   function addToRetailer(rid) { addToHolding(rid); }
@@ -581,6 +613,7 @@ const UISheet = (() => {
     open, openCreate, close, save, discard, syncOFF, changeImage, changeImageUrl, setActiveImage, setAsMainImage,
     updateField, updateHoldingField, toggleStock,
     setHolding, addToHolding, removeFromHolding,
+    validateEANInput,
     updateRetailerField, addToRetailer, removeFromRetailer, setRetailer
   };
 })();

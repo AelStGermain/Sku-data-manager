@@ -93,6 +93,9 @@ const UIRetailers = (() => {
       <span class="retailer-id-badge">ID: ${esc(r.id)}</span>
     </div>
     <div class="retailer-card-actions">
+      <button class="icon-btn" title="Ver SKUs de este Holding" onclick="App.filterByHolding('${esc(r.id)}')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/></svg>
+      </button>
       <button class="icon-btn" title="Ver Tiendas Físicas" onclick="UIRetailers.openStores('${esc(r.id)}')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </button>

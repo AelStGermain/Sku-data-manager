@@ -106,8 +106,3 @@ El sistema implementa la siguiente estructura de datos:
 git clone https://github.com/AelStGermain/Sku-data-manager.git
 ```
 
-No requiere Node.js ni compilación. Sirve el directorio raíz con un servidor HTTP estático.
-
-## Conclusión Académica
-
-Si bien el enfoque de mi lugar de práctica ha sido en la Inteligencia Artificial y el reconocimiento visual, este proyecto demostró una hipótesis fundamental en la ciencia de datos y logística: **Ninguna IA ni algoritmo predictivo funcionará correctamente si la base de datos subyacente (el flujo digital) es inconsistente o basura.** Optimizar primero la captura, limpieza y estructuración de los Datos Maestros es el pilar para cualquier innovación tecnológica futura.

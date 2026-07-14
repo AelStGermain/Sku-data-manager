@@ -131,6 +131,21 @@ const UIBulk = (() => {
             </button>
 
             <hr style="margin:20px 0; border:none; border-top:1px solid var(--border)">
+
+            <h4>Asignar a Holding</h4>
+            <p class="bulk-hint" style="margin-bottom:12px">Activa los SKUs seleccionados en un holding específico (no sobreescribe datos existentes).</p>
+            
+            <div class="form-group">
+              <select id="bulk-batch-holding" class="form-select">
+                <option value="">-- Seleccionar Holding --</option>
+                ${DB.getHoldings().map(h => `<option value="${h.id}">${h.name}</option>`).join('')}
+              </select>
+            </div>
+            <button class="btn-secondary" style="width:100%; margin-bottom:0;" onclick="UIBulk.applyBulkHolding()" ${_selectedEans.size === 0 ? 'disabled' : ''}>
+              Asignar selección a Holding
+            </button>
+
+            <hr style="margin:20px 0; border:none; border-top:1px solid var(--border)">
             <button class="btn-danger-sm" style="width:100%" onclick="UIBulk.deleteSelected()" ${_selectedEans.size === 0 ? 'disabled' : ''}>
               Eliminar seleccionados
             </button>
@@ -426,6 +441,45 @@ const UIBulk = (() => {
         if (App) App.showToast('Base de datos sincronizada', 'success');
         render();
       });
+    },
+    applyBulkHolding() {
+      if (_selectedEans.size === 0) return;
+      const hid = document.getElementById('bulk-batch-holding')?.value;
+      if (!hid) { if (App) App.showToast('Selecciona un holding primero', 'warning'); return; }
+      const hInfo = DB.getHoldings().find(h => h.id === hid);
+      const hName = hInfo?.name || hid;
+      const cats = hInfo?.categories || [];
+      const defaultCat = cats.length > 0 ? cats[0] : 'GROCERY STORE';
+      const prodsToSave = [];
+      let assigned = 0;
+      _selectedEans.forEach(ean => {
+        const p = DB.getProduct(ean);
+        if (p) {
+          p.holdings = p.holdings || {};
+          if (!p.holdings[hid]) {
+            p.holdings[hid] = {
+              holdingInternalId: null, customerId: null,
+              localProductName: p.name || '',
+              name: p.name || '',
+              localCategoryName: defaultCat,
+              category: defaultCat,
+              stockStatus: true, isActiveHolding: true,
+              imageUrl: p.imageUrl || null,
+              updatedAt: new Date().toISOString()
+            };
+            prodsToSave.push(p);
+            assigned++;
+          }
+        }
+      });
+      if (assigned > 0) {
+        DB.saveProducts(prodsToSave);
+        if (App) App.showToast(`${assigned} SKUs asignados a ${hName}`, 'success');
+        _selectedEans.clear();
+        render();
+      } else {
+        if (App) App.showToast('Los SKUs seleccionados ya pertenecen a ese holding', 'info');
+      }
     }
   };
 })();
