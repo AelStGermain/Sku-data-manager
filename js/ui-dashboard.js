@@ -2,16 +2,33 @@
 
 const UIDashboard = (() => {
   let _catChart = null;
+  let _holdingChart = null;
+  let _statusChart = null;
+  let _selectedHoldings = new Set(); // Empty means all
+
+  function toggleHolding(hid) {
+    if (_selectedHoldings.has(hid)) {
+      _selectedHoldings.delete(hid);
+    } else {
+      _selectedHoldings.add(hid);
+    }
+    render();
+  }
+
+  function toggleAllHoldings() {
+    _selectedHoldings.clear();
+    render();
+  }
 
   function render() {
     const el = document.getElementById('view-dashboard');
     if (!el) return;
 
-    const products = DB.getProductsArray();
+    const allProducts = DB.getProductsArray();
     const holdings = DB.getHoldings();
-    const total = products.length;
+    const allTotal = allProducts.length;
 
-    if (total === 0) {
+    if (allTotal === 0) {
       el.innerHTML = `
 <header class="view-header">
   <div>
@@ -20,7 +37,7 @@ const UIDashboard = (() => {
   </div>
 </header>
 <div class="empty-state" style="padding:60px; text-align:center;">
-  <div style="font-size:48px; margin-bottom:16px">??</div>
+  <div style="font-size:48px; margin-bottom:16px">📊</div>
   <h3>Sin datos aún</h3>
   <p style="color:var(--text-muted); margin-bottom:24px;">Importa productos para ver el dashboard.</p>
   <button class="btn-primary" onclick="App.navigateTo('import')">Importar datos</button>
@@ -28,19 +45,30 @@ const UIDashboard = (() => {
       return;
     }
 
+    // Filter products by selected holdings
+    let products = allProducts;
+    if (_selectedHoldings.size > 0) {
+      products = allProducts.filter(p => {
+        const pHoldings = p.holdings || p.retailers || {};
+        return Array.from(_selectedHoldings).some(hid => pHoldings[hid]);
+      });
+    }
+
+    const total = products.length;
     const enriched = products.filter(p => p.dataSource && p.dataSource !== 'manual').length;
     const withImage = products.filter(p => p.imageUrl).length;
     const noBrand = products.filter(p => !p.brand || p.brand === 'N/A').length;
     const noWeight = products.filter(p => !p.weight_g).length;
     const noCat = products.filter(p => !p.universalCategory && !p.category).length;
     const noImage = products.filter(p => !p.imageUrl).length;
-    const avgCompleteness = Math.round(products.reduce((s, p) => s + DB.computeCompleteness(p), 0) / total);
-    const enrichRate = Math.round(enriched / total * 100);
-    const imgRate = Math.round(withImage / total * 100);
+    
+    const avgCompleteness = total > 0 ? Math.round(products.reduce((s, p) => s + DB.computeCompleteness(p), 0) / total) : 0;
+    const enrichRate = total > 0 ? Math.round(enriched / total * 100) : 0;
+    const imgRate = total > 0 ? Math.round(withImage / total * 100) : 0;
 
     const catCount = {};
     products.forEach(p => {
-      const c = p.universalCategory || p.category || 'Sin categor�a';
+      const c = p.universalCategory || p.category || 'Sin categoría';
       catCount[c] = (catCount[c] || 0) + 1;
     });
     const topCats = Object.entries(catCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -51,6 +79,14 @@ const UIDashboard = (() => {
         ? Math.round(hProds.reduce((s, p) => s + DB.computeCompleteness(p), 0) / hProds.length)
         : 0;
       return { ...h, count: hProds.length, avg: hAvg };
+    }).filter(h => h.count > 0);
+    holdingStats.sort((a, b) => b.count - a.count);
+
+    const statusCounts = { active: 0, review: 0 };
+    products.forEach(p => {
+      const s = p.status || 'active';
+      if (s === 'review') statusCounts.review++;
+      else statusCounts.active++;
     });
 
     const noEanCount = DB.getStagingNoEan().length;
@@ -78,6 +114,15 @@ const UIDashboard = (() => {
   </div>
 </header>
 
+<div class="dash-holding-filters" style="margin-bottom:16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+  <span style="font-size:12px; font-weight:600; color:var(--text-muted); margin-right:8px;">Filtrar Dashboard por Holdings:</span>
+  <button class="btn-mini ${_selectedHoldings.size === 0 ? 'active' : ''}" onclick="UIDashboard.toggleAllHoldings()" style="${_selectedHoldings.size === 0 ? 'background:var(--accent); color:#fff; border-color:var(--accent);' : 'border-color:var(--border); color:var(--text);'}">Todos</button>
+  ${holdings.map(h => {
+    const isSelected = _selectedHoldings.has(h.id);
+    return `<button class="btn-mini ${isSelected ? 'active' : ''}" onclick="UIDashboard.toggleHolding('${h.id}')" style="border-color:${h.color}; color:${isSelected ? '#fff' : h.color}; background:${isSelected ? h.color : 'transparent'};">${h.name}</button>`;
+  }).join('')}
+</div>
+
 <div class="dash-kpi-grid">
   <div class="dash-kpi-card">
     <div class="dash-kpi-icon" style="background:rgba(79,110,247,0.12);color:#4F6EF7">
@@ -85,7 +130,7 @@ const UIDashboard = (() => {
     </div>
     <div class="dash-kpi-body">
       <span class="dash-kpi-val">${total.toLocaleString('es-CL')}</span>
-      <span class="dash-kpi-label">SKUs en Catálogo</span>
+      <span class="dash-kpi-label">SKUs Seleccionados</span>
     </div>
   </div>
   <div class="dash-kpi-card" style="cursor:pointer" onclick="App.navigateTo('bulk')">
@@ -120,12 +165,30 @@ const UIDashboard = (() => {
   </div>
 </div>
 
-<div class="dash-main-grid">
+<div class="dash-main-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
 
   <div class="dash-panel">
     <h3 class="dash-panel-title">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Distribución por Categoría Vispera
+      SKUs por Holding
+    </h3>
+    <div style="position:relative;height:200px;display:flex;justify-content:center;">
+      <canvas id="dash-holding-chart" style="max-width:200px;"></canvas>
+    </div>
+    <div class="dash-cat-legend">
+      ${holdingStats.map(h => `
+        <div class="dash-cat-item">
+          <span class="dash-cat-dot" style="background:${h.color}"></span>
+          <span class="dash-cat-name">${h.name}</span>
+          <span class="dash-cat-count">${h.count}</span>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="dash-panel">
+    <h3 class="dash-panel-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+      Distribución por Categoría
     </h3>
     <div style="position:relative;height:200px;display:flex;justify-content:center;">
       <canvas id="dash-cat-chart" style="max-width:200px;"></canvas>
@@ -141,6 +204,28 @@ const UIDashboard = (() => {
     }).join('')}
     </div>
   </div>
+  
+  <div class="dash-panel">
+    <h3 class="dash-panel-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Estado de SKUs
+    </h3>
+    <div style="position:relative;height:200px;display:flex;justify-content:center;">
+      <canvas id="dash-status-chart" style="max-width:200px;"></canvas>
+    </div>
+    <div class="dash-cat-legend">
+      <div class="dash-cat-item">
+        <span class="dash-cat-dot" style="background:#4ac99b"></span>
+        <span class="dash-cat-name">Activos</span>
+        <span class="dash-cat-count">${statusCounts.active}</span>
+      </div>
+      <div class="dash-cat-item">
+        <span class="dash-cat-dot" style="background:#FFC107"></span>
+        <span class="dash-cat-name">En Revisión</span>
+        <span class="dash-cat-count">${statusCounts.review}</span>
+      </div>
+    </div>
+  </div>
 
   <div class="dash-panel">
     <h3 class="dash-panel-title">
@@ -148,7 +233,7 @@ const UIDashboard = (() => {
       Completitud por Holding
     </h3>
     ${holdingStats.length === 0
-        ? '<p style="color:var(--text-muted);font-size:13px;padding:20px 0">Sin holdings configurados.</p>'
+        ? '<p style="color:var(--text-muted);font-size:13px;padding:20px 0">Sin holdings con productos.</p>'
         : holdingStats.map(h => `
       <div class="dash-holding-row" onclick="App.filterByHolding('${h.id}')" title="Ver SKUs de ${h.name}">
         <div class="dash-holding-name">
@@ -183,6 +268,9 @@ const UIDashboard = (() => {
 `;
 
     if (_catChart) { _catChart.destroy(); _catChart = null; }
+    if (_holdingChart) { _holdingChart.destroy(); _holdingChart = null; }
+    if (_statusChart) { _statusChart.destroy(); _statusChart = null; }
+
     const catCtx = document.getElementById('dash-cat-chart');
     if (catCtx && typeof Chart !== 'undefined' && topCats.length > 0) {
       _catChart = new Chart(catCtx, {
@@ -198,14 +286,52 @@ const UIDashboard = (() => {
         },
         options: {
           responsive: true, maintainAspectRatio: false, cutout: '65%',
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} SKUs` } }
-          }
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} SKUs` } } }
         }
       });
     }
+
+    const holdCtx = document.getElementById('dash-holding-chart');
+    if (holdCtx && typeof Chart !== 'undefined' && holdingStats.length > 0) {
+      _holdingChart = new Chart(holdCtx, {
+        type: 'doughnut',
+        data: {
+          labels: holdingStats.map(h => h.name),
+          datasets: [{
+            data: holdingStats.map(h => h.count),
+            backgroundColor: holdingStats.map(h => h.color),
+            borderWidth: 2,
+            borderColor: 'transparent'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '65%',
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} SKUs` } } }
+        }
+      });
+    }
+
+    const statCtx = document.getElementById('dash-status-chart');
+    if (statCtx && typeof Chart !== 'undefined' && (statusCounts.active > 0 || statusCounts.review > 0)) {
+      _statusChart = new Chart(statCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Activos', 'En Revisión'],
+          datasets: [{
+            data: [statusCounts.active, statusCounts.review],
+            backgroundColor: ['#4ac99b', '#FFC107'],
+            borderWidth: 2,
+            borderColor: 'transparent'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '65%',
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} SKUs` } } }
+        }
+      });
+    }
+
   }
 
-  return { render };
+  return { render, toggleHolding, toggleAllHoldings };
 })();
