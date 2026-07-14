@@ -7,7 +7,7 @@ const UIStaging = (() => {
   let _activeTab = 'unmatched'; // 'unmatched' | 'batch'
 
   function render() {
-    const el = document.getElementById('view-staging');
+    const el = document.getElementById('view-auditoria');
     if (!el) return;
 
     const unmatched = DB.getStagingUnmatched();
@@ -16,7 +16,7 @@ const UIStaging = (() => {
     el.innerHTML = `
 <header class="view-header">
   <div>
-    <h1 class="view-title">Matching &amp; Enrichment Pipeline</h1>
+    <h1 class="view-title">Auditoría de Matching</h1>
     <p class="view-sub">Revisión de EANs no identificados y envío de lotes a Vispera</p>
   </div>
   <div class="view-actions">
@@ -468,7 +468,7 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
     if (!item) return;
 
     // Open the create sheet pre-populated with field discovery data
-    UISheet.openCreate();
+    UISheet.openCreate(id);
 
     // After a tick, pre-fill available fields
     setTimeout(() => {
@@ -509,9 +509,6 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
       }
 
       App.showToast('Formulario pre-cargado con datos del SKU de terreno. Completa y guarda.', 'info');
-
-      // Remove from staging once promoted
-      DB.removeStagingUnmatched(id);
     }, 120);
   }
 

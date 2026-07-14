@@ -442,7 +442,7 @@ const UIBulk = (() => {
         render();
       });
     },
-    applyBulkHolding() {
+    applyBulkHolding: async function() {
       if (_selectedEans.size === 0) return;
       const hid = document.getElementById('bulk-batch-holding')?.value;
       if (!hid) { if (App) App.showToast('Selecciona un holding primero', 'warning'); return; }
@@ -473,9 +473,10 @@ const UIBulk = (() => {
         }
       });
       if (assigned > 0) {
-        DB.saveProducts(prodsToSave);
+        await DB.saveProducts(prodsToSave);
         if (App) App.showToast(`${assigned} SKUs asignados a ${hName}`, 'success');
         _selectedEans.clear();
+        await DB.fetchProducts();
         render();
       } else {
         if (App) App.showToast('Los SKUs seleccionados ya pertenecen a ese holding', 'info');

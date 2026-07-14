@@ -35,6 +35,8 @@ const App = {
   navigateTo(view) {
     // Map legacy 'retailers' to 'holdings'
     if (view === 'retailers') view = 'holdings';
+    // Map legacy 'staging' and 'pipeline' to 'auditoria'
+    if (view === 'staging' || view === 'pipeline') view = 'auditoria';
 
     if (window.location.hash !== `#${view}`) {
       window.location.hash = view; 
@@ -55,7 +57,7 @@ const App = {
     if (view === 'import')         UIImport.render();
     if (view === 'holdings')       { if (typeof UIHoldings !== 'undefined') UIHoldings.render(); else if (typeof UIRetailers !== 'undefined') UIRetailers.render(); }
     if (view === 'levantamiento')  UILevantamiento.render();
-    if (view === 'staging')        UIStaging.render();
+    if (view === 'auditoria')      UIStaging.render();
     if (view === 'dashboard')      UIDashboard.render();
   },
 

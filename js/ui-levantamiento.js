@@ -22,7 +22,7 @@ const UILevantamiento = (() => {
     <span class="badge" style="background:var(--accent)">${staging.length} registros en Staging</span>
     <button class="btn-teal" onclick="UILevantamiento.processStaging()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      Ejecutar Matching Pipeline
+      Ejecutar Auditoría Matching
     </button>
   </div>
 </header>
@@ -113,7 +113,7 @@ const UILevantamiento = (() => {
 
 <!-- Pipeline Visual -->
 <div class="pipeline-visual">
-  <h3 style="margin-bottom:16px;">Matching & Enrichment Pipeline</h3>
+  <h3 style="margin-bottom:16px;">Auditoría de Matching</h3>
   <div class="pipeline-steps">
     <div class="pipeline-step">
       <div class="pipeline-step-number">1</div>

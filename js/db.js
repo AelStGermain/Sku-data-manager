@@ -508,8 +508,10 @@ const DB = (() => {
               ean: p.ean,
               retailer_id: hid,
               internal_sku_id: hData.holdingInternalId || hData.customerId || p.ean,
+              local_product_name: hData.localProductName || hData.name || p.name,
               retailer_category: hData.localCategoryName || hData.category || 'General',
-              is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false
+              is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false,
+              updated_at: hData.updatedAt || new Date().toISOString()
             });
           }
         }

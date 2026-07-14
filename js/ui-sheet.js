@@ -11,6 +11,7 @@ const UISheet = (() => {
   let _isCreate = false;
   let _createMode = 'master'; // 'master' | 'field'
   let _activeImageIndex = 0;
+  let _stagingId = null;
   
   // Field discovery states
   let _fdImageB64 = null;
@@ -47,8 +48,9 @@ const UISheet = (() => {
     _showModal();
   }
 
-  function openCreate() {
+  function openCreate(stagingId = null) {
     _ean = null;
+    _stagingId = stagingId;
     _isCreate = true;
     _data = {
       ean: '', name: '', brand: '', packageType: 'other', 
@@ -72,7 +74,7 @@ const UISheet = (() => {
   function close() {
     if (_dirty && !confirm('Tienes cambios sin guardar. ¿Salir de todas formas?')) return;
     _hideModal();
-    _ean = _original = _data = null;
+    _ean = _original = _data = _stagingId = null;
     _dirty = false;
     _isCreate = false;
   }
@@ -165,6 +167,12 @@ const UISheet = (() => {
     _isCreate = false;
     const btn = document.getElementById('sheet-save-btn');
     if (btn) btn.classList.remove('has-changes');
+    
+    if (_stagingId) {
+      DB.removeStagingUnmatched(_stagingId);
+      _stagingId = null;
+    }
+    
     App.showToast('Cambios guardados correctamente', 'success');
     _render();
     // Refresh catalog in background
