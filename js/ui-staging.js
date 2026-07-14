@@ -298,32 +298,36 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
 
     let enriched = 0;
     let batch = [];
-    for (const item of unmatched) {
-      const apiData = await API.enrichProduct(item.ean);
-      if (apiData) {
-        // Map to universal category
-        const universalCat = _mapToVisperaCategory(apiData.masterCategory || apiData.name || '');
-
-        batch.push({
-          id: item.id,
-          updates: {
-            apiRawName: apiData.name || null,
-            apiBrand: apiData.brand || null,
-            apiWeight: apiData.weight_g ? `${apiData.weight_g}g` : null,
-            apiUniversalCategory: universalCat,
-            status: 'ENRICHED'
-          }
-        });
-        enriched++;
-      } else {
-        batch.push({
-          id: item.id,
-          updates: {
-            status: 'ENRICHED',
-            apiUniversalCategory: item.dmuCategory ? _mapToVisperaCategory(item.dmuCategory) : null
-          }
-        });
-      }
+    const chunkSize = 10;
+    
+    for (let i = 0; i < unmatched.length; i += chunkSize) {
+      const chunk = unmatched.slice(i, i + chunkSize);
+      
+      await Promise.all(chunk.map(async (item) => {
+        const apiData = await API.enrichProduct(item.ean);
+        if (apiData) {
+          const universalCat = _mapToVisperaCategory(apiData.masterCategory || apiData.name || '');
+          batch.push({
+            id: item.id,
+            updates: {
+              apiRawName: apiData.name || null,
+              apiBrand: apiData.brand || null,
+              apiWeight: apiData.weight_g ? `${apiData.weight_g}g` : null,
+              apiUniversalCategory: universalCat,
+              status: 'ENRICHED'
+            }
+          });
+          enriched++;
+        } else {
+          batch.push({
+            id: item.id,
+            updates: {
+              status: 'ENRICHED',
+              apiUniversalCategory: item.dmuCategory ? _mapToVisperaCategory(item.dmuCategory) : null
+            }
+          });
+        }
+      }));
       
       if (batch.length >= 20) {
         DB.updateStagingUnmatchedBatch([...batch]);
@@ -331,7 +335,7 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
         render(); // optional to show progress
       }
       
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 1000));
     }
     
     if (batch.length > 0) {

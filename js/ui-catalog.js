@@ -417,34 +417,43 @@ ${renderPagination(filtered.length)}`;
     // Desacoplar la ejecución para que sobreviva la navegación de vistas
     (async () => {
       let done = 0, found = 0;
-      let batch = [];
-      for (const product of toEnrich) {
-        const apiData = await API.enrichProduct(product.ean);
-        if (apiData) {
-          const merged = API.mergeEnriched(product, apiData);
-          batch.push(merged);
-          found++;
-          const imgEl = document.querySelector(`[data-ean="${product.ean}"] .card-img`);
-          if (imgEl && merged.imageUrl) imgEl.src = merged.imageUrl;
-        }
-        done++;
+      let batchToSave = [];
+      
+      // Procesar en chunks de 10 concurrentes
+      const chunkSize = 10;
+      for (let i = 0; i < toEnrich.length; i += chunkSize) {
+        const chunk = toEnrich.slice(i, i + chunkSize);
         
-        // Save batch every 20 items to prevent huge network stalls and memory spikes
-        if (batch.length >= 20) {
-          await DB.saveProducts([...batch]);
-          batch = [];
+        await Promise.all(chunk.map(async (product) => {
+          const apiData = await API.enrichProduct(product.ean);
+          if (apiData) {
+            const merged = API.mergeEnriched(product, apiData);
+            batchToSave.push(merged);
+            found++;
+            const imgEl = document.querySelector(`[data-ean="${product.ean}"] .card-img`);
+            if (imgEl && merged.imageUrl) imgEl.src = merged.imageUrl;
+          }
+          done++;
+        }));
+        
+        // Save batch if it reaches threshold (e.g., 20)
+        if (batchToSave.length >= 20) {
+          await DB.saveProducts([...batchToSave]);
+          batchToSave = [];
         }
         
-        // Actualizar botón si existe en el DOM (si el usuario sigue en Catalog)
+        // Actualizar botón si existe en el DOM
         const btn = document.getElementById('enrich-all-btn');
         if (btn) btn.innerHTML = `<span class="spin-ico">↻</span> Enriqueciendo (${done}/${toEnrich.length})…`;
         
-        await new Promise(r => setTimeout(r, 600)); // Intervalo generoso para no saturar API
+        // Espera de 1 segundo entre chunks para no saturar la API (aprox 10 req/s)
+        await new Promise(r => setTimeout(r, 1000));
       }
       
       // Save remaining
-      if (batch.length > 0) {
-        await DB.saveProducts(batch);
+      if (batchToSave.length > 0) {
+        await DB.saveProducts(batchToSave);
+      }
       }
 
       _enriching = false;
