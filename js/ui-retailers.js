@@ -202,7 +202,17 @@ const UIRetailers = (() => {
     <p class="form-hint">URL o nombre de archivo de la imagen que se usará como cabecera o banner.</p>
   </div>
 
-  <!-- Categories are dynamically gathered from imported products -->
+  <div class="form-group">
+    <label>Categorías Propias del Holding</label>
+    <div style="display:flex; gap:8px; margin-bottom:8px;">
+      <input type="text" class="form-input" id="cat-new-input" placeholder="ej. Cuidado Personal" onkeydown="if(event.key==='Enter') { event.preventDefault(); UIRetailers.addCat(); }">
+      <button class="btn-outline" onclick="UIRetailers.addCat()">Agregar</button>
+    </div>
+    <div class="cats-manager" id="cats-manager">
+      ${_renderCatTags()}
+    </div>
+    <p class="form-hint">Estas categorías son independientes a las categorías universales de Vispera.</p>
+  </div>
 </div>
 
 <div class="form-modal-footer">
@@ -254,14 +264,14 @@ const UIRetailers = (() => {
     if (!name) { App.showToast('El nombre es obligatorio', 'error'); return; }
 
     if (_editId) {
-      DB.updateRetailer(_editId, { name, color, logoUrl });
+      DB.updateRetailer(_editId, { name, color, logoUrl, categories: _editCats });
       App.showToast(`${name} actualizado correctamente`, 'success');
     } else {
       const idInput = document.getElementById('r-id')?.value.trim().toLowerCase().replace(/\s+/g,'-');
       if (!idInput) { App.showToast('El ID es obligatorio', 'error'); return; }
       const exists = DB.getRetailers().find(r => r.id === idInput);
       if (exists) { App.showToast(`Ya existe un Holding con ID "${idInput}"`, 'error'); return; }
-      DB.addRetailer({ id: idInput, name, color, logoUrl, categories: [] });
+      DB.addRetailer({ id: idInput, name, color, logoUrl, categories: _editCats });
       App.showToast(`${name} agregado correctamente`, 'success');
     }
 
