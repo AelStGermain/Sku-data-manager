@@ -265,7 +265,7 @@ const UILevantamiento = (() => {
   function removeEntry(idx) {
     const staging = DB.getStagingLevantamiento();
     staging.splice(idx, 1);
-    try { localStorage.setItem(, ); } catch (e) { console.warn('QuotaExceededError in ui-levantamiento'); }
+    try { localStorage.setItem('ss_staging_levantamiento', JSON.stringify(staging)); } catch (e) { localStorage.removeItem('ss_products_cache'); try { localStorage.setItem('ss_staging_levantamiento', JSON.stringify(staging)); } catch(e2) {} }
     render();
   }
 
@@ -525,7 +525,7 @@ const UILevantamiento = (() => {
     }
 
     // Save status changes without clearing staging
-    try { localStorage.setItem(, ); } catch (e) { console.warn('QuotaExceededError in ui-levantamiento'); }
+    try { localStorage.setItem('ss_staging_levantamiento', JSON.stringify(staging)); } catch (e) { localStorage.removeItem('ss_products_cache'); try { localStorage.setItem('ss_staging_levantamiento', JSON.stringify(staging)); } catch(e2) {} }
 
     if (matched > 0 || unmatched > 0) {
       App.showToast(`Auditoría Automática: ${matched} matches, ${unmatched} nuevos SKUs. ${visperaTickets} tickets a Vispera.`, 'success');
