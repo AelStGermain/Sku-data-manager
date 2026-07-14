@@ -8,7 +8,7 @@ const UIImport = (() => {
   let _fileData    = null;   // { headers, rows }
   let _mapping     = {};     // field → column name mapping
   let _retailer    = '';     // retailer id selected
-  let _enrich      = true;
+  let _enrich      = false;
   let _importMode  = 'fill_empty';   // 'fill_empty' | 'overwrite' | 'skip'
   let _importResults = null;         // { created, updated, skipped, conflictLog }
   let _enrichLog   = [];             // [{ ean, name, status, source }]
@@ -468,44 +468,39 @@ ${conflictLog.length > 0 ? `
        }
     }
 
-    // 2) Redirect to Levantamiento Staging (Pipeline first) as requested by user
-    let addedCount = 0;
-    let noEanCount = 0;
+    // 2) Direct import to Master Catalog (Local DB) for speed and immediate multi-holding visibility
+    const validEans = [];
+    const noEans = [];
     
     for (const p of products) {
        if (!p.ean || p.ean.toString().trim().length < 6) {
-           DB.addStagingNoEan({
-             holdingId: _retailer || 'IMPORTACION',
-             dmu: p.retailers?.[_retailer]?.dmu || p.category || '',
-             category: p.category || '',
-             auditor: 'Excel Import',
-             source: 'Subida Masiva Excel',
-             firebaseName: p.name || 'Sin Nombre'
-           });
-           noEanCount++;
+           noEans.push(p);
        } else {
-           DB.addStagingLevantamiento({
-             ean: p.ean.toString().trim(),
-             holdingId: _retailer || 'IMPORTACION',
-             dmu: p.retailers?.[_retailer]?.dmu || p.category || '',
-             category: p.category || '',
-             auditor: 'Excel Import',
-             firebaseName: p.name || '',
-             status: 'PENDING'
-           });
-           addedCount++;
+           validEans.push(p);
        }
     }
-
-    _importResults = { 
-      created: addedCount, 
-      updated: noEanCount, // abusing 'updated' to show no-ean count in UI
-      skipped: 0, 
-      conflictLog: [] 
-    };
+    
+    if (status) status.textContent = 'Guardando en la base de datos maestra...';
+    
+    // Save valid EANs to master catalog
+    _importResults = Importer.importWithMode(validEans, _importMode);
+    
+    // Send only items without EAN to Staging (Por Identificar)
+    for (const p of noEans) {
+      DB.addStagingNoEan({
+        holdingId: _retailer || 'IMPORTACION',
+        dmu: p.retailers?.[_retailer]?.dmu || p.category || '',
+        category: p.category || '',
+        auditor: 'Excel Import',
+        source: 'Subida Masiva Excel',
+        firebaseName: p.name || 'Sin Nombre'
+      });
+    }
+    
+    _importResults.updated += noEans.length; // Add to UI count of "updated/no-ean"
 
     if (fill) fill.style.width = '30%';
-    if (detail) detail.textContent = `${addedCount} EANs al Pipeline · ${noEanCount} sin EAN a Por Identificar`;
+    if (detail) detail.textContent = `${_importResults.created} Nuevos · ${_importResults.updated - noEans.length} Actualizados · ${noEans.length} Sin EAN`;
 
     // 3) Parallel enrichment
     if (_enrich && products.length > 0) {
