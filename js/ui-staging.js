@@ -148,9 +148,9 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
 <div class="staging-info-bar">
   <div class="staging-info-left">
     <span class="staging-info-label">Total: <strong>${items.length}</strong> EAN(s) sin match</span>
-    <span class="staging-info-label">Enriquecidos: <strong>${items.filter(i => i.apiRawName).length}</strong></span>
+    <span class="staging-info-label">Enriquecidos: <strong>${items.filter(i => i.apiRawName && i.type !== 'field_discovery').length}</strong></span>
+    <span class="staging-info-label" style="color:var(--warning)">📷 De Terreno: <strong>${items.filter(i => i.type === 'field_discovery').length}</strong></span>
     <span class="staging-info-label" style="color:var(--success)">Alta confianza: <strong>${items.filter(i => getConfidence(i) === 'ALTA').length}</strong></span>
-    <span class="staging-info-label" style="color:var(--warning)">Baja confianza: <strong>${items.filter(i => getConfidence(i) === 'BAJA').length}</strong></span>
   </div>
   <button class="btn-clear" onclick="UIStaging.clearUnmatched()">Limpiar todo</button>
 </div>
@@ -159,38 +159,55 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
   <table class="preview-table">
     <thead>
       <tr>
-        <th>EAN</th>
+        <th width="50">Img</th>
+        <th>EAN / ID</th>
         <th>Holding</th>
-        <th>DMU/Categoría</th>
-        <th>Nombre (API)</th>
-        <th>Marca (API)</th>
-        <th>Peso (API)</th>
-        <th>Cat. Universal</th>
+        <th>Descripción / Nombre</th>
+        <th>Pasillo / DMU</th>
+        <th>Categoría Vispera</th>
+        <th>Tipo</th>
         <th>Confianza</th>
-        <th>Status</th>
         <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
       ${items.map(item => {
-        const conf = getConfidence(item);
-        const confColor = conf === 'ALTA' ? 'var(--success)' : 'var(--warning)';
-        const catColor = VISPERA_CATEGORY_COLORS[item.apiUniversalCategory] || '#888';
+        const isField = item.type === 'field_discovery';
+        const conf = isField ? '—' : getConfidence(item);
+        const confColor = conf === 'ALTA' ? 'var(--success)' : conf === 'BAJA' ? 'var(--warning)' : 'var(--text-muted)';
+        const catColor = VISPERA_CATEGORY_COLORS[item.apiUniversalCategory || item.dmuCategory] || '#888';
+        const imgSrc = item.imageUrl || '';
         return `
-      <tr>
-        <td class="mono" style="font-weight:600">${esc(item.ean)}</td>
-        <td><span class="holding-badge-sm">${esc(item.holdingId)}</span></td>
-        <td>${esc(item.dmuCategory || '—')}</td>
-        <td>${item.apiRawName ? esc(item.apiRawName) : '<span style="color:var(--text-muted)">—</span>'}</td>
-        <td>${item.apiBrand ? esc(item.apiBrand) : '<span style="color:var(--text-muted)">—</span>'}</td>
-        <td>${item.apiWeight ? esc(item.apiWeight) : '<span style="color:var(--text-muted)">—</span>'}</td>
-        <td>${item.apiUniversalCategory
-          ? `<span class="vispera-cat-badge" style="--cat-color:${catColor}">${esc(item.apiUniversalCategory)}</span>`
+      <tr class="${isField ? 'field-discovery-row' : ''}">
+        <td>
+          ${imgSrc
+            ? `<div class="staging-thumb" style="background-image:url('${esc(imgSrc)}')"></div>`
+            : `<div class="staging-thumb staging-thumb-empty"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}
+        </td>
+        <td class="mono" style="font-weight:600">
+          ${esc(item.ean)}
+          ${item.isTentativeEAN ? '<span class="tentative-ean-badge">tentativo</span>' : ''}
+        </td>
+        <td><span class="holding-badge-sm">${esc(item.holdingId || '—')}</span></td>
+        <td>${esc(item.description || item.apiRawName || '—')}</td>
+        <td style="font-size:12px">
+          ${item.aisle ? `<span style="color:var(--text-sec)">${esc(item.aisle)}</span><br>` : ''}
+          ${item.dmu ? `<span style="color:var(--text-muted);font-size:11px">DMU: ${esc(item.dmu)}</span>` : ''}
+          ${!item.aisle && !item.dmu ? '—' : ''}
+        </td>
+        <td>${(item.apiUniversalCategory || item.dmuCategory)
+          ? `<span class="vispera-cat-badge" style="--cat-color:${catColor}">${esc(item.apiUniversalCategory || item.dmuCategory)}</span>`
           : '<span style="color:var(--text-muted)">—</span>'}</td>
-        <td><span class="confidence-badge" style="background:${confColor}20;color:${confColor};border-color:${confColor}40">${conf}</span></td>
+        <td>
+          ${isField
+            ? '<span class="confidence-badge" style="background:rgba(255,193,7,0.12);color:#FFC107;border-color:#FFC107">📷 Terreno</span>'
+            : `<span class="confidence-badge" style="background:${confColor}20;color:${confColor};border-color:${confColor}40">${conf}</span>`}
+        </td>
         <td><span class="status-badge ${item.status === 'ENRICHED' ? 'new' : 'conflict'}" style="font-size:10px">${esc(item.status)}</span></td>
         <td style="display:flex; gap:4px;">
-          <button class="btn-mini" onclick="UIStaging.approveAndInsert('${esc(item.id)}')" title="Aprobar e insertar en Master">✓</button>
+          ${isField
+            ? `<button class="btn-mini" onclick="UIStaging.promoteFieldDiscovery('${esc(item.id)}')" title="Crear SKU desde este registro">＋ Crear SKU</button>`
+            : `<button class="btn-mini" onclick="UIStaging.approveAndInsert('${esc(item.id)}')" title="Aprobar e insertar en Master">✓</button>`}
           <button class="btn-mini" style="color:var(--danger)" onclick="UIStaging.removeUnmatched('${esc(item.id)}')" title="Rechazar">✕</button>
         </td>
       </tr>`;
@@ -446,6 +463,43 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
     render();
   }
 
+  function promoteFieldDiscovery(id) {
+    const item = DB.getStagingUnmatched().find(i => i.id === id);
+    if (!item) return;
+
+    // Open the create sheet pre-populated with field discovery data
+    UISheet.openCreate();
+
+    // After a tick, pre-fill available fields
+    setTimeout(() => {
+      const eanInput = document.getElementById('sheet-ean-inp');
+      const nameInput = document.getElementById('sheet-name');
+
+      if (eanInput && !item.isTentativeEAN && item.ean) {
+        eanInput.value = item.ean;
+        UISheet.validateEANInput(item.ean);
+      }
+      if (nameInput && item.description) {
+        nameInput.value = item.description;
+        UISheet.updateField('name', item.description);
+      }
+      // Pre-select universal category
+      if (item.dmuCategory) {
+        UISheet.updateField('universalCategory', item.dmuCategory);
+        UISheet.updateField('category', item.dmuCategory);
+      }
+      // Set image if available
+      if (item.imageUrl) {
+        UISheet.updateField('imageUrl', item.imageUrl);
+      }
+
+      App.showToast('Formulario pre-cargado con datos del SKU de terreno. Completa y guarda.', 'info');
+
+      // Remove from staging once promoted
+      DB.removeStagingUnmatched(id);
+    }, 120);
+  }
+
   return {
     render,
     setTab,
@@ -456,6 +510,7 @@ ${_activeTab === 'unmatched' ? renderUnmatched(unmatched) : renderBatch(batch)}
     clearUnmatched,
     clearBatch,
     sendToVispera,
-    rejectBatch
+    rejectBatch,
+    promoteFieldDiscovery
   };
 })();

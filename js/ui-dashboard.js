@@ -16,54 +16,57 @@ const UIDashboard = (() => {
 <header class="view-header">
   <div>
     <h1 class="view-title">Dashboard</h1>
-    <p class="view-sub">Resumen general del estado del catálogo</p>
+    <p class="view-sub">Resumen general del estado del catÃ¡logo</p>
   </div>
 </header>
 <div class="empty-state" style="padding:60px; text-align:center;">
   <div style="font-size:48px; margin-bottom:16px">??</div>
-  <h3>Sin datos aún</h3>
+  <h3>Sin datos aÃºn</h3>
   <p style="color:var(--text-muted); margin-bottom:24px;">Importa productos para ver el dashboard.</p>
   <button class="btn-primary" onclick="App.navigateTo('import')">Importar datos</button>
 </div>`;
       return;
     }
 
-    const enriched    = products.filter(p => p.dataSource && p.dataSource !== 'manual').length;
-    const withImage   = products.filter(p => p.imageUrl).length;
-    const noBrand     = products.filter(p => !p.brand || p.brand === 'N/A').length;
-    const noWeight    = products.filter(p => !p.weight_g).length;
-    const noCat       = products.filter(p => !p.universalCategory && !p.category).length;
-    const noImage     = products.filter(p => !p.imageUrl).length;
+    const enriched = products.filter(p => p.dataSource && p.dataSource !== 'manual').length;
+    const withImage = products.filter(p => p.imageUrl).length;
+    const noBrand = products.filter(p => !p.brand || p.brand === 'N/A').length;
+    const noWeight = products.filter(p => !p.weight_g).length;
+    const noCat = products.filter(p => !p.universalCategory && !p.category).length;
+    const noImage = products.filter(p => !p.imageUrl).length;
     const avgCompleteness = Math.round(products.reduce((s, p) => s + DB.computeCompleteness(p), 0) / total);
-    const enrichRate  = Math.round(enriched / total * 100);
-    const imgRate     = Math.round(withImage / total * 100);
+    const enrichRate = Math.round(enriched / total * 100);
+    const imgRate = Math.round(withImage / total * 100);
 
     const catCount = {};
     products.forEach(p => {
-      const c = p.universalCategory || p.category || 'Sin categoría';
+      const c = p.universalCategory || p.category || 'Sin categorï¿½a';
       catCount[c] = (catCount[c] || 0) + 1;
     });
     const topCats = Object.entries(catCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
     const holdingStats = holdings.map(h => {
       const hProds = products.filter(p => (p.holdings || p.retailers || {})[h.id]);
-      const hAvg   = hProds.length
+      const hAvg = hProds.length
         ? Math.round(hProds.reduce((s, p) => s + DB.computeCompleteness(p), 0) / hProds.length)
         : 0;
       return { ...h, count: hProds.length, avg: hAvg };
     });
 
+    const fieldDiscoveryCount = DB.getStagingUnmatched().filter(i => i.type === 'field_discovery').length;
+
     const alerts = [];
-    if (noBrand > 0)  alerts.push({ icon: '???', label: `${noBrand} SKU${noBrand > 1 ? 's' : ''} sin marca` });
-    if (noImage > 0)  alerts.push({ icon: '???', label: `${noImage} SKU${noImage > 1 ? 's' : ''} sin imagen` });
-    if (noCat > 0)    alerts.push({ icon: '???', label: `${noCat} SKU${noCat > 1 ? 's' : ''} sin categoría Vispera` });
-    if (noWeight > 0) alerts.push({ icon: '??', label: `${noWeight} SKU${noWeight > 1 ? 's' : ''} sin peso registrado` });
+    if (fieldDiscoveryCount > 0) alerts.push({ icon: 'ðŸ“·', label: `${fieldDiscoveryCount} SKU${fieldDiscoveryCount > 1 ? 's' : ''} de terreno por revisar`, action: 'App.navigateTo("staging")' });
+    if (noBrand > 0) alerts.push({ icon: 'ðŸ·ï¸', label: `${noBrand} SKU${noBrand > 1 ? 's' : ''} sin marca` });
+    if (noImage > 0) alerts.push({ icon: 'ðŸ–¼ï¸', label: `${noImage} SKU${noImage > 1 ? 's' : ''} sin imagen` });
+    if (noCat > 0)   alerts.push({ icon: 'ðŸ—‚ï¸', label: `${noCat} SKU${noCat > 1 ? 's' : ''} sin categorÃ­a Vispera` });
+    if (noWeight > 0) alerts.push({ icon: 'âš–ï¸', label: `${noWeight} SKU${noWeight > 1 ? 's' : ''} sin peso registrado` });
 
     el.innerHTML = `
 <header class="view-header">
   <div>
     <h1 class="view-title">Dashboard</h1>
-    <p class="view-sub">Resumen general del estado del catálogo</p>
+    <p class="view-sub">Resumen general del estado del catÃ¡logo</p>
   </div>
   <div class="view-actions">
     <button class="btn-outline" onclick="App.exportCSV()">
@@ -80,7 +83,7 @@ const UIDashboard = (() => {
     </div>
     <div class="dash-kpi-body">
       <span class="dash-kpi-val">${total.toLocaleString('es-CL')}</span>
-      <span class="dash-kpi-label">SKUs en Catálogo</span>
+      <span class="dash-kpi-label">SKUs en CatÃ¡logo</span>
     </div>
   </div>
   <div class="dash-kpi-card" style="cursor:pointer" onclick="App.navigateTo('bulk')">
@@ -99,7 +102,7 @@ const UIDashboard = (() => {
     </div>
     <div class="dash-kpi-body">
       <span class="dash-kpi-val">${enriched.toLocaleString('es-CL')}</span>
-      <span class="dash-kpi-label">Enriquecidos vía API (${enrichRate}%)</span>
+      <span class="dash-kpi-label">Enriquecidos vÃ­a API (${enrichRate}%)</span>
       <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${enrichRate}%;background:#FFC107"></div></div>
     </div>
   </div>
@@ -120,20 +123,20 @@ const UIDashboard = (() => {
   <div class="dash-panel">
     <h3 class="dash-panel-title">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Distribución por Categoría Vispera
+      DistribuciÃ³n por CategorÃ­a Vispera
     </h3>
     <div style="position:relative;height:200px;display:flex;justify-content:center;">
       <canvas id="dash-cat-chart" style="max-width:200px;"></canvas>
     </div>
     <div class="dash-cat-legend">
       ${topCats.map(([cat, count]) => {
-        const color = (window.VISPERA_CATEGORY_COLORS || {})[cat] || '#888';
-        return `<div class="dash-cat-item">
+      const color = (window.VISPERA_CATEGORY_COLORS || {})[cat] || '#888';
+      return `<div class="dash-cat-item">
           <span class="dash-cat-dot" style="background:${color}"></span>
           <span class="dash-cat-name">${cat}</span>
           <span class="dash-cat-count">${count}</span>
         </div>`;
-      }).join('')}
+    }).join('')}
     </div>
   </div>
 
@@ -143,8 +146,8 @@ const UIDashboard = (() => {
       Completitud por Holding
     </h3>
     ${holdingStats.length === 0
-      ? '<p style="color:var(--text-muted);font-size:13px;padding:20px 0">Sin holdings configurados.</p>'
-      : holdingStats.map(h => `
+        ? '<p style="color:var(--text-muted);font-size:13px;padding:20px 0">Sin holdings configurados.</p>'
+        : holdingStats.map(h => `
       <div class="dash-holding-row" onclick="App.filterByHolding('${h.id}')" title="Ver SKUs de ${h.name}">
         <div class="dash-holding-name">
           <span style="width:10px;height:10px;border-radius:50%;background:${h.color};display:inline-block;flex-shrink:0;"></span>
@@ -166,9 +169,9 @@ const UIDashboard = (() => {
       Alertas de Calidad de Datos
     </h3>
     ${alerts.length === 0
-      ? '<div style="padding:24px 0;text-align:center;color:var(--text-muted);"><div style="font-size:36px;margin-bottom:8px">?</div><p>¡Catálogo en buen estado!</p></div>'
+      ? '<div style="padding:24px 0;text-align:center;color:var(--text-muted);"><div style="font-size:36px;margin-bottom:8px">âœ…</div><p>Â¡CatÃ¡logo en buen estado!</p></div>'
       : alerts.map(a => `
-      <div class="dash-alert-item" onclick="App.navigateTo('bulk')" title="Ver en Modo Edición">
+      <div class="dash-alert-item" onclick="${a.action || "App.navigateTo('bulk')"}" title="Ver detalles">
         <span class="dash-alert-icon">${a.icon}</span>
         <span class="dash-alert-label">${a.label}</span>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:var(--text-muted)"><polyline points="9 18 15 12 9 6"/></svg>

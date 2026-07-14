@@ -2141,3 +2141,127 @@ html[data-theme="dark"] {
 .pf-step-info strong { font-size: 12px; font-weight: 700; }
 .pf-step-info span { font-size: 11px; color: var(--text-muted); }
 .pf-arrow { color: var(--text-muted); font-size: 18px; flex-shrink: 0; }
+
+/* ----------------------------------------------
+   FIELD DISCOVERY MODAL & STAGING STYLES
+   ---------------------------------------------- */
+.fd-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  opacity: 0; transition: opacity 0.25s;
+}
+.fd-overlay.visible { opacity: 1; }
+.fd-overlay.hidden { display: none; }
+
+.fd-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 12px);
+  width: 100%; max-width: 800px;
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+  transform: translateY(20px); transition: transform 0.25s;
+}
+.fd-overlay.visible .fd-modal { transform: translateY(0); }
+
+.fd-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.fd-modal-title-wrap { display: flex; gap: 14px; align-items: center; }
+.fd-icon-badge {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: rgba(74,201,155,0.12); color: #4ac99b;
+  display: flex; align-items: center; justify-content: center;
+}
+.fd-modal-title { font-size: 18px; font-weight: 700; margin: 0 0 4px 0; color: var(--text); }
+.fd-modal-sub { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+.fd-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+.fd-two-cols {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+}
+@media (max-width: 768px) {
+  .fd-two-cols { grid-template-columns: 1fr; }
+}
+
+.fd-section-lbl {
+  font-size: 11px; font-weight: 700; color: var(--text-sec);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+
+.fd-photo-drop {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  height: 280px;
+  background: var(--surface-el, rgba(0,0,0,0.02));
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 16px; text-align: center;
+}
+.fd-photo-drop:hover, .fd-photo-drop.drag-over {
+  border-color: var(--accent, #4F6EF7);
+  background: var(--accent-dim, rgba(79,110,247,0.05));
+}
+#fd-photo-placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--text); font-size: 13px; font-weight: 500;
+}
+
+.fd-col-meta { display: flex; flex-direction: column; gap: 16px; }
+.fd-two-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.fd-alert-notice {
+  background: rgba(255,193,7,0.1);
+  border-left: 3px solid #FFC107;
+  padding: 12px 16px;
+  border-radius: 4px;
+  font-size: 13px; color: var(--text);
+  display: flex; gap: 12px; align-items: center;
+  margin-top: 8px;
+}
+.fd-alert-notice svg { color: #FFC107; flex-shrink: 0; }
+
+.fd-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 12px;
+  background: var(--surface-el, rgba(0,0,0,0.02));
+  border-radius: 0 0 12px 12px;
+}
+
+/* Staging field discovery row overrides */
+.field-discovery-row {
+  background: var(--surface-el, rgba(0,0,0,0.02)) !important;
+}
+.field-discovery-row td {
+  border-top: 1px solid rgba(255,193,7,0.3) !important;
+  border-bottom: 1px solid rgba(255,193,7,0.3) !important;
+}
+.staging-thumb {
+  width: 36px; height: 36px; border-radius: 6px;
+  background-size: cover; background-position: center;
+  border: 1px solid var(--border);
+}
+.staging-thumb-empty {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface-el); color: var(--text-muted);
+}
+.tentative-ean-badge {
+  display: inline-block; margin-left: 6px;
+  font-size: 10px; padding: 2px 4px; border-radius: 4px;
+  background: rgba(255,193,7,0.15); color: #B28704; font-weight: 700; text-transform: uppercase;
+}

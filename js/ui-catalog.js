@@ -279,6 +279,10 @@ const UICatalog = (() => {
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Importar SKUs
     </button>
+    <button class="btn-outline" onclick="UICatalog.openFieldDiscovery()" title="Registrar producto encontrado en terreno sin EAN confirmado">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      SKU de Terreno
+    </button>
     <button class="btn-primary" onclick="UISheet.openCreate()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Nuevo SKU
@@ -445,10 +449,244 @@ ${renderPagination(filtered.length)}`;
     })();
   }
 
+  // ── Field Discovery Modal ───────────────────────────────────────────────────
+  let _fdImageB64 = null;  // base64 preview of the captured image
+  let _fdImageFile = null; // actual File object
+
+  function openFieldDiscovery() {
+    _fdImageB64 = null;
+    _fdImageFile = null;
+
+    const holdings = DB.getHoldings();
+    const holdingOpts = holdings.map(h => `<option value="${h.id}">${h.name}</option>`).join('');
+    const catOpts = (window.UNIVERSAL_CATEGORIES || window.CATEGORIES || []).map(c => `<option value="${c}">${c}</option>`).join('');
+
+    // Inject modal into body (if not exists)
+    let mo = document.getElementById('fd-modal-overlay');
+    if (!mo) {
+      mo = document.createElement('div');
+      mo.id = 'fd-modal-overlay';
+      mo.className = 'fd-overlay hidden';
+      document.body.appendChild(mo);
+    }
+
+    mo.innerHTML = `
+<div class="fd-modal" role="dialog" aria-label="Registrar SKU de Terreno">
+  <div class="fd-modal-header">
+    <div class="fd-modal-title-wrap">
+      <div class="fd-icon-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+      <div>
+        <h2 class="fd-modal-title">Registrar SKU de Terreno</h2>
+        <p class="fd-modal-sub">Producto nuevo encontrado en góndola sin EAN confirmado</p>
+      </div>
+    </div>
+    <button class="btn-close-sheet" onclick="UICatalog.closeFieldDiscovery()" aria-label="Cerrar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <div class="fd-modal-body">
+    <div class="fd-two-cols">
+
+      <!-- Left: Photo capture -->
+      <div class="fd-col-photo">
+        <p class="fd-section-lbl">Foto del Producto</p>
+        <div class="fd-photo-drop" id="fd-photo-drop" onclick="document.getElementById('fd-file-inp').click()">
+          <img id="fd-photo-preview" src="" alt="" style="display:none; width:100%; height:100%; object-fit:contain; border-radius:8px;">
+          <div id="fd-photo-placeholder">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-muted)"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>Haz clic o arrastra una foto aquí</span>
+            <span style="font-size:11px; color:var(--text-muted)">JPG, PNG, WEBP</span>
+          </div>
+        </div>
+        <input type="file" id="fd-file-inp" accept="image/*" capture="environment" style="display:none" onchange="UICatalog._fdHandleImage(this)">
+        <button class="btn-outline" style="width:100%; margin-top:8px;" onclick="document.getElementById('fd-file-inp').click()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Seleccionar / Capturar foto
+        </button>
+      </div>
+
+      <!-- Right: Metadata -->
+      <div class="fd-col-meta">
+        <p class="fd-section-lbl">Datos del Producto</p>
+
+        <div class="form-group">
+          <label>Descripción breve <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="fd-desc" class="form-input" placeholder="Ej: Leche descremada en cartón azul, 1L" maxlength="120">
+        </div>
+
+        <div class="form-group">
+          <label>EAN tentativo
+            <span id="fd-ean-badge" style="font-size:11px; font-weight:700; margin-left:8px;"></span>
+          </label>
+          <input type="text" id="fd-ean" class="form-input" placeholder="EAN si lo tienes (a confirmar)" maxlength="13" oninput="UICatalog._fdValidateEAN(this.value)">
+          <p class="form-hint">Si no tienes el EAN, se generará un ID temporal para identificar este SKU.</p>
+        </div>
+
+        <div class="form-group">
+          <label>Número de DMU</label>
+          <input type="text" id="fd-dmu" class="form-input" placeholder="Ej: 487321">
+        </div>
+
+        <div class="form-group">
+          <label>Pasillo / Góndola</label>
+          <input type="text" id="fd-aisle" class="form-input" placeholder="Ej: Pasillo 3 – Lácteos">
+        </div>
+
+        <div class="fd-two-mini">
+          <div class="form-group">
+            <label>Holding</label>
+            <select id="fd-holding" class="form-select">
+              <option value="">-- Seleccionar --</option>
+              ${holdingOpts}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Categoría Vispera</label>
+            <select id="fd-cat-universal" class="form-select">
+              <option value="">-- Seleccionar --</option>
+              ${catOpts}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Categoría del Holding</label>
+          <input type="text" id="fd-cat-holding" class="form-input" placeholder="Categoría usada por el holding (opcional)">
+        </div>
+
+        <div class="fd-alert-notice">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Este SKU quedará en la lista de <strong>EANs sin Identificar</strong> del Pipeline para su revisión posterior.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fd-modal-footer">
+    <button class="btn-outline" onclick="UICatalog.closeFieldDiscovery()">Cancelar</button>
+    <button class="btn-primary" id="fd-submit-btn" onclick="UICatalog.submitFieldDiscovery()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Registrar SKU de Terreno
+    </button>
+  </div>
+</div>`;
+
+    mo.classList.remove('hidden');
+    requestAnimationFrame(() => mo.classList.add('visible'));
+
+    // Drag & drop on the photo area
+    const dropZone = document.getElementById('fd-photo-drop');
+    if (dropZone) {
+      dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+      dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) UICatalog._fdSetFile(file);
+      });
+    }
+  }
+
+  function _fdHandleImage(input) {
+    const file = input.files[0];
+    if (file) _fdSetFile(file);
+  }
+
+  function _fdSetFile(file) {
+    _fdImageFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      _fdImageB64 = e.target.result;
+      const preview = document.getElementById('fd-photo-preview');
+      const placeholder = document.getElementById('fd-photo-placeholder');
+      if (preview) { preview.src = _fdImageB64; preview.style.display = 'block'; }
+      if (placeholder) placeholder.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function _fdValidateEAN(val) {
+    const badge = document.getElementById('fd-ean-badge');
+    if (!badge) return;
+    if (!val || val.length < 8) { badge.textContent = ''; return; }
+    const v = DB.validateEAN(val);
+    badge.textContent = v.valid ? '✓ Válido' : '✗ Inválido';
+    badge.style.color  = v.valid ? 'var(--success, #4ac99b)' : 'var(--danger, #e55)';
+  }
+
+  async function submitFieldDiscovery() {
+    const desc = document.getElementById('fd-desc')?.value.trim();
+    if (!desc) { App.showToast('La descripción es obligatoria', 'error'); return; }
+
+    const tentativeEAN = document.getElementById('fd-ean')?.value.trim();
+    const dmu     = document.getElementById('fd-dmu')?.value.trim();
+    const aisle   = document.getElementById('fd-aisle')?.value.trim();
+    const holding = document.getElementById('fd-holding')?.value;
+    const catUni  = document.getElementById('fd-cat-universal')?.value;
+    const catHold = document.getElementById('fd-cat-holding')?.value.trim();
+
+    const btn = document.getElementById('fd-submit-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+    // Generate a temporary ID if no EAN provided
+    const tempId = `TERRENO-${Date.now().toString(36).toUpperCase()}`;
+    const ean    = tentativeEAN || tempId;
+    const isTentative = !tentativeEAN;
+
+    // Upload image if provided
+    let imageUrl = null;
+    if (_fdImageFile) {
+      try {
+        imageUrl = await DB.uploadProductImage(ean, _fdImageFile, 'field');
+      } catch { /* if upload fails, embed base64 as fallback */ imageUrl = _fdImageB64; }
+    }
+
+    // Add to staging_unmatched with type 'field_discovery'
+    DB.addStagingUnmatched({
+      ean,
+      isTentativeEAN: isTentative,
+      type: 'field_discovery',
+      status: 'FIELD_DISCOVERY',
+      description: desc,
+      dmu,
+      aisle,
+      holdingId: holding || null,
+      dmuCategory: catUni || null,
+      holdingCategory: catHold || null,
+      imageUrl,
+      apiRawName: desc,     // shown in staging table as "Nombre (API)" column
+      timestamp: new Date().toISOString(),
+    });
+
+    App.showToast(
+      isTentative
+        ? `SKU de terreno registrado con ID temporal: ${ean}`
+        : `SKU de terreno registrado con EAN tentativo: ${ean}`,
+      'success'
+    );
+    closeFieldDiscovery();
+    render();
+  }
+
+  function closeFieldDiscovery() {
+    const mo = document.getElementById('fd-modal-overlay');
+    if (!mo) return;
+    mo.classList.remove('visible');
+    setTimeout(() => mo.classList.add('hidden'), 280);
+    _fdImageB64 = null;
+    _fdImageFile = null;
+  }
+
   return {
     render,
     setSearch, setRetailer, setCategory, setSource, setStatusFilter, setSortBy, toggleIncomplete, setImagePref,
     clearFilters, setViewMode, goPage, enrichAll, deleteOne,
-    toggleExportDropdown
+    toggleExportDropdown,
+    openFieldDiscovery, closeFieldDiscovery, submitFieldDiscovery,
+    _fdHandleImage, _fdSetFile, _fdValidateEAN
   };
 })();
