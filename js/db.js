@@ -558,6 +558,7 @@ const DB = (() => {
     entry.id = entry.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36));
     entry.timestamp = entry.timestamp || new Date().toISOString();
     _stagingLevantamiento.push(entry);
+    
     _safeSetItem(STAGING_LEVANTAMIENTO_KEY, JSON.stringify(_stagingLevantamiento));
     return entry;
   }

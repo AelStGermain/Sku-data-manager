@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { collection, getDocs, getFirestore, limit, orderBy, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { collection, getDocs, getFirestore, limit, orderBy, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD486cV5aa3chf6zeq8Cr28dnXT5XAbQgY",
@@ -83,10 +83,37 @@ async function obtenerTiposNegocio() {
   return resultado.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+function escucharNuevosLevantamientos(callback) {
+  // Obtenemos TODO el historial sin orderBy para evitar que Firebase filtre documentos sin campo "fecha"
+  const consulta = query(
+    collection(db, "levantamientos")
+  );
+
+  return onSnapshot(consulta, (snapshot) => {
+    const nuevosRegistros = [];
+    console.log("[Firebase onSnapshot] Recibidos cambios:", snapshot.docChanges().length);
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === "added" || change.type === "modified") {
+         nuevosRegistros.push({ id: change.doc.id, ...change.doc.data() });
+      }
+    });
+    console.log("[Firebase onSnapshot] Registros válidos (added/modified):", nuevosRegistros.length);
+    if (nuevosRegistros.length > 0) {
+      callback(nuevosRegistros);
+    }
+  }, (error) => {
+    console.error("[Firebase onSnapshot] Error crítico:", error);
+    if (window.App && window.App.showToast) {
+       window.App.showToast("Error en tiempo real Firebase: " + error.message, "danger");
+    }
+  });
+}
+
 // Expose globally for vanilla JS compatibility
 window.FirebaseAPI = {
   obtenerLevantamientos,
   buscarPorEan,
   obtenerAuditores,
-  obtenerTiposNegocio
+  obtenerTiposNegocio,
+  escucharNuevosLevantamientos
 };
