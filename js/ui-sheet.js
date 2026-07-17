@@ -92,17 +92,46 @@ const UISheet = (() => {
   }
 
   // ── field update helpers ───────────────────
-  function updateField(field, value) {
-    _data[field] = value;
+  function updateField(key, val) {
+    if (!_data) return;
+    _data[key] = val;
     _markDirty();
   }
 
-  function updateHoldingField(field, value) {
-    if (!_holding) return;
-    _data.holdings = _data.holdings || {};
-    _data.holdings[_holding] = _data.holdings[_holding] || {};
-    _data.holdings[_holding][field] = value;
+  function updateHoldingField(key, val) {
+    if (!_data || !_holding) return;
+    if (!_data.holdings) _data.holdings = {};
+    if (!_data.holdings[_holding]) _data.holdings[_holding] = {};
+    _data.holdings[_holding][key] = val;
     _markDirty();
+  }
+
+  function toggleArrayField(field, value, isHolding = false, event = null) {
+    if (!_data) return;
+    const target = isHolding && _holding ? (_data.holdings[_holding] = _data.holdings[_holding] || {}) : _data;
+    if (!Array.isArray(target[field])) target[field] = target[field] ? [target[field]] : [];
+    
+    if (target[field].includes(value)) {
+      target[field] = target[field].filter(v => v !== value);
+    } else {
+      target[field].push(value);
+    }
+    
+    // sync fields
+    if (!isHolding && field === 'universalCategory') target.category = [...target.universalCategory];
+    if (isHolding && field === 'localCategoryName') target.category = [...target.localCategoryName];
+    
+    _markDirty();
+    
+    if (event) {
+      const container = event.target.closest('.ms-dropdown');
+      if (container) {
+        const labelDiv = container.querySelector('.ms-label-text');
+        if (labelDiv) labelDiv.textContent = target[field].length > 0 ? target[field].join(', ') : 'Seleccionar…';
+      }
+    } else {
+      _render();
+    }
   }
 
   function toggleStock() {
@@ -411,15 +440,35 @@ const UISheet = (() => {
       `<option value="${pt.value}" ${_data.packageType===pt.value?'selected':''}>${esc(pt.label)}</option>`
     ).join('');
     
+    function _buildMultiSelect(opts, selectedArray, fieldName, isHolding) {
+      const availableOpts = opts.filter(o => !selectedArray.includes(o));
+      const optsHtml = availableOpts.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      
+      const tagsHtml = selectedArray.map(c => `
+        <span style="display:inline-flex; align-items:center; background:var(--accent); color:#fff; padding:4px 10px; border-radius:14px; font-size:11px; margin:3px 3px 3px 0;">
+          ${esc(c)}
+          <span style="cursor:pointer; margin-left:6px; font-weight:bold; opacity:0.8;" onclick="UISheet.toggleArrayField('${fieldName}', '${esc(c)}', ${isHolding})">×</span>
+        </span>
+      `).join('');
+
+      return `
+      <div>
+        <select class="form-select" onchange="if(this.value) { UISheet.toggleArrayField('${fieldName}', this.value, ${isHolding}); }">
+          <option value="">+ Agregar categoría...</option>
+          ${optsHtml}
+        </select>
+        ${selectedArray.length > 0 ? `<div style="margin-top:6px; display:flex; flex-wrap:wrap;">${tagsHtml}</div>` : ''}
+      </div>
+      `;
+    }
+
     // Universal categories for Master SKU
-    const masterCatOpts = UNIVERSAL_CATEGORIES.map(c =>
-      `<option value="${esc(c)}" ${(_data.universalCategory || _data.category)===c?'selected':''}>${esc(c)}</option>`
-    ).join('');
+    const uCat = Array.isArray(_data.universalCategory) ? _data.universalCategory : (_data.universalCategory ? [_data.universalCategory] : []);
+    const masterCatOpts = _buildMultiSelect(UNIVERSAL_CATEGORIES, uCat, 'universalCategory', false);
     
     const rCategories = (rInfo?.categories?.length ? rInfo.categories : UNIVERSAL_CATEGORIES);
-    const catOpts = rCategories.map(c =>
-      `<option value="${esc(c)}" ${(rData?.localCategoryName || rData?.category)===c?'selected':''}>${esc(c)}</option>`
-    ).join('');
+    const rCat = rData ? (Array.isArray(rData.localCategoryName) ? rData.localCategoryName : (rData.localCategoryName ? [rData.localCategoryName] : [])) : [];
+    const catOpts = _buildMultiSelect(rCategories, rCat, 'localCategoryName', true);
 
     const sourceLabel = {
       'open_food_facts': 'Open Food Facts',
@@ -598,9 +647,7 @@ ${tabsHtml}
         </div>
         <div class="form-group">
           <label>Categoría Vispera</label>
-          <select class="form-select" onchange="UISheet.updateField('universalCategory', this.value); UISheet.updateField('category', this.value);">
-            <option value="">Seleccionar…</option>${masterCatOpts}
-          </select>
+          ${masterCatOpts}
         </div>
         <div class="form-group">
           <label>Tipo de envase</label>
@@ -649,6 +696,10 @@ ${tabsHtml}
     ${rData ? `
     <!-- Holding form -->
     <div class="retailer-form-area">
+      ${rData.isDiscontinued ? `<div style="background:rgba(211,47,47,0.1); color:#d32f2f; padding:8px 12px; border-radius:6px; margin-bottom:16px; font-size:12px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+        <span>Descontinuado el ${new Date(rData.discontinuedAt || rData.updatedAt).toLocaleDateString()}</span>
+        <button class="btn-primary" style="padding:4px 8px; font-size:11px;" onclick="UISheet.addToHolding('${esc(_holding)}')">Reactivar</button>
+      </div>` : ''}
       <div class="form-group">
         <label>ID del Holding (holding_internal_id)</label>
         <input type="text" class="form-input" value="${esc(rData.holdingInternalId || rData.customerId || '')}"
@@ -663,9 +714,13 @@ ${tabsHtml}
       </div>
       <div class="form-group">
         <label>Categoría Local</label>
-        <select class="form-select" onchange="UISheet.updateHoldingField('localCategoryName', this.value); UISheet.updateHoldingField('category', this.value);">
-          <option value="">Seleccionar…</option>${catOpts}
-        </select>
+        ${catOpts}
+      </div>
+      <div class="form-group">
+        <label>DMU / Góndolas</label>
+        <input type="text" class="form-input" value="${esc(Array.isArray(rData.dmu) ? rData.dmu.join(', ') : (rData.dmu || ''))}"
+          placeholder="Separar con comas (Ej: Pasillo 3, Caja)"
+          onchange="UISheet.updateHoldingField('dmu', this.value.split(',').map(s=>s.trim()).filter(Boolean))">
       </div>
       <div class="form-group">
         <label>Estado / Stock (is_active_holding)</label>
@@ -676,9 +731,9 @@ ${tabsHtml}
           <span id="stock-label">${inStock ? 'Disponible en tienda' : 'Sin stock / Inactivo'}</span>
         </div>
       </div>
-      <button class="btn-danger-sm" onclick="UISheet.removeFromHolding('${esc(_holding)}')">
-        Quitar de ${esc(rInfo?.name || _holding)} ×
-      </button>
+      ${!rData.isDiscontinued ? `<button class="btn-danger-sm" onclick="UISheet.removeFromHolding('${esc(_holding)}')">
+        Descontinuar de ${esc(rInfo?.name || _holding)} ×
+      </button>` : ''}
     </div>` : `
     <!-- Add to holding -->
     <div class="retailer-empty-area">

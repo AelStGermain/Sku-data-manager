@@ -4,6 +4,23 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// ── Firebase Config ───────────────────────────────────────────────────────
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, getDocs, onSnapshot, query, where } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD486cV5aa3chf6zeq8Cr28dnXT5XAbQgY",
+  authDomain: "levantamiento-sku.firebaseapp.com",
+  projectId: "levantamiento-sku",
+  storageBucket: "levantamiento-sku.firebasestorage.app",
+  messagingSenderId: "322919219291",
+  appId: "1:322919219291:web:1ead3108065ea1e66d7f7e",
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const fbDb = getFirestore(fbApp);
+// ──────────────────────────────────────────────────────────────────────────
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -172,6 +189,188 @@ app.post('/api/stores', (req, res) => {
   }
   saveStores(stores);
   res.json({ success: true, count: stores.length });
+});
+
+// ── Helper: Open Food Facts Enrichment ─────────────────────────────────────
+async function fetchEnrichment(ean) {
+  try {
+    const paddedEan = ean.length === 12 ? '0' + ean : ean;
+    const url = `https://world.openfoodfacts.org/api/v2/product/${paddedEan}`;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(url, { signal: controller.signal }).finally(() => clearTimeout(id));
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === 1 && data.product) {
+        const p = data.product;
+        return {
+          name: p.product_name || p.product_name_es || null,
+          brand: p.brands || null,
+          imageUrl: p.image_url || null,
+          masterCategory: p.categories ? p.categories.split(',')[0].trim().toUpperCase() : null
+        };
+      }
+    }
+  } catch(e) {
+    console.warn(`[API] Falla al enriquecer ${ean}: ${e.message}`);
+  }
+  return null;
+}
+
+// ── Servicio: Sincronización Firebase a SQLite ────────────────────────────
+let isSyncing = false;
+async function syncFirebaseToCatalog(force = false) {
+  if (isSyncing) return { success: false, error: 'Sync ya en progreso' };
+  isSyncing = true;
+  
+  try {
+    const master = getMaster();
+    // Guardar timestamp del último sync local para no traer todo de nuevo si no es force
+    const lastSyncFile = path.join(dataDir, 'last_fb_sync.json');
+    let lastSync = 0;
+    if (fs.existsSync(lastSyncFile) && !force) {
+      lastSync = Number(fs.readFileSync(lastSyncFile, 'utf8'));
+    }
+    
+    let fbQuery;
+    if (lastSync > 0) {
+      // Filtrar solo creados recientemente
+      fbQuery = query(collection(fbDb, "levantamientos"), where("timestamp", ">", new Date(lastSync).toISOString()));
+    } else {
+      // Fetch completo
+      fbQuery = collection(fbDb, "levantamientos");
+    }
+
+    const snapshot = await getDocs(fbQuery);
+    if (snapshot.empty) {
+      fs.writeFileSync(lastSyncFile, String(Date.now()));
+      return { success: true, count: 0, message: 'No hay nuevos datos' };
+    }
+
+    let added = 0;
+    let updated = 0;
+    const sinEanList = [];
+
+    for (const doc of snapshot.docs) {
+      const reg = { id: doc.id, ...doc.data() };
+      const eanStr = String(reg.ean || '').trim().replace(/\D/g, '');
+      const timestamp = reg.timestamp || new Date().toISOString();
+      const holding = reg.holdingId || reg.holding || 'tottus'; // Default o resuelto
+      const dmu = reg.dmu || reg.pasillo || reg.categoria || '';
+
+      if (!eanStr || eanStr.length < 8) {
+        // Ignorar sin EAN de master_catalog, pero devolverlos al frontend para staging
+        sinEanList.push({
+          firebaseId: reg.id,
+          holdingId: holding,
+          dmu,
+          pasillo: reg.pasillo || '',
+          local: reg.local || '',
+          category: reg.categoria || '',
+          auditor: reg.auditor || 'App Terreno',
+          timestamp,
+          firebaseName: reg.productoWeb || reg.nombreProductoOCR || '',
+          firebasePrice: reg.precioWeb || reg.precioOCR || null,
+          estado: reg.estado || null,
+          source: 'Firebase'
+        });
+        continue;
+      }
+      
+      const idx = master.findIndex(p => p.ean === eanStr);
+      let existing = idx > -1 ? master[idx] : null;
+
+      let nombre = reg.productoWeb || reg.nombreProductoOCR || (existing ? existing.name : '');
+      let category = existing?.universalCategory || reg.categoria || 'GROCERY STORE';
+      let brand = reg.marcaWeb || (existing ? existing.brand : null) || 'Por Definir';
+      let imageUrl = reg.imagenProductoWeb || (existing ? existing.imageUrl : null) || null;
+
+      if (!nombre && !existing) {
+        const apiData = await fetchEnrichment(eanStr);
+        if (apiData?.name) {
+          nombre = apiData.name;
+          if (apiData.masterCategory) category = apiData.masterCategory;
+          if (apiData.brand && brand === 'Por Definir') brand = apiData.brand;
+          if (apiData.imageUrl && !imageUrl) imageUrl = apiData.imageUrl;
+        }
+      }
+
+      if (!nombre) nombre = 'Nuevo SKU de Terreno';
+
+      const levantamientoMeta = {
+        auditor: reg.auditor || 'App Terreno',
+        dmu,
+        pasillo: reg.pasillo || '',
+        local: reg.local || '',
+        holdingId: holding,
+        timestamp,
+        firebaseId: reg.id,
+        estado: reg.estado || null
+      };
+
+      if (existing) {
+        master[idx] = {
+          ...existing,
+          name: (!existing.name || existing.name === 'Nuevo SKU de Terreno') ? nombre : existing.name,
+          brand: (!existing.brand || existing.brand === 'Por Definir') ? brand : existing.brand,
+          imageUrl: !existing.imageUrl ? imageUrl : existing.imageUrl,
+          levantamientoMeta,
+          fromLevantamiento: true,
+          dataSource: 'levantamiento'
+        };
+        updated++;
+      } else {
+        master.push({
+          ean: eanStr,
+          name: nombre,
+          brand,
+          imageUrl,
+          universalCategory: category,
+          visperaId: null,
+          status: 'review',
+          dataSource: 'levantamiento',
+          fromLevantamiento: true,
+          offAttempted: false,
+          levantamientoMeta,
+          holdings: {}
+        });
+        added++;
+      }
+    }
+
+    saveMaster(master);
+    fs.writeFileSync(lastSyncFile, String(Date.now()));
+    return { success: true, count: snapshot.size, added, updated, sinEanList };
+
+  } catch(e) {
+    console.error('[Firebase Sync Error]', e.message);
+    return { success: false, error: e.message };
+  } finally {
+    isSyncing = false;
+  }
+}
+
+// Background Cron Job (cada 1 hora = 3600000 ms)
+setInterval(() => {
+  console.log('⏰ [Cron] Ejecutando auto-sync Firebase...');
+  syncFirebaseToCatalog().then(res => console.log('   Resultado:', res));
+}, 3600000);
+
+// ── API: Sync Endpoint ────────────────────────────────────────────────────
+app.post('/api/sync-firebase', async (req, res) => {
+  const { force } = req.body || {};
+  const result = await syncFirebaseToCatalog(force);
+  res.json(result);
+});
+
+app.get('/api/last-sync', (req, res) => {
+  const lastSyncFile = path.join(dataDir, 'last_fb_sync.json');
+  let lastSync = 0;
+  if (fs.existsSync(lastSyncFile)) {
+    lastSync = Number(fs.readFileSync(lastSyncFile, 'utf8'));
+  }
+  res.json({ lastSync });
 });
 
 // ── Ruta catch-all: devolver index.html para navegación SPA ───────────────

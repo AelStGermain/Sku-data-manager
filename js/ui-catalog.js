@@ -99,9 +99,19 @@ const UICatalog = (() => {
     const isPendingVispera = p.visperaId === null || p.visperaId === undefined;
     const pendingBadge = isPendingVispera ? `<span class="status-badge conflict" title="Falta en Vispera" style="font-size:10px; margin-left:6px;">⚠️ Vispera</span>` : '';
 
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const retailerBadges = retailers
       .filter(r => { const h = p.holdings || p.retailers || {}; return h[r.id]; })
-      .map(r => `<span class="r-badge" style="background:${r.color}" title="${esc(r.name)}">${esc(r.name[0])}</span>`)
+      .map(r => {
+        const hData = (p.holdings || p.retailers || {})[r.id];
+        let extra = '';
+        if (hData.isDiscontinued) {
+          extra = `<span style="color:#ffcccc; margin-left:4px; font-weight:700">⨯</span>`;
+        } else if (hData.createdAt && hData.createdAt > thirtyDaysAgo) {
+          extra = `<span style="color:#ffffaa; margin-left:4px; font-weight:700">★</span>`;
+        }
+        return `<span class="r-badge" style="background:${r.color}; width:auto; padding:0 6px; border-radius:10px" title="${esc(r.name)}${hData.isDiscontinued ? ' (Discontinuado)' : ''}">${esc(r.name[0])}${extra}</span>`;
+      })
       .join('');
 
     return `
@@ -145,9 +155,19 @@ const UICatalog = (() => {
     const isPendingVispera = p.visperaId === null || p.visperaId === undefined;
     const pendingBadge = isPendingVispera ? `<span class="status-badge conflict" title="Falta en Vispera" style="font-size:10px; margin-left:6px;">⚠️ Vispera</span>` : '';
 
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const retailerBadges = retailers
       .filter(r => { const h = p.holdings || p.retailers || {}; return h[r.id]; })
-      .map(r => `<span class="r-badge" style="background:${r.color}" title="${esc(r.name)}">${esc(r.name[0])}</span>`)
+      .map(r => {
+        const hData = (p.holdings || p.retailers || {})[r.id];
+        let extra = '';
+        if (hData.isDiscontinued) {
+          extra = `<span style="color:#ffcccc; margin-left:4px; font-weight:700">⨯</span>`;
+        } else if (hData.createdAt && hData.createdAt > thirtyDaysAgo) {
+          extra = `<span style="color:#ffffaa; margin-left:4px; font-weight:700">★</span>`;
+        }
+        return `<span class="r-badge" style="background:${r.color}; width:auto; padding:0 6px; border-radius:10px" title="${esc(r.name)}${hData.isDiscontinued ? ' (Discontinuado)' : ''}">${esc(r.name[0])}${extra}</span>`;
+      })
       .join('');
 
     return `
@@ -229,9 +249,26 @@ const UICatalog = (() => {
       return false;
     });
     if (_retailer !== 'all')  filtered = filtered.filter(p => { const h = p.holdings || p.retailers || {}; return h[_retailer]; });
-    if (_category !== 'all')  filtered = filtered.filter(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).some(r => (r.localCategoryName || r.category) === _category); });
+    if (_category !== 'all')  filtered = filtered.filter(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).some(r => {
+      const rCats = Array.isArray(r.localCategoryName) ? r.localCategoryName : (Array.isArray(r.category) ? r.category : [r.localCategoryName || r.category]);
+      return rCats.includes(_category);
+    }); });
     if (_source   !== 'all')  filtered = filtered.filter(p => p.dataSource === _source);
-    if (_statusFilter !== 'all') filtered = filtered.filter(p => (p.status||'active') === _statusFilter);
+    if (_statusFilter === 'new') {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      filtered = filtered.filter(p => {
+        if (p.createdAt && p.createdAt > thirtyDaysAgo) return true;
+        const h = p.holdings || p.retailers || {};
+        return Object.values(h).some(r => r.createdAt && r.createdAt > thirtyDaysAgo);
+      });
+    } else if (_statusFilter === 'discontinued') {
+      filtered = filtered.filter(p => {
+        const h = p.holdings || p.retailers || {};
+        return Object.values(h).some(r => r.isDiscontinued);
+      });
+    } else if (_statusFilter !== 'all') {
+      filtered = filtered.filter(p => (p.status||'active') === _statusFilter);
+    }
     if (_showIncomplete)      filtered = filtered.filter(p => DB.computeCompleteness(p) < 50);
 
     filtered = sortProducts(filtered);
@@ -239,7 +276,7 @@ const UICatalog = (() => {
 
     const enriched = all.filter(p => p.dataSource !== 'manual').length;
     const noData   = all.filter(p => DB.computeCompleteness(p) < 40).length;
-    const cats = [...new Set(all.flatMap(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).map(r => r.localCategoryName || r.category).filter(Boolean); }))].sort();
+    const cats = [...new Set(all.flatMap(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).flatMap(r => Array.isArray(r.localCategoryName) ? r.localCategoryName : (Array.isArray(r.category) ? r.category : [r.localCategoryName || r.category])).filter(Boolean); }))].sort();
 
     el.innerHTML = `
 <header class="view-header">

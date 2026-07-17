@@ -176,6 +176,12 @@ const DB = (() => {
      await fetchProducts();
   }
 
+  function _toArray(val, defaultVal) {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string' && val.trim()) return val.split(',').map(s => s.trim());
+    return defaultVal ? [defaultVal] : [];
+  }
+
   async function fetchProducts() {
     try {
       let masterData = [];
@@ -210,11 +216,12 @@ const DB = (() => {
           brand: p.brand || local.brand || 'N/A',
           brandId: p.brand_id || local.brandId || null,
           producerId: p.producer_id || local.producerId || null,
-          category: p.category_master || local.category || 'GROCERY STORE',
-          universalCategory: p.category_master || local.universalCategory || local.category || 'GROCERY STORE',
+          category: _toArray(p.category_master || local.category, 'GROCERY STORE'),
+          universalCategory: _toArray(p.category_master || local.universalCategory || local.category, 'GROCERY STORE'),
           imageUrl: p.image_url || local.imageUrl || null,
           images: p.images || local.images || [],
-          status: p.product_name === 'Nuevo SKU de Terreno' || (p.product_name && p.product_name.includes('UNDEFINED')) ? 'review' : (local.status || 'active'),
+          is_ready_for_vispera: p.is_ready_for_vispera !== undefined ? p.is_ready_for_vispera : (local.is_ready_for_vispera || false),
+          status: (!(p.vispera_id || local.visperaId) && !(p.is_ready_for_vispera || local.is_ready_for_vispera)) ? 'review' : (local.status || 'active'),
           updatedAt: p.updated_at || local.updatedAt || new Date().toISOString(),
           createdAt: local.createdAt || new Date().toISOString(),
           
@@ -229,6 +236,10 @@ const DB = (() => {
           offImageUrl: local.offImageUrl || null,
           offAttempted: p.off_attempted !== undefined ? p.off_attempted : (local.offAttempted || false),
           dataSource: p.data_source || local.dataSource || 'manual',
+          
+          // Levantamiento metadata (ahora guardado en servidor como JSON y cache local)
+          levantamientoMeta: p.levantamientoMeta || local.levantamientoMeta || null,
+          fromLevantamiento: p.fromLevantamiento || local.fromLevantamiento || (p.data_source === 'levantamiento') || false,
           
           // Holdings (formerly retailers) - Holding-Specific SKU Data
           holdings: local.holdings || local.retailers || {}
@@ -251,10 +262,14 @@ const DB = (() => {
             customerId: r.internal_sku_id || p.holdings[r.retailer_id].customerId || r.ean,
             localProductName: r.local_product_name || p.holdings[r.retailer_id].localProductName || p.holdings[r.retailer_id].name || p.name,
             name: p.holdings[r.retailer_id].name || p.name,
-            localCategoryName: r.retailer_category || p.holdings[r.retailer_id].localCategoryName || p.holdings[r.retailer_id].category || p.category || 'General',
-            category: r.retailer_category || p.holdings[r.retailer_id].category || p.category || 'General',
+            localCategoryName: _toArray(r.retailer_category || p.holdings[r.retailer_id].localCategoryName || p.holdings[r.retailer_id].category || p.category, 'General'),
+            category: _toArray(r.retailer_category || p.holdings[r.retailer_id].category || p.category, 'General'),
+            dmu: _toArray(p.holdings[r.retailer_id].dmu, null),
             isActiveHolding: r.is_trained !== false,
             stockStatus: r.is_trained !== false,
+            createdAt: r.created_at || p.holdings[r.retailer_id].createdAt || p.createdAt,
+            isDiscontinued: r.is_discontinued !== undefined ? r.is_discontinued : (p.holdings[r.retailer_id].isDiscontinued || false),
+            discontinuedAt: r.discontinued_at || p.holdings[r.retailer_id].discontinuedAt || null,
             updatedAt: r.updated_at || p.updatedAt
           };
         }
@@ -296,7 +311,7 @@ const DB = (() => {
       ean: product.ean,
       product_name: product.name || 'Sin Nombre',
       brand: product.brand || 'N/A',
-      category_master: product.universalCategory || product.category || 'GROCERY STORE',
+      category_master: Array.isArray(product.universalCategory) ? product.universalCategory.join(', ') : (Array.isArray(product.category) ? product.category.join(', ') : 'GROCERY STORE'),
       image_url: product.imageUrl || null
     };
 
@@ -308,6 +323,7 @@ const DB = (() => {
     if (_availableColumns.has('images')) payload.images = product.images || [];
     if (_availableColumns.has('data_source')) payload.data_source = product.dataSource || 'manual';
     if (_availableColumns.has('off_attempted')) payload.off_attempted = product.offAttempted || false;
+    payload.is_ready_for_vispera = product.is_ready_for_vispera || false;
 
     try {
       // Upsert product and relations to Local Server
@@ -318,8 +334,11 @@ const DB = (() => {
             ean: product.ean,
             retailer_id: hid,
             internal_sku_id: hData.holdingInternalId || hData.customerId || product.ean,
-            retailer_category: hData.localCategoryName || hData.category || 'General',
-            is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false
+            retailer_category: Array.isArray(hData.localCategoryName) ? hData.localCategoryName.join(', ') : (Array.isArray(hData.category) ? hData.category.join(', ') : 'General'),
+            is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false,
+            created_at: hData.createdAt || new Date().toISOString(),
+            is_discontinued: hData.isDiscontinued || false,
+            discontinued_at: hData.discontinuedAt || null
           });
         }
       }

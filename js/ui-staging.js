@@ -4,7 +4,7 @@ const UIStaging = (() => {
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   let _enriching = false;
-  let _activeTab = 'matches'; // 'matches' | 'no_ean' | 'batch'
+  let _activeTab = 'batch'; // 'batch' | 'orphans'
 
   function render() {
     const el = document.getElementById('view-auditoria');
@@ -12,91 +12,36 @@ const UIStaging = (() => {
 
     const matches = DB.getRecentMatches ? DB.getRecentMatches() : [];
     const noEan = DB.getStagingNoEan();
-    const batch = DB.getVisperaBatch();
+    const inReview = DB.getProductsArray().filter(p => p.status === 'review');
+    const orphans = DB.getProductsArray().filter(p => {
+      const hData = p.holdings || p.retailers || {};
+      const hKeys = Object.keys(hData);
+      if (hKeys.length === 0) return true; // No holdings
+      // If ANY holding lacks customerId
+      return hKeys.some(k => !hData[k].customerId && !hData[k].holdingInternalId);
+    });
 
     el.innerHTML = `
 <header class="view-header">
   <div>
-    <h1 class="view-title">Auditoría de Terreno</h1>
-    <p class="view-sub">Visualiza y exporta los resultados automáticos del procesamiento de SKUs.</p>
+    <h1 class="view-title">Revisión</h1>
   </div>
 </header>
 
-<div class="dashboard-row stagger-in" style="display:flex; gap:16px; margin-bottom: 24px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow);">
-  <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
-    <h3 style="font-size:12px; color:var(--text-sec); margin-bottom: 12px; text-transform:uppercase; letter-spacing:0.05em;">Tasa de Enriquecimiento (Global)</h3>
-    <div style="position:relative; width:140px; height:140px;"><canvas id="chart-enrichment"></canvas></div>
-  </div>
-  <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
-    <h3 style="font-size:12px; color:var(--text-sec); margin-bottom: 12px; text-transform:uppercase; letter-spacing:0.05em;">Completitud (Global)</h3>
-    <div style="position:relative; width:140px; height:140px;"><canvas id="chart-completeness"></canvas></div>
-  </div>
-</div>
-
 <!-- Tabs -->
 <div class="staging-tabs">
-  <button class="staging-tab ${_activeTab === 'matches' ? 'active' : ''}" onclick="UIStaging.setTab('matches')">
-    Matches Exitosos
-    <span class="staging-tab-count">${matches.length}</span>
-  </button>
   <button class="staging-tab ${_activeTab === 'batch' ? 'active' : ''}" onclick="UIStaging.setTab('batch')">
-    EANs sin Vispera ID
-    <span class="staging-tab-count">${batch.length}</span>
+    SKUs en Revisión
+    <span class="staging-tab-count">${inReview.length}</span>
   </button>
-  <button class="staging-tab ${_activeTab === 'no_ean' ? 'active' : ''}" onclick="UIStaging.setTab('no_ean')">
-    SKUs sin EAN
-    <span class="staging-tab-count">${noEan.length}</span>
+  <button class="staging-tab ${_activeTab === 'orphans' ? 'active' : ''}" onclick="UIStaging.setTab('orphans')">
+    Falta Customer ID
+    <span class="staging-tab-count">${orphans.length}</span>
   </button>
 </div>
 
-${_activeTab === 'matches' ? renderMatches(matches) : _activeTab === 'no_ean' ? renderNoEan(noEan) : renderBatch(batch)}
+${_activeTab === 'orphans' ? renderOrphans(orphans) : renderReview(inReview)}
 `;
-
-    setTimeout(_drawCharts, 50);
-  }
-
-  let _chart1 = null;
-  let _chart2 = null;
-
-  function _drawCharts() {
-    if (typeof Chart === 'undefined') return;
-    
-    const all = DB.getProductsArray();
-    if (!all || all.length === 0) return;
-
-    const enriched = all.filter(p => p.dataSource !== 'manual').length;
-    const manual = all.length - enriched;
-
-    const complete = all.filter(p => DB.computeCompleteness(p) >= 80).length;
-    const partial = all.filter(p => DB.computeCompleteness(p) >= 50 && DB.computeCompleteness(p) < 80).length;
-    const incomplete = all.filter(p => DB.computeCompleteness(p) < 50).length;
-
-    const ctx1 = document.getElementById('chart-enrichment');
-    const ctx2 = document.getElementById('chart-completeness');
-
-    if (ctx1) {
-      if (_chart1) _chart1.destroy();
-      _chart1 = new Chart(ctx1, {
-        type: 'doughnut',
-        data: {
-          labels: ['Por API', 'Manual'],
-          datasets: [{ data: [enriched, manual], backgroundColor: ['#4F6EF7', '#D8DFF0'], borderWidth: 0 }]
-        },
-        options: { cutout: '75%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
-      });
-    }
-
-    if (ctx2) {
-      if (_chart2) _chart2.destroy();
-      _chart2 = new Chart(ctx2, {
-        type: 'doughnut',
-        data: {
-          labels: ['Alta (>80%)', 'Media', 'Baja (<50%)'],
-          datasets: [{ data: [complete, partial, incomplete], backgroundColor: ['#1A7A34', '#D29922', '#C42B20'], borderWidth: 0 }]
-        },
-        options: { cutout: '75%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
-      });
-    }
   }
 
   function renderMatches(items) {
@@ -135,10 +80,10 @@ ${_activeTab === 'matches' ? renderMatches(matches) : _activeTab === 'no_ean' ? 
       <tr>
         <td class="mono">${esc(item.ean)}</td>
         <td style="font-weight:500;">${esc(item.name)}</td>
-        <td><span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS[item.category] || '#888'}">${esc(item.category)}</span></td>
+        <td>${(Array.isArray(item.category) ? item.category : [item.category || '—']).map(c => `<span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[c] : '#888'}">${esc(c)}</span>`).join(' ')}</td>
         <td>
           <span class="holding-badge-sm">${esc(item.holdingId)}</span><br>
-          <span style="font-size:12px; color:var(--text-sec)">DMU: ${esc(item.dmu)}</span>
+          <span style="font-size:12px; color:var(--text-sec)">DMU: ${esc(Array.isArray(item.dmu) ? item.dmu.join(', ') : (item.dmu || '—'))}</span>
         </td>
         <td><span class="status-badge ${item.type === 'NUEVO_SKU' ? 'new' : 'active'}">${esc(item.type)}</span></td>
         <td style="font-size:12px;">
@@ -186,7 +131,7 @@ ${_activeTab === 'matches' ? renderMatches(matches) : _activeTab === 'no_ean' ? 
       <tr>
         <td>
           <span class="holding-badge-sm">${esc(item.holdingId || '—')}</span><br>
-          <span style="font-size:12px; color:var(--text-sec)">DMU: ${esc(item.dmu)}</span>
+          <span style="font-size:12px; color:var(--text-sec)">DMU: ${esc(Array.isArray(item.dmu) ? item.dmu.join(', ') : (item.dmu || '—'))}</span>
         </td>
         <td style="font-weight:500;">${esc(item.firebaseName || item.source)}</td>
         <td style="font-size:12px;">
@@ -206,58 +151,118 @@ ${_activeTab === 'matches' ? renderMatches(matches) : _activeTab === 'no_ean' ? 
 </div>`;
   }
 
-  function renderBatch(items) {
+  function renderReview(items) {
     if (items.length === 0) {
       return `
 <div class="empty-state" style="padding:40px;">
-  <div class="empty-icon">📦</div>
-  <h3>Sin tickets pendientes</h3>
-  <p>Los tickets a Vispera se generan automáticamente al procesar EANs desconocidos en Levantamiento.</p>
+  <div class="empty-icon">✅</div>
+  <h3>Sin SKUs en revisión</h3>
+  <p>Todos los SKUs están listos o tienen su Vispera ID asociado.</p>
 </div>`;
     }
 
     return `
 <div class="staging-info-bar">
   <div class="staging-info-left">
-    <span class="staging-info-label">Total Tickets: <strong>${items.length}</strong></span>
-    <span class="staging-info-label">Pendientes: <strong>${items.filter(i => i.status === 'PENDING_REVIEW').length}</strong></span>
-    <span class="staging-info-label" style="color:var(--success)">Enviados: <strong>${items.filter(i => i.status === 'SENT_TO_VISPERA').length}</strong></span>
+    <span class="staging-info-label">SKUs en revisión: <strong>${items.length}</strong></span>
   </div>
-  <button class="btn-primary" onclick="UIStaging.exportToExcel('batch')">Exportar a Excel</button>
-  <button class="btn-clear" onclick="UIStaging.clearBatch()">Limpiar lista completa</button>
 </div>
 
-<div class="batch-cards">
-  ${items.map(item => {
-    const catColor = VISPERA_CATEGORY_COLORS[item.dmuCategory] || '#888';
-    const statusClass = item.status === 'SENT_TO_VISPERA' ? 'new' : item.status === 'REJECTED' ? 'conflict' : '';
-    return `
-  <div class="batch-card">
-    <div class="batch-card-header">
-      <div>
-        <span class="mono" style="font-size:11px; color:var(--text-muted)">Ticket: ${esc(item.batchId?.slice(0, 8))}…</span>
-        <h4 style="margin:4px 0 0 0">${esc(item.name || 'Sin nombre')}</h4>
-      </div>
-      <span class="status-badge ${statusClass}">${esc(item.status)}</span>
-    </div>
-    <div class="batch-card-body">
-      <div class="batch-meta">
-        <span><strong>EAN:</strong> <span class="mono" style="background:#eee; padding:2px 4px; border-radius:2px;">${esc(item.ean)}</span></span>
-        <span><strong>Categoría:</strong> <span class="vispera-cat-badge" style="--cat-color:${catColor}">${esc(item.dmuCategory || '—')}</span></span>
-        <span><strong>Motivo:</strong> ${esc(item.reason)}</span>
-      </div>
-    </div>
-    <div class="batch-card-footer">
-      <span style="font-size:10px; color:var(--text-muted)">${new Date(item.createdAt).toLocaleString('es-CL')}</span>
-      ${item.status === 'PENDING_REVIEW' ? `
-        <div style="display:flex; gap:6px;">
-          <button class="btn-mini" style="background:rgba(74,201,155,0.1); color:#4ac99b; border-color:rgba(74,201,155,0.2);" onclick="UIStaging.sendToVispera('${esc(item.batchId)}')">Marcar como Enviado a Vispera</button>
-          <button class="btn-mini" style="color:var(--danger); border-color:rgba(196,43,32,0.2);" onclick="UIStaging.rejectBatch('${esc(item.batchId)}')">Cancelar</button>
-        </div>` : ''}
-    </div>
-  </div>`;
-  }).join('')}
+<div class="preview-table-wrap" style="max-height:60vh;">
+  <table class="preview-table">
+    <thead>
+      <tr>
+        <th>EAN</th>
+        <th>Nombre Master</th>
+        <th>Categoría</th>
+        <th>Creado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map(item => `
+      <tr>
+        <td class="mono">${esc(item.ean)}</td>
+        <td style="font-weight:500;">
+          <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(item.name || 'Sin nombre')}</a>
+        </td>
+        <td>${(Array.isArray(item.category) ? item.category : [item.category || '—']).map(c => `<span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[c] : '#888'}">${esc(c)}</span>`).join(' ')}</td>
+        <td style="font-size:12px; color:var(--text-sec)">${new Date(item.createdAt).toLocaleDateString('es-CL')}</td>
+        <td style="display:flex; gap:6px;">
+          <button class="btn-primary btn-mini" style="background:#4CAF50" onclick="UIStaging.markAsReady('${esc(item.ean)}')">Marcar como Listo ✓</button>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
 </div>`;
+  }
+
+  function renderOrphans(items) {
+    if (items.length === 0) {
+      return `
+<div class="empty-state" style="padding:40px;">
+  <div class="empty-icon">✅</div>
+  <h3>Todos los Customer IDs configurados</h3>
+  <p>Todos los SKUs tienen al menos un Holding con su Customer ID asignado.</p>
+</div>`;
+    }
+
+    return `
+<div class="staging-info-bar">
+  <div class="staging-info-left">
+    <span class="staging-info-label">SKUs sin Customer ID: <strong>${items.length}</strong></span>
+  </div>
+</div>
+
+<div class="preview-table-wrap" style="max-height:60vh;">
+  <table class="preview-table">
+    <thead>
+      <tr>
+        <th>EAN</th>
+        <th>Nombre Master</th>
+        <th>Marca</th>
+        <th>Holdings</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map(item => {
+        const hData = item.holdings || item.retailers || {};
+        const hKeys = Object.keys(hData);
+        let holdingsStr = '<span style="color:var(--danger)">Ninguno</span>';
+        if (hKeys.length > 0) {
+          holdingsStr = hKeys.map(k => {
+             const missing = !hData[k].customerId && !hData[k].holdingInternalId;
+             return missing ? `<span style="color:var(--danger); font-weight:bold;" title="Falta Customer ID">⚠️ ${esc(k)}</span>` : `<span style="color:var(--success)">✓ ${esc(k)}</span>`;
+          }).join(', ');
+        }
+        return `
+      <tr>
+        <td class="mono">${esc(item.ean)}</td>
+        <td style="font-weight:500;">
+          <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(item.name || 'Sin nombre')}</a>
+        </td>
+        <td>${esc(item.brand || '—')}</td>
+        <td style="font-size:12px;">${holdingsStr}</td>
+        <td>
+          <button class="btn-primary btn-mini" onclick="UISheet.open('${esc(item.ean)}')">Asignar ID</button>
+        </td>
+      </tr>`;
+      }).join('')}
+    </tbody>
+  </table>
+</div>`;
+  }
+
+  function markAsReady(ean) {
+    const p = DB.getProduct(ean);
+    if (p) {
+      p.is_ready_for_vispera = true;
+      p.status = 'active'; // force out of review
+      DB.saveProduct(p);
+      App.showToast('Producto marcado como Listo', 'success');
+      render();
+    }
   }
 
   function getConfidence(item) {
@@ -501,6 +506,7 @@ ${_activeTab === 'matches' ? renderMatches(matches) : _activeTab === 'no_ean' ? 
     clearBatch,
     enrichAll,
     clearMatches,
-    exportToExcel
+    exportToExcel,
+    markAsReady
   };
 })();

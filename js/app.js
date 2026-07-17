@@ -216,14 +216,19 @@ const App = {
     products.forEach(p => {
       const hlds = p.holdings || p.retailers || {};
       const row = [
-        p.ean, p.name||'', p.brand||'', p.universalCategory || p.category || '', p.packageType||'',
+        p.ean, p.name||'', p.brand||'', Array.isArray(p.universalCategory) ? p.universalCategory.join(', ') : (Array.isArray(p.category) ? p.category.join(', ') : (p.universalCategory || p.category || '')), p.packageType||'',
         p.width_cm||'', p.height_cm||'', p.depth_cm||'', p.weight_g||'',
         p.imageUrl||'', p.dataSource||''
       ];
       holdings.forEach(h => {
         const hd = hlds[h.id];
         if (hd) {
-          row.push(hd.holdingInternalId || hd.customerId||'', hd.localProductName || hd.name||'', hd.localCategoryName || hd.category||'', hd.isActiveHolding !== false ? 'SI':'NO');
+          row.push(
+            hd.holdingInternalId || hd.customerId || '',
+            hd.localProductName || hd.name || '',
+            Array.isArray(hd.localCategoryName) ? hd.localCategoryName.join(', ') : (Array.isArray(hd.category) ? hd.category.join(', ') : (hd.localCategoryName || hd.category || '')),
+            hd.isActiveHolding !== false ? 'SI':'NO'
+          );
         } else {
           row.push('','','','');
         }
@@ -261,9 +266,17 @@ const App = {
     products.forEach(p => {
       const hlds = p.holdings || p.retailers || {};
       const hd  = hlds[holdingId];
-      const dmu = hd.dmu || hd.localCategoryName || hd.category || 'Sin DMU';
-      if (!groups[dmu]) groups[dmu] = [];
-      groups[dmu].push({ p, hd });
+      const dmus = Array.isArray(hd.dmu) ? hd.dmu : (hd.dmu ? [hd.dmu] : []);
+      if (dmus.length === 0) {
+         let fbDmu = Array.isArray(hd.localCategoryName) ? hd.localCategoryName[0] : hd.localCategoryName;
+         if (!fbDmu) fbDmu = Array.isArray(hd.category) ? hd.category[0] : hd.category;
+         dmus.push(fbDmu || 'Sin DMU');
+      }
+      
+      dmus.forEach(dmu => {
+        if (!groups[dmu]) groups[dmu] = [];
+        groups[dmu].push({ p, hd });
+      });
     });
 
     const wb = XLSX.utils.book_new();
@@ -278,8 +291,8 @@ const App = {
           hd.localProductName || hd.name || p.name || '',
           p.brand || '',
           hd.holdingInternalId || hd.customerId || '',
-          hd.localCategoryName || hd.category || '',
-          hd.dmu || '',
+          Array.isArray(hd.localCategoryName) ? hd.localCategoryName.join(', ') : (Array.isArray(hd.category) ? hd.category.join(', ') : (hd.localCategoryName || hd.category || '')),
+          Array.isArray(hd.dmu) ? hd.dmu.join(', ') : (hd.dmu || ''),
           hd.position || '',
           p.weight_g || '',
           p.packageType || '',
@@ -318,7 +331,7 @@ const App = {
         p.ean,
         hd.localProductName || hd.name || p.name || '',
         hd.holdingInternalId || hd.customerId || '',
-        hd.localCategoryName || hd.category || '',
+        Array.isArray(hd.localCategoryName) ? hd.localCategoryName.join(', ') : (Array.isArray(hd.category) ? hd.category.join(', ') : (hd.localCategoryName || hd.category || '')),
         hd.isActiveHolding !== false ? 'SI' : 'NO',
         p.brand || '',
         p.weight_g || '',
@@ -386,7 +399,7 @@ const App = {
     });
 
     // Hash tracking for F5 refreshes
-    const validViews = ['dashboard', 'catalog', 'import', 'holdings', 'bulk', 'levantamiento', 'staging'];
+    const validViews = ['dashboard', 'catalog', 'import', 'holdings', 'bulk', 'levantamiento', 'auditoria', 'staging'];
     window.addEventListener('hashchange', () => {
       let hash = window.location.hash.replace('#', '');
       if (hash === 'retailers') hash = 'holdings'; // legacy redirect

@@ -2265,3 +2265,21 @@ html[data-theme="dark"] {
   font-size: 10px; padding: 2px 4px; border-radius: 4px;
   background: rgba(255,193,7,0.15); color: #B28704; font-weight: 700; text-transform: uppercase;
 }
+
+/* ── Stat chips (Levantamiento header) ─────────── */
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.stat-chip strong {
+  font-size: 16px;
+  font-weight: 700;
+  margin-right: 3px;
+}
+
