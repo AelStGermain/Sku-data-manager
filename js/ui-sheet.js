@@ -16,6 +16,7 @@ const UISheet = (() => {
   // Field discovery states
   let _fdImageB64 = null;
   let _fdImageFile = null;
+  let _fdSelectedCats = []; // Categorías Vispera seleccionadas en modo Reporte de Terreno
 
   function setCreateMode(mode) {
     _createMode = mode;
@@ -65,6 +66,7 @@ const UISheet = (() => {
     _createMode = 'master';
     _fdImageB64 = null;
     _fdImageFile = null;
+    _fdSelectedCats = [];
     const holdings = DB.getHoldings();
     _holding = holdings.length > 0 ? holdings[0].id : null;
     _render();
@@ -559,8 +561,14 @@ const UISheet = (() => {
                 <select id="fd-holding" class="form-select"><option value="">-- Seleccionar --</option>${holdingOpts}</select>
               </div>
               <div class="form-group">
-                <label>Categoría Vispera</label>
-                <select id="fd-cat-universal" class="form-select"><option value="">-- Seleccionar --</option>${uniCatOpts}</select>
+                <label>Categoría Vispera (puede seleccionar varias)</label>
+                <div id="fd-cat-container">
+                  <select class="form-select" id="fd-cat-add-select" onchange="UISheet._fdAddCat(this.value); this.value=''">
+                    <option value="">+ Agregar categoría...</option>
+                    ${(window.UNIVERSAL_CATEGORIES || []).map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+                  </select>
+                  <div id="fd-cat-tags" style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;"></div>
+                </div>
               </div>
             </div>
             <div class="fd-alert-notice" style="margin-top:16px;">
@@ -576,8 +584,11 @@ const UISheet = (() => {
         </button>
       </div>`;
 
-      // Drag & drop logic
+      // Drag & drop + fd cat multiselect init
       requestAnimationFrame(() => {
+        // Render existing selected cats as tags
+        _fdRenderCatTags();
+
         const dropZone = document.getElementById('fd-photo-drop');
         if (dropZone) {
           dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('drag-over'); };
@@ -803,6 +814,43 @@ ${tabsHtml}
     reader.readAsDataURL(file);
   }
 
+  // --- Field Discovery: category multiselect helpers ---
+  function _fdAddCat(val) {
+    if (!val || _fdSelectedCats.includes(val)) return;
+    _fdSelectedCats.push(val);
+    _fdRenderCatTags();
+    // Remove from options dropdown
+    const sel = document.getElementById('fd-cat-add-select');
+    if (sel) {
+      const opt = sel.querySelector(`option[value="${val}"]`);
+      if (opt) opt.remove();
+    }
+  }
+
+  function _fdRemoveCat(val) {
+    _fdSelectedCats = _fdSelectedCats.filter(c => c !== val);
+    _fdRenderCatTags();
+    // Add back to dropdown
+    const sel = document.getElementById('fd-cat-add-select');
+    if (sel) {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = val;
+      sel.appendChild(opt);
+    }
+  }
+
+  function _fdRenderCatTags() {
+    const container = document.getElementById('fd-cat-tags');
+    if (!container) return;
+    container.innerHTML = _fdSelectedCats.map(c => `
+      <span style="display:inline-flex; align-items:center; background:var(--accent); color:#fff; padding:4px 10px; border-radius:14px; font-size:11px;">
+        ${esc(c)}
+        <span style="cursor:pointer; margin-left:6px; font-weight:bold; opacity:0.8;" onclick="UISheet._fdRemoveCat('${esc(c)}')">×</span>
+      </span>
+    `).join('');
+  }
+
   function _fdValidateEAN(val) {
     const badge = document.getElementById('fd-ean-badge');
     if (!badge) return;
@@ -821,7 +869,8 @@ ${tabsHtml}
     const dmu     = document.getElementById('fd-dmu')?.value.trim();
     const aisle   = document.getElementById('fd-aisle')?.value.trim();
     const holding = document.getElementById('fd-holding')?.value;
-    const catUni  = document.getElementById('fd-cat-universal')?.value;
+    // Multi-categoría: usar el array seleccionado
+    const catUni  = _fdSelectedCats.length > 0 ? _fdSelectedCats : null;
 
     const btn = document.getElementById('fd-submit-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
@@ -869,6 +918,8 @@ ${tabsHtml}
     setHolding, addToHolding, removeFromHolding,
     validateEANInput,
     updateRetailerField, addToRetailer, removeFromRetailer, setRetailer,
-    setCreateMode, _fdHandleImage, _fdSetFile, _fdValidateEAN, submitFieldDiscovery
+    setCreateMode, _fdHandleImage, _fdSetFile, _fdValidateEAN, submitFieldDiscovery,
+    _fdAddCat, _fdRemoveCat, _fdRenderCatTags,
+    toggleArrayField
   };
 })();

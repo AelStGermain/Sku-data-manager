@@ -105,7 +105,12 @@ const UILevantamiento = (() => {
   // ── Fetch catálogos (auditores, DMUs para datalists) desde el catálogo local ──
   async function _fetchMetadata() {
     try {
-      const productos = DB.getProductsArray().filter(p => p.dataSource === 'levantamiento' || p.fromLevantamiento === true);
+    const productos = DB.getProductsArray().filter(p =>
+      p.dataSource === 'levantamiento' ||
+      p.dataSource === 'firebase' ||
+      p.fromLevantamiento === true ||
+      p.fromFirebase === true
+    );
       const auditoresSet = new Set();
       const dmusSet = new Set();
       
@@ -140,7 +145,13 @@ const UILevantamiento = (() => {
     if (!wrap) return;
 
     // Fuente de verdad: catálogo maestro
-    let productos = DB.getProductsArray().filter(p => p.dataSource === 'levantamiento' || p.fromLevantamiento === true);
+    // Incluye todos los SKUs provenientes de Firebase o Levantamiento de Terreno
+    let productos = DB.getProductsArray().filter(p =>
+      p.dataSource === 'levantamiento' ||
+      p.dataSource === 'firebase' ||
+      p.fromLevantamiento === true ||
+      p.fromFirebase === true
+    );
 
     // ── Filtros sobre levantamientoMeta
     if (_filterAuditor) {
@@ -153,7 +164,11 @@ const UILevantamiento = (() => {
       productos = productos.filter(p => (p.levantamientoMeta?.pasillo || '').toLowerCase().includes(_filterPasillo.toLowerCase()));
     }
     if (_filterCategoria) {
-      productos = productos.filter(p => (p.universalCategory || p.category || '') === _filterCategoria);
+      productos = productos.filter(p => {
+        const cat = p.universalCategory || p.category || [];
+        if (Array.isArray(cat)) return cat.includes(_filterCategoria);
+        return cat === _filterCategoria;
+      });
     }
     if (_filterHolding) {
       productos = productos.filter(p => p.levantamientoMeta?.holdingId === _filterHolding || Object.keys(p.holdings || {}).includes(_filterHolding));
@@ -176,7 +191,12 @@ const UILevantamiento = (() => {
     const mostrar = _showAll ? productos : productos.slice(0, 25);
 
     // Stats de todo el histórico de levantamiento (sin filtro)
-    const todoLev = DB.getProductsArray().filter(p => p.dataSource === 'levantamiento' || p.fromLevantamiento === true);
+    const todoLev = DB.getProductsArray().filter(p =>
+      p.dataSource === 'levantamiento' ||
+      p.dataSource === 'firebase' ||
+      p.fromLevantamiento === true ||
+      p.fromFirebase === true
+    );
     const matched    = todoLev.filter(p => p.status === 'active' || p.status === 'review').length;
     const sinVispera = todoLev.filter(p => !p.visperaId).length;
     const vispTickets = DB.getVisperaBatch().length;
@@ -244,8 +264,8 @@ const UILevantamiento = (() => {
                 </td>
                 <td style="font-size:12px;color:var(--text-sec);">${esc(p.brand || '—')}</td>
                 <td>
-                  <span class="vispera-cat-badge" style="--cat-color:${VISPERA_CATEGORY_COLORS[p.universalCategory || p.category] || '#888'}">
-                    ${esc(p.universalCategory || p.category || '—')}
+                  <span class="vispera-cat-badge" style="--cat-color:${VISPERA_CATEGORY_COLORS[Array.isArray(p.universalCategory || p.category) ? (p.universalCategory || p.category)[0] : (p.universalCategory || p.category)] || '#888'}">
+                    ${esc(Array.isArray(p.universalCategory || p.category) ? (p.universalCategory || p.category).join(', ') : (p.universalCategory || p.category || '—'))}
                   </span>
                 </td>
                 <td style="font-size:12px;">${esc(meta.auditor || '—')}</td>
@@ -280,7 +300,12 @@ const UILevantamiento = (() => {
     const holdingFilterOpts = `<option value="">Todos los Holdings</option>` + holdings.map(h => `<option value="${esc(h.id)}">${esc(h.name)}</option>`).join('');
     const catOpts = UNIVERSAL_CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
 
-    const todoLev = DB.getProductsArray().filter(p => p.dataSource === 'levantamiento' || p.fromLevantamiento === true);
+    const todoLev = DB.getProductsArray().filter(p =>
+      p.dataSource === 'levantamiento' ||
+      p.dataSource === 'firebase' ||
+      p.fromLevantamiento === true ||
+      p.fromFirebase === true
+    );
     const vispTickets = DB.getVisperaBatch().length;
     const noEanCount = DB.getStagingNoEan().length;
     const pendingStaging = DB.getStagingLevantamiento().filter(s => s.status === 'PENDING' || !s.status).length;
@@ -346,18 +371,14 @@ const UILevantamiento = (() => {
     <div class="lev-form">
       <div class="form-row">
         <div class="form-group" style="flex:1">
-          <label>Desde Fecha</label>
-          <input type="date" id="fb-filter-date-from" class="form-input" value="${_filterDateFrom}" onchange="UILevantamiento.setFilters()">
+          <label>Rango de Fechas (Captura)</label>
+          <input type="text" id="fb-filter-date-range" class="form-input" placeholder="Ej: 2026-07-01 a 2026-07-15" readonly>
         </div>
         <div class="form-group" style="flex:1">
-          <label>Hasta Fecha</label>
-          <input type="date" id="fb-filter-date-to" class="form-input" value="${_filterDateTo}" onchange="UILevantamiento.setFilters()">
+          <label>Auditor</label>
+          <input type="text" list="fb-auditores-list" id="fb-filter-auditor" class="form-input" placeholder="Todos los Auditores..." value="${_filterAuditor}" oninput="UILevantamiento.setFilters()">
+          <datalist id="fb-auditores-list">${_auditoresOpts}</datalist>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Auditor</label>
-        <input type="text" list="fb-auditores-list" id="fb-filter-auditor" class="form-input" placeholder="Todos los Auditores..." value="${_filterAuditor}" oninput="UILevantamiento.setFilters()">
-        <datalist id="fb-auditores-list">${_auditoresOpts}</datalist>
       </div>
       <div class="form-row">
         <div class="form-group" style="flex:1">
@@ -470,6 +491,30 @@ const UILevantamiento = (() => {
     _fetchMetadata();
     _fetchLastSync();
     renderTable();
+
+    // Init flatpickr date range picker
+    setTimeout(() => {
+      if (window.flatpickr) {
+        flatpickr("#fb-filter-date-range", {
+          mode: "range",
+          locale: "es",
+          dateFormat: "Y-m-d",
+          maxDate: "today",
+          defaultDate: _filterDateFrom && _filterDateTo ? [_filterDateFrom, _filterDateTo] : [],
+          onChange: function(selectedDates, dateStr, instance) {
+            if (selectedDates.length === 2) {
+              _filterDateFrom = instance.formatDate(selectedDates[0], "Y-m-d");
+              _filterDateTo = instance.formatDate(selectedDates[1], "Y-m-d");
+              UILevantamiento.setFilters();
+            } else if (selectedDates.length === 0) {
+              _filterDateFrom = '';
+              _filterDateTo = '';
+              UILevantamiento.setFilters();
+            }
+          }
+        });
+      }
+    }, 100);
   }
 
   async function _fetchLastSync() {
@@ -508,7 +553,9 @@ const UILevantamiento = (() => {
       const res = await fetch('http://localhost:3000/api/sync-firebase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: force || true }) // from manual button, we force sync
+        // El servidor decide qué registros traer según su propio estado (last_fb_sync.json)
+        // No se pasa 'since' desde el cliente — el servidor es la fuente de verdad
+        body: JSON.stringify({ force: true })
       });
       
       const result = await res.json();
@@ -546,8 +593,9 @@ const UILevantamiento = (() => {
 
   // ── Filtros ──────────────────────────────────
   function setFilters() {
-    _filterDateFrom  = document.getElementById('fb-filter-date-from')?.value || '';
-    _filterDateTo    = document.getElementById('fb-filter-date-to')?.value || '';
+    // Note: _filterDateFrom and _filterDateTo are now managed by flatpickr onChange callback.
+    // We don't overwrite them here.
+
     _filterAuditor   = document.getElementById('fb-filter-auditor')?.value || '';
     _filterDmu       = document.getElementById('fb-filter-dmu')?.value || '';
     _filterPasillo   = document.getElementById('fb-filter-pasillo')?.value || '';
@@ -559,12 +607,17 @@ const UILevantamiento = (() => {
 
   function clearFilters() {
     _filterDateFrom = _filterDateTo = _filterAuditor = _filterDmu = _filterPasillo = _filterCategoria = _filterHolding = '';
-    ['fb-filter-date-from','fb-filter-date-to','fb-filter-auditor','fb-filter-dmu','fb-filter-pasillo']
+    ['fb-filter-auditor','fb-filter-dmu','fb-filter-pasillo']
       .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     const cat = document.getElementById('fb-filter-cat');
     if (cat) cat.value = '';
     const hold = document.getElementById('fb-filter-holding');
     if (hold) hold.value = '';
+    
+    // Clear flatpickr
+    const dp = document.getElementById('fb-filter-date-range');
+    if (dp && dp._flatpickr) dp._flatpickr.clear();
+    
     _showAll = false;
     renderTable();
   }
@@ -622,7 +675,7 @@ const UILevantamiento = (() => {
         name: 'Nuevo SKU Manual',
         brand: 'Por Definir',
         imageUrl: null,
-        universalCategory: category || 'GROCERY STORE',
+        universalCategory: category ? [category] : ['GROCERY STORE'],
         visperaId: null,
         status: 'review',
         dataSource: 'levantamiento',

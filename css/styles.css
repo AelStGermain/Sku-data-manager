@@ -379,6 +379,8 @@ img { display: block; }
 }
 .source-badge.off { background: rgba(0,212,170,0.2); color: var(--teal); border: 1px solid var(--teal); }
 .source-badge.opf { background: rgba(79,110,247,0.2); color: var(--accent); border: 1px solid var(--accent); }
+.source-badge.firebase { background: rgba(255,111,0,0.15); color: #ff6f00; border: 1px solid rgba(255,111,0,0.5); }
+.source-badge.excel   { background: rgba(33,150,83,0.15);  color: #21a353; border: 1px solid rgba(33,150,83,0.5); }
 
 .card-body {
   padding: 14px 14px 8px;

@@ -12,14 +12,24 @@ const UIStaging = (() => {
 
     const matches = DB.getRecentMatches ? DB.getRecentMatches() : [];
     const noEan = DB.getStagingNoEan();
-    const inReview = DB.getProductsArray().filter(p => p.status === 'review');
+
+    // Tab 1: SKUs sin Vispera ID (no necesariamente status='review')
+    const inReview = DB.getProductsArray().filter(p => !p.visperaId && p.status !== 'discontinued');
+
+    // Tab 2: SKUs que TIENEN al menos un holding pero a ese holding le falta customerId
+    // (Productos sin ningún holding no van aquí — eso es otro problema)
     const orphans = DB.getProductsArray().filter(p => {
       const hData = p.holdings || p.retailers || {};
       const hKeys = Object.keys(hData);
-      if (hKeys.length === 0) return true; // No holdings
-      // If ANY holding lacks customerId
-      return hKeys.some(k => !hData[k].customerId && !hData[k].holdingInternalId);
+      if (hKeys.length === 0) return false; // Sin holdings → no aplica
+      // Solo si ALGÚN holding tiene datos pero le falta customerId
+      return hKeys.some(k => {
+        const h = hData[k];
+        const hasData = h && (h.name || h.localProductName || h.dmu || h.category);
+        return hasData && !h.customerId && !h.holdingInternalId;
+      });
     });
+
 
     el.innerHTML = `
 <header class="view-header">
@@ -31,7 +41,7 @@ const UIStaging = (() => {
 <!-- Tabs -->
 <div class="staging-tabs">
   <button class="staging-tab ${_activeTab === 'batch' ? 'active' : ''}" onclick="UIStaging.setTab('batch')">
-    SKUs en Revisión
+    Sin Vispera ID
     <span class="staging-tab-count">${inReview.length}</span>
   </button>
   <button class="staging-tab ${_activeTab === 'orphans' ? 'active' : ''}" onclick="UIStaging.setTab('orphans')">
@@ -156,15 +166,15 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : renderReview(inReview)}
       return `
 <div class="empty-state" style="padding:40px;">
   <div class="empty-icon">✅</div>
-  <h3>Sin SKUs en revisión</h3>
-  <p>Todos los SKUs están listos o tienen su Vispera ID asociado.</p>
+  <h3>Todos los SKUs tienen Vispera ID</h3>
+  <p>No hay SKUs pendientes de asignar su Vispera ID.</p>
 </div>`;
     }
 
     return `
 <div class="staging-info-bar">
   <div class="staging-info-left">
-    <span class="staging-info-label">SKUs en revisión: <strong>${items.length}</strong></span>
+    <span class="staging-info-label">SKUs sin Vispera ID: <strong>${items.length}</strong></span>
   </div>
 </div>
 

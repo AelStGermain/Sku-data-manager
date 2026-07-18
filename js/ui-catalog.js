@@ -43,6 +43,8 @@ const UICatalog = (() => {
   function srcBadge(src) {
     if (src === 'open_food_facts')     return `<span class="source-badge off">API</span>`;
     if (src === 'open_products_facts') return `<span class="source-badge opf">API_OPF</span>`;
+    if (src === 'firebase')            return `<span class="source-badge firebase" title="Importado desde Firebase / App de Terreno">🔥 Firebase</span>`;
+    if (src === 'levantamiento')       return `<span class="source-badge firebase" title="Importado desde App de Terreno">📱 Terreno</span>`;
     return '';
   }
   function completenessColor(pct) {
@@ -362,9 +364,11 @@ const UICatalog = (() => {
   </select>
   <select class="filter-sel" onchange="UICatalog.setSource(this.value)">
     <option value="all" ${_source==='all'?'selected':''}>Todas las fuentes</option>
+    <option value="firebase" ${_source==='firebase'?'selected':''}>🔥 Firebase (Terreno)</option>
+    <option value="levantamiento" ${_source==='levantamiento'?'selected':''}>📱 App Terreno</option>
     <option value="open_food_facts" ${_source==='open_food_facts'?'selected':''}>API Rest (Auto)</option>
     <option value="open_products_facts" ${_source==='open_products_facts'?'selected':''}>API OPF</option>
-    <option value="manual" ${_source==='manual'?'selected':''}>Manual</option>
+    <option value="manual" ${_source==='manual'?'selected':''}>Manual / Excel</option>
   </select>
   <div style="border-left:1px solid var(--border); margin:0 8px; height:24px;"></div>
   <select class="filter-sel" style="background-color: var(--card-bg); font-weight: 500;" onchange="UICatalog.setImagePref(this.value)">

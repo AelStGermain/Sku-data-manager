@@ -208,22 +208,43 @@ const DB = (() => {
       // 1. Map from remote database (Supabase is source of truth → Universal Products)
       masterData.forEach(p => {
         const local = localCache[p.ean] || {};
+        // Determinar status: priorizar el guardado en servidor, luego caché local, como último recurso inferir
+        const serverStatus = p.status || null;
+        const localStatus  = local.status  || null;
+        let resolvedStatus;
+        if (serverStatus) {
+          resolvedStatus = serverStatus;
+        } else if (localStatus) {
+          resolvedStatus = localStatus;
+        } else {
+          // Solo si no hay ningún status guardado, inferir desde visperaId
+          resolvedStatus = (!(p.vispera_id || local.visperaId) && !(p.is_ready_for_vispera || local.is_ready_for_vispera)) ? 'review' : 'active';
+        }
+
+        // Normalizar dataSource: el servidor guarda en camelCase (dataSource),
+        // pero algunos registros pueden tener data_source (snake_case) — leer ambos
+        const rawDataSource = p.dataSource || p.data_source || local.dataSource || 'manual';
+        const resolvedDataSource = rawDataSource;
+
         _memoryProducts[p.ean] = {
           ean: p.ean,
           masterProductId: p.ean, // master_product_id = ean as PK
-          visperaId: p.vispera_id || local.visperaId || null,
-          name: p.product_name || local.name || '',
+          visperaId: p.vispera_id || p.visperaId || local.visperaId || null,
+          // Servidor puede guardar 'name' (Firebase sync) o 'product_name' (Supabase conv.)
+          name: p.product_name || p.name || local.name || '',
           brand: p.brand || local.brand || 'N/A',
           brandId: p.brand_id || local.brandId || null,
           producerId: p.producer_id || local.producerId || null,
-          category: _toArray(p.category_master || local.category, 'GROCERY STORE'),
-          universalCategory: _toArray(p.category_master || local.universalCategory || local.category, 'GROCERY STORE'),
-          imageUrl: p.image_url || local.imageUrl || null,
+          // Servidor puede guardar 'universalCategory' (camelCase) o 'category_master' (snake)
+          category: _toArray(p.category_master || p.universalCategory || local.category, 'GROCERY STORE'),
+          universalCategory: _toArray(p.category_master || p.universalCategory || local.universalCategory || local.category, 'GROCERY STORE'),
+          // Servidor puede guardar 'imageUrl' (camelCase) o 'image_url' (snake)
+          imageUrl: p.image_url || p.imageUrl || local.imageUrl || null,
           images: p.images || local.images || [],
           is_ready_for_vispera: p.is_ready_for_vispera !== undefined ? p.is_ready_for_vispera : (local.is_ready_for_vispera || false),
-          status: (!(p.vispera_id || local.visperaId) && !(p.is_ready_for_vispera || local.is_ready_for_vispera)) ? 'review' : (local.status || 'active'),
+          status: resolvedStatus,
           updatedAt: p.updated_at || local.updatedAt || new Date().toISOString(),
-          createdAt: local.createdAt || new Date().toISOString(),
+          createdAt: p.created_at || local.createdAt || new Date().toISOString(),
           
           // Reconstruct dimensions/weights (fallback to local if not on Supabase)
           weight_g: p.weight_g !== undefined ? p.weight_g : (local.weight_g || null),
@@ -235,11 +256,12 @@ const DB = (() => {
           // Fallbacks for OFF fields
           offImageUrl: local.offImageUrl || null,
           offAttempted: p.off_attempted !== undefined ? p.off_attempted : (local.offAttempted || false),
-          dataSource: p.data_source || local.dataSource || 'manual',
+          dataSource: resolvedDataSource,
           
           // Levantamiento metadata (ahora guardado en servidor como JSON y cache local)
           levantamientoMeta: p.levantamientoMeta || local.levantamientoMeta || null,
-          fromLevantamiento: p.fromLevantamiento || local.fromLevantamiento || (p.data_source === 'levantamiento') || false,
+          fromLevantamiento: p.fromLevantamiento || local.fromLevantamiento || (resolvedDataSource === 'levantamiento') || false,
+          fromFirebase: p.fromFirebase || local.fromFirebase || (resolvedDataSource === 'firebase') || false,
           
           // Holdings (formerly retailers) - Holding-Specific SKU Data
           holdings: local.holdings || local.retailers || {}
@@ -312,7 +334,21 @@ const DB = (() => {
       product_name: product.name || 'Sin Nombre',
       brand: product.brand || 'N/A',
       category_master: Array.isArray(product.universalCategory) ? product.universalCategory.join(', ') : (Array.isArray(product.category) ? product.category.join(', ') : 'GROCERY STORE'),
-      image_url: product.imageUrl || null
+      image_url: product.imageUrl || null,
+      // ── Campos siempre incluidos para persistencia correcta ──
+      status: product.status || 'active',
+      data_source: product.dataSource || 'manual',
+      off_attempted: product.offAttempted || false,
+      is_ready_for_vispera: product.is_ready_for_vispera || false,
+      weight_g: product.weight_g || null,
+      width_cm: product.width_cm || null,
+      height_cm: product.height_cm || null,
+      depth_cm: product.depth_cm || null,
+      package_type: product.packageType || null,
+      images: product.images || [],
+      levantamientoMeta: product.levantamientoMeta || null,
+      fromLevantamiento: product.fromLevantamiento || false,
+      fromFirebase: product.fromFirebase || false
     };
 
     if (_availableColumns.has('weight_g')) payload.weight_g = product.weight_g;
@@ -323,7 +359,6 @@ const DB = (() => {
     if (_availableColumns.has('images')) payload.images = product.images || [];
     if (_availableColumns.has('data_source')) payload.data_source = product.dataSource || 'manual';
     if (_availableColumns.has('off_attempted')) payload.off_attempted = product.offAttempted || false;
-    payload.is_ready_for_vispera = product.is_ready_for_vispera || false;
 
     try {
       // Upsert product and relations to Local Server

@@ -4,21 +4,114 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ── Firebase Config ───────────────────────────────────────────────────────
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, onSnapshot, query, where } from "firebase/firestore";
+// ── Firestore REST API ────────────────────────────────────────────────────────────────────
+// Usamos la REST API de Firestore en lugar del SDK para evitar problemas
+// de autenticación en entornos Node.js sin credenciales Google Cloud.
+// Las reglas actuales permiten lecturas públicas en la colección levantamientos.
+const FB_PROJECT = 'levantamiento-sku';
+const FB_BASE    = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents`;
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD486cV5aa3chf6zeq8Cr28dnXT5XAbQgY",
-  authDomain: "levantamiento-sku.firebaseapp.com",
-  projectId: "levantamiento-sku",
-  storageBucket: "levantamiento-sku.firebasestorage.app",
-  messagingSenderId: "322919219291",
-  appId: "1:322919219291:web:1ead3108065ea1e66d7f7e",
-};
+// Convierte un valor de Firestore REST ({stringValue, integerValue, timestampValue, mapValue...})
+// a un valor JavaScript plano.
+function parseFirestoreValue(fv) {
+  if (!fv) return null;
+  if (fv.stringValue  !== undefined) return fv.stringValue;
+  if (fv.integerValue !== undefined) return Number(fv.integerValue);
+  if (fv.doubleValue  !== undefined) return Number(fv.doubleValue);
+  if (fv.booleanValue !== undefined) return fv.booleanValue;
+  if (fv.nullValue    !== undefined) return null;
+  if (fv.timestampValue !== undefined) return fv.timestampValue; // ISO string
+  if (fv.arrayValue !== undefined)
+    return (fv.arrayValue.values || []).map(parseFirestoreValue);
+  if (fv.mapValue !== undefined) {
+    const out = {};
+    for (const [k, v] of Object.entries(fv.mapValue.fields || {}))
+      out[k] = parseFirestoreValue(v);
+    return out;
+  }
+  return null;
+}
 
-const fbApp = initializeApp(firebaseConfig);
-const fbDb = getFirestore(fbApp);
+// Convierte un documento REST de Firestore a un objeto JS plano.
+// Excluye automáticamente fotoUrl y fotoFlejeUrl (son Base64 muy pesados).
+function parseFirestoreDoc(doc) {
+  const fields = doc.fields || {};
+  const EXCLUDED = new Set(['fotoUrl', 'fotoFlejeUrl']);
+  const result = { _id: doc.name.split('/').pop() };
+  for (const [k, v] of Object.entries(fields)) {
+    if (!EXCLUDED.has(k)) result[k] = parseFirestoreValue(v);
+  }
+  return result;
+}
+
+// Consulta la colección levantamientos via REST. Devuelve array de documentos planos.
+// Acepta filtro de fecha (campo `fecha`) y pageToken para paginación.
+async function firestoreQuery({ sinceDate = null, pageToken = null, pageSize = 200 } = {}) {
+  const TIMEOUT_MS = 60000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    // Usamos el endpoint :runQuery con StructuredQuery para filtrar por fecha
+    const body = {
+      structuredQuery: {
+        from: [{ collectionId: 'levantamientos' }],
+        select: {
+          fields: [
+            { fieldPath: 'ean' },
+            { fieldPath: 'fecha' },
+            { fieldPath: 'holding' },
+            { fieldPath: 'holdingId' },
+            { fieldPath: 'dmu' },
+            { fieldPath: 'pasillo' },
+            { fieldPath: 'categoria' },
+            { fieldPath: 'local' },
+            { fieldPath: 'auditor' },
+            { fieldPath: 'productoWeb' },
+            { fieldPath: 'marcaWeb' },
+            { fieldPath: 'imagenProductoWeb' },
+            { fieldPath: 'nombreProductoOCR' },
+            { fieldPath: 'precioWeb' },
+            { fieldPath: 'precioOCR' },
+            { fieldPath: 'estado' }
+          ]
+        },
+        limit: pageSize,
+        ...(sinceDate ? {
+          where: {
+            fieldFilter: {
+              field:  { fieldPath: 'fecha' },
+              op:     'GREATER_THAN_OR_EQUAL',
+              value:  { timestampValue: sinceDate.toISOString() }
+            }
+          }
+        } : {})
+      }
+    };
+
+    const url = `${FB_BASE}:runQuery`;
+    const res = await fetch(url, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+      signal:  controller.signal
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Firestore REST ${res.status}: ${txt.substring(0, 200)}`);
+    }
+
+    const rows = await res.json();
+    // runQuery devuelve un array; cada elemento tiene { document: {...} } o {}
+    return rows
+      .filter(r => r.document)
+      .map(r => parseFirestoreDoc(r.document));
+
+  } finally {
+    clearTimeout(timer);
+  }
+}
 // ──────────────────────────────────────────────────────────────────────────
 
 const __filename = fileURLToPath(import.meta.url);
@@ -90,6 +183,7 @@ app.post('/api/products', (req, res) => {
   
   const idx = master.findIndex(p => p.ean === product.ean);
   if (idx > -1) {
+    // Merge preservando todos los campos, incluyendo status, data_source, etc.
     master[idx] = { ...master[idx], ...product };
   } else {
     master.push(product);
@@ -191,7 +285,7 @@ app.post('/api/stores', (req, res) => {
   res.json({ success: true, count: stores.length });
 });
 
-// ── Helper: Open Food Facts Enrichment ─────────────────────────────────────
+// ── Helper: Open Food Facts Enrichment ────────────────────────────────────
 async function fetchEnrichment(ean) {
   try {
     const paddedEan = ean.length === 12 ? '0' + ean : ean;
@@ -199,15 +293,14 @@ async function fetchEnrichment(ean) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(url, { signal: controller.signal }).finally(() => clearTimeout(id));
-    
     if (res.ok) {
       const data = await res.json();
       if (data.status === 1 && data.product) {
         const p = data.product;
         return {
-          name: p.product_name || p.product_name_es || null,
-          brand: p.brands || null,
-          imageUrl: p.image_url || null,
+          name:           p.product_name || p.product_name_es || null,
+          brand:          p.brands || null,
+          imageUrl:       p.image_url || null,
           masterCategory: p.categories ? p.categories.split(',')[0].trim().toUpperCase() : null
         };
       }
@@ -218,60 +311,73 @@ async function fetchEnrichment(ean) {
   return null;
 }
 
-// ── Servicio: Sincronización Firebase a SQLite ────────────────────────────
+
+// ── Servicio: Sincronización Firebase → Catalogo Maestro ─────────────────────
 let isSyncing = false;
-async function syncFirebaseToCatalog(force = false) {
+async function syncFirebaseToCatalog(force = false, since = null) {
   if (isSyncing) return { success: false, error: 'Sync ya en progreso' };
   isSyncing = true;
-  
+
   try {
     const master = getMaster();
-    // Guardar timestamp del último sync local para no traer todo de nuevo si no es force
     const lastSyncFile = path.join(dataDir, 'last_fb_sync.json');
     let lastSync = 0;
     if (fs.existsSync(lastSyncFile) && !force) {
       lastSync = Number(fs.readFileSync(lastSyncFile, 'utf8'));
     }
-    
-    let fbQuery;
-    if (lastSync > 0) {
-      // Filtrar solo creados recientemente
-      fbQuery = query(collection(fbDb, "levantamientos"), where("timestamp", ">", new Date(lastSync).toISOString()));
-    } else {
-      // Fetch completo
-      fbQuery = collection(fbDb, "levantamientos");
+
+    let sinceDate = null;
+    if (since) {
+      sinceDate = new Date(since);
+    } else if (lastSync > 0) {
+      sinceDate = new Date(lastSync);
     }
 
-    const snapshot = await getDocs(fbQuery);
-    if (snapshot.empty) {
+    console.log(`[Firebase Sync] Consultando via REST${sinceDate ? ` desde ${sinceDate.toISOString()}` : ' (todos)'}...`);
+    let docs;
+    try {
+      docs = await firestoreQuery({ sinceDate, pageSize: 500 });
+    } catch(fetchErr) {
+      console.error('[Firebase Sync] Error de red:', fetchErr.message);
+      return { success: false, error: `Error de red: ${fetchErr.message}` };
+    }
+    console.log(`[Firebase Sync] Documentos encontrados: ${docs.length}`);
+
+    if (docs.length === 0) {
       fs.writeFileSync(lastSyncFile, String(Date.now()));
-      return { success: true, count: 0, message: 'No hay nuevos datos' };
+      return { success: true, count: 0, added: 0, updated: 0, message: 'No hay nuevos datos en Firebase' };
     }
 
     let added = 0;
     let updated = 0;
     const sinEanList = [];
 
-    for (const doc of snapshot.docs) {
-      const reg = { id: doc.id, ...doc.data() };
+    for (const reg of docs) {
+      // El campo de fecha es `fecha` (Timestamp), lo tratamos como string ISO
+      const fechaRaw = reg.fecha;
+      let timestamp;
+      if (typeof fechaRaw === 'string') {
+        timestamp = fechaRaw;
+      } else {
+        timestamp = new Date().toISOString();
+      }
+      
       const eanStr = String(reg.ean || '').trim().replace(/\D/g, '');
-      const timestamp = reg.timestamp || new Date().toISOString();
-      const holding = reg.holdingId || reg.holding || 'tottus'; // Default o resuelto
+      const holding = reg.holdingId || reg.holding || 'tottus';
       const dmu = reg.dmu || reg.pasillo || reg.categoria || '';
 
       if (!eanStr || eanStr.length < 8) {
-        // Ignorar sin EAN de master_catalog, pero devolverlos al frontend para staging
         sinEanList.push({
           firebaseId: reg.id,
-          holdingId: holding,
+          holdingId:  holding,
           dmu,
-          pasillo: reg.pasillo || '',
-          local: reg.local || '',
+          pasillo:  reg.pasillo || '',
+          local:    reg.local   || '',
           category: reg.categoria || '',
-          auditor: reg.auditor || 'App Terreno',
+          auditor:  reg.auditor   || 'App Terreno',
           timestamp,
-          firebaseName: reg.productoWeb || reg.nombreProductoOCR || '',
-          firebasePrice: reg.precioWeb || reg.precioOCR || null,
+          firebaseName:  reg.productoWeb || reg.nombreProductoOCR || '',
+          firebasePrice: reg.precioWeb   || reg.precioOCR         || null,
           estado: reg.estado || null,
           source: 'Firebase'
         });
@@ -281,10 +387,10 @@ async function syncFirebaseToCatalog(force = false) {
       const idx = master.findIndex(p => p.ean === eanStr);
       let existing = idx > -1 ? master[idx] : null;
 
-      let nombre = reg.productoWeb || reg.nombreProductoOCR || (existing ? existing.name : '');
-      let category = existing?.universalCategory || reg.categoria || 'GROCERY STORE';
-      let brand = reg.marcaWeb || (existing ? existing.brand : null) || 'Por Definir';
-      let imageUrl = reg.imagenProductoWeb || (existing ? existing.imageUrl : null) || null;
+      let nombre    = reg.productoWeb || reg.nombreProductoOCR || (existing ? existing.name : '');
+      let category  = existing?.universalCategory || reg.categoria || 'GROCERY STORE';
+      let brand     = reg.marcaWeb || (existing ? existing.brand : null) || 'Por Definir';
+      let imageUrl  = reg.imagenProductoWeb || (existing ? existing.imageUrl : null) || null;
 
       if (!nombre && !existing) {
         const apiData = await fetchEnrichment(eanStr);
@@ -299,13 +405,13 @@ async function syncFirebaseToCatalog(force = false) {
       if (!nombre) nombre = 'Nuevo SKU de Terreno';
 
       const levantamientoMeta = {
-        auditor: reg.auditor || 'App Terreno',
+        auditor:   reg.auditor || 'App Terreno',
         dmu,
-        pasillo: reg.pasillo || '',
-        local: reg.local || '',
+        pasillo:   reg.pasillo || '',
+        local:     reg.local   || '',
         holdingId: holding,
         timestamp,
-        firebaseId: reg.id,
+        firebaseId: reg._id,
         estado: reg.estado || null
       };
 
@@ -317,7 +423,10 @@ async function syncFirebaseToCatalog(force = false) {
           imageUrl: !existing.imageUrl ? imageUrl : existing.imageUrl,
           levantamientoMeta,
           fromLevantamiento: true,
-          dataSource: 'levantamiento'
+          fromFirebase: true,
+          dataSource: existing.dataSource === 'firebase' ? 'firebase' : (existing.dataSource || 'firebase'),
+          // Preservar el status existente — no sobreescribir
+          status: existing.status || 'review'
         };
         updated++;
       } else {
@@ -327,10 +436,10 @@ async function syncFirebaseToCatalog(force = false) {
           brand,
           imageUrl,
           universalCategory: category,
-          visperaId: null,
           status: 'review',
-          dataSource: 'levantamiento',
+          dataSource: 'firebase',
           fromLevantamiento: true,
+          fromFirebase: true,
           offAttempted: false,
           levantamientoMeta,
           holdings: {}
@@ -351,16 +460,25 @@ async function syncFirebaseToCatalog(force = false) {
   }
 }
 
-// Background Cron Job (cada 1 hora = 3600000 ms)
+// ── Cron Job: Sync incremental cada 1 hora ──────────────────────────────
+// El servidor es la fuente de verdad — los clientes solo leen, no sincronizan.
 setInterval(() => {
-  console.log('⏰ [Cron] Ejecutando auto-sync Firebase...');
-  syncFirebaseToCatalog().then(res => console.log('   Resultado:', res));
-}, 3600000);
+  console.log('⏰ [Cron] Ejecutando sync incremental Firebase...');
+  syncFirebaseToCatalog(false).then(res => {
+    if (res.success && (res.added > 0 || res.updated > 0)) {
+      console.log(`   ✅ Sync: +${res.added} nuevos, ~${res.updated} actualizados`);
+    } else if (!res.success) {
+      console.warn('   ⚠ Sync falló:', res.error);
+    }
+  });
+}, 3600000); // 1 hora
 
-// ── API: Sync Endpoint ────────────────────────────────────────────────────
+// ── API: Sync Endpoint (solo para uso administrativo) ────────────────────
 app.post('/api/sync-firebase', async (req, res) => {
-  const { force } = req.body || {};
-  const result = await syncFirebaseToCatalog(force);
+  const { force, since } = req.body || {};
+  // `since` puede ser una fecha ISO string (e.g. '2025-05-01') para traer
+  // todos los registros desde esa fecha, ignorando el lastSync guardado
+  const result = await syncFirebaseToCatalog(force, since || null);
   res.json(result);
 });
 
@@ -383,4 +501,39 @@ app.listen(port, () => {
   console.log(`   → App:  http://localhost:${port}`);
   console.log(`   → API:  http://localhost:${port}/api/products`);
   console.log(`   → Data: ${dataDir}\n`);
+
+  // ── Sync inicial al arrancar el servidor ────────────────────────────────
+  // El servidor es la fuente de verdad. Si nunca hubo sync (first run),
+  // se traen TODOS los registros desde Mayo 2025 automáticamente.
+  // Si ya hubo sync previo, solo se actualizan los nuevos (incremental).
+  const lastSyncFile = path.join(dataDir, 'last_fb_sync.json');
+  const isFirstRun = !fs.existsSync(lastSyncFile);
+
+  if (isFirstRun) {
+    console.log('🔄 [Startup] Primera ejecución: sincronizando Firebase desde Mayo 2025...');
+    syncFirebaseToCatalog(true, '2025-05-01').then(res => {
+      if (res.success) {
+        console.log(`✅ [Startup] Sync inicial completo: +${res.added} SKUs nuevos, ~${res.updated} actualizados`);
+        if (res.sinEanList && res.sinEanList.length > 0) {
+          console.log(`   ${res.sinEanList.length} registros sin EAN (staging)`);
+        }
+      } else {
+        console.warn('⚠ [Startup] Sync inicial falló:', res.error);
+      }
+    });
+  } else {
+    // Ya hubo sync: hacer un incremental rápido para traer lo más reciente
+    console.log('🔄 [Startup] Verificando nuevos registros en Firebase...');
+    syncFirebaseToCatalog(false).then(res => {
+      if (res.success) {
+        if (res.added > 0 || res.updated > 0) {
+          console.log(`✅ [Startup] Sync incremental: +${res.added} nuevos, ~${res.updated} actualizados`);
+        } else {
+          console.log('✅ [Startup] Catálogo al día (sin cambios nuevos en Firebase)');
+        }
+      } else {
+        console.warn('⚠ [Startup] Sync incremental falló:', res.error);
+      }
+    });
+  }
 });

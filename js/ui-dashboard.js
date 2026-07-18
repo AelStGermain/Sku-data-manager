@@ -59,7 +59,7 @@ const UIDashboard = (() => {
     const withImage = products.filter(p => p.imageUrl).length;
     const noBrand = products.filter(p => !p.brand || p.brand === 'N/A').length;
     const noWeight = products.filter(p => !p.weight_g).length;
-    const noCat = products.filter(p => !p.universalCategory && !p.category).length;
+    const noCat = products.filter(p => (!p.universalCategory || p.universalCategory.length === 0) && (!p.category || p.category.length === 0)).length;
     const noImage = products.filter(p => !p.imageUrl).length;
     
     const avgCompleteness = total > 0 ? Math.round(products.reduce((s, p) => s + DB.computeCompleteness(p), 0) / total) : 0;
@@ -68,8 +68,10 @@ const UIDashboard = (() => {
 
     const catCount = {};
     products.forEach(p => {
-      const c = p.universalCategory || p.category || 'Sin categoría';
-      catCount[c] = (catCount[c] || 0) + 1;
+      const catArray = Array.isArray(p.universalCategory) ? p.universalCategory : (p.universalCategory ? [p.universalCategory] : (Array.isArray(p.category) ? p.category : (p.category ? [p.category] : ['Sin categoría'])));
+      catArray.forEach(c => {
+        catCount[c] = (catCount[c] || 0) + 1;
+      });
     });
     const topCats = Object.entries(catCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
