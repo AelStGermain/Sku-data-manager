@@ -69,6 +69,19 @@ const DB = (() => {
         }
       }
     }
+
+    // Sync automático al servidor para colas de Staging
+    const STAGING_KEYS = [
+      'ss_staging_levantamiento', 'ss_staging_unmatched', 'ss_staging_no_ean',
+      'ss_vispera_batch', 'ss_brands_producers', 'ss_category_mapping', 'ss_recent_matches'
+    ];
+    if (STAGING_KEYS.includes(key)) {
+      fetch(`/api/staging/${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: value
+      }).catch(() => console.warn(`Offline: ${key} saved locally only`));
+    }
   }
   const HOLDINGS_KEY = 'ss_holdings';
   const STORES_KEY = 'ss_physical_stores';
@@ -163,14 +176,25 @@ const DB = (() => {
        }
      }
 
-     // Cargar datos de staging desde localStorage
-     _stagingLevantamiento = JSON.parse(localStorage.getItem(STAGING_LEVANTAMIENTO_KEY) || '[]');
-     _stagingUnmatched = JSON.parse(localStorage.getItem(STAGING_UNMATCHED_KEY) || '[]');
-     _stagingNoEan = JSON.parse(localStorage.getItem(STAGING_NO_EAN_KEY) || '[]');
-     _visperaBatch = JSON.parse(localStorage.getItem(VISPERA_BATCH_KEY) || '[]');
-     _brandsProducers = JSON.parse(localStorage.getItem(BRANDS_PRODUCERS_KEY) || '[]');
-     _categoryMapping = JSON.parse(localStorage.getItem(CATEGORY_MAPPING_KEY) || '[]');
-     _recentMatches = JSON.parse(localStorage.getItem(RECENT_MATCHES_KEY) || '[]');
+     // Cargar datos de staging desde servidor (fallback a localStorage)
+     const loadStaging = async (key) => {
+       try {
+         const res = await fetch(`/api/staging/${key}`);
+         if (res.ok) {
+           const data = await res.json();
+           if (Array.isArray(data) && data.length > 0) return data;
+         }
+       } catch (e) {}
+       return JSON.parse(localStorage.getItem(key) || '[]');
+     };
+
+     _stagingLevantamiento = await loadStaging(STAGING_LEVANTAMIENTO_KEY);
+     _stagingUnmatched = await loadStaging(STAGING_UNMATCHED_KEY);
+     _stagingNoEan = await loadStaging(STAGING_NO_EAN_KEY);
+     _visperaBatch = await loadStaging(VISPERA_BATCH_KEY);
+     _brandsProducers = await loadStaging(BRANDS_PRODUCERS_KEY);
+     _categoryMapping = await loadStaging(CATEGORY_MAPPING_KEY);
+     _recentMatches = await loadStaging(RECENT_MATCHES_KEY);
 
      // Cargar productos (siempre, independientemente de Supabase)
      await fetchProducts();

@@ -459,6 +459,29 @@ app.get('/api/last-sync', (req, res) => {
   res.json({ lastSync });
 });
 
+// ── API: Staging Queues (Global Persistence) ──────────────────────────────
+app.get('/api/staging/:key', (req, res) => {
+  const key = req.params.key;
+  // Sanitizamos el key para evitar path traversal
+  const safeKey = key.replace(/[^a-z0-9_]/gi, '');
+  const filePath = path.join(dataDir, `${safeKey}.json`);
+  if (fs.existsSync(filePath)) {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    res.json(data);
+  } else {
+    res.json([]);
+  }
+});
+
+app.post('/api/staging/:key', (req, res) => {
+  const key = req.params.key;
+  const safeKey = key.replace(/[^a-z0-9_]/gi, '');
+  const filePath = path.join(dataDir, `${safeKey}.json`);
+  const data = req.body;
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  res.json({ success: true });
+});
+
 // ── Ruta catch-all: devolver index.html para navegación SPA ───────────────
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
