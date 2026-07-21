@@ -42,7 +42,7 @@ window.VISPERA_CATEGORY_COLORS = {
   'BREAKFAST': '#FF9800', 'SNACKS': '#F44336', 'BABY': '#EC407A',
   'PET': '#8D6E63', 'DESSERT': '#AD1457', 'CEREALS': '#FF7043',
   'CANNED FOOD': '#607D8B', 'DETERGENTS': '#26A69A', 'DRINKS': '#42A5F5',
-  'HEALTHY': '#66BB6A', 'PAPER ITEMS': '#BDBDBD'
+  'HEALTHY': '#66BB6A', 'PAPER ITEMS': '#BDBDBD', 'HYGIENE': '#8E24AA'
 };
 
 // ──────────────────────────────────────────────
@@ -124,7 +124,7 @@ const DB = (() => {
 
      // Intentar cargar Holdings desde el servidor local (fallback a localStorage)
      try {
-       const res = await fetch('http://localhost:3000/api/holdings');
+       const res = await fetch('/api/holdings');
        if (res.ok) {
          const serverHoldings = await res.json();
          if (Array.isArray(serverHoldings) && serverHoldings.length > 0) {
@@ -145,7 +145,7 @@ const DB = (() => {
 
      // Intentar cargar Stores desde el servidor local (fallback a localStorage)
      try {
-       const res = await fetch('http://localhost:3000/api/stores');
+       const res = await fetch('/api/stores');
        if (res.ok) {
          const serverStores = await res.json();
          if (Array.isArray(serverStores) && serverStores.length > 0) {
@@ -188,7 +188,7 @@ const DB = (() => {
       let holdingData = [];
 
       try {
-        const res = await fetch('http://localhost:3000/api/products');
+        const res = await fetch('/api/products');
         if (res.ok) {
           const data = await res.json();
           masterData = data.master_catalog || [];
@@ -280,8 +280,8 @@ const DB = (() => {
             ...p.holdings[r.retailer_id],
             holdingProductId: r.uuid || p.holdings[r.retailer_id].holdingProductId,
             masterProductId: r.ean,
-            holdingInternalId: r.internal_sku_id || p.holdings[r.retailer_id].holdingInternalId || p.holdings[r.retailer_id].customerId || r.ean,
-            customerId: r.internal_sku_id || p.holdings[r.retailer_id].customerId || r.ean,
+            holdingInternalId: r.internal_sku_id !== undefined ? r.internal_sku_id : (p.holdings[r.retailer_id].holdingInternalId !== undefined ? p.holdings[r.retailer_id].holdingInternalId : (p.holdings[r.retailer_id].customerId !== undefined ? p.holdings[r.retailer_id].customerId : '')),
+            customerId: r.internal_sku_id !== undefined ? r.internal_sku_id : (p.holdings[r.retailer_id].customerId !== undefined ? p.holdings[r.retailer_id].customerId : ''),
             localProductName: r.local_product_name || p.holdings[r.retailer_id].localProductName || p.holdings[r.retailer_id].name || p.name,
             name: p.holdings[r.retailer_id].name || p.name,
             localCategoryName: _toArray(r.retailer_category || p.holdings[r.retailer_id].localCategoryName || p.holdings[r.retailer_id].category || p.category, 'General'),
@@ -368,7 +368,7 @@ const DB = (() => {
           holdingRelations.push({
             ean: product.ean,
             retailer_id: hid,
-            internal_sku_id: hData.holdingInternalId || hData.customerId || product.ean,
+            internal_sku_id: hData.holdingInternalId !== undefined ? hData.holdingInternalId : (hData.customerId !== undefined ? hData.customerId : ''),
             retailer_category: Array.isArray(hData.localCategoryName) ? hData.localCategoryName.join(', ') : (Array.isArray(hData.category) ? hData.category.join(', ') : 'General'),
             is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false,
             created_at: hData.createdAt || new Date().toISOString(),
@@ -379,7 +379,7 @@ const DB = (() => {
       }
 
       try {
-        await fetch('http://localhost:3000/api/products', {
+        await fetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ product: payload, holdingRelations })
@@ -418,7 +418,7 @@ const DB = (() => {
   function saveHoldings(h) {
     _safeSetItem(HOLDINGS_KEY, JSON.stringify(h));
     // Sincronizar con servidor local (best-effort, no bloquea)
-    fetch('http://localhost:3000/api/holdings', {
+    fetch('/api/holdings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(h)
@@ -498,7 +498,7 @@ const DB = (() => {
     _safeSetItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
 
     try {
-      await fetch('http://localhost:3000/api/products', {
+      await fetch('/api/products', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eans: [ean] })
@@ -526,7 +526,7 @@ const DB = (() => {
     _safeSetItem(PRODUCTS_CACHE_KEY, JSON.stringify(localCache));
 
     try {
-      await fetch('http://localhost:3000/api/products', {
+      await fetch('/api/products', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eans })
@@ -593,7 +593,7 @@ const DB = (() => {
         }
       }
 
-      await fetch('http://localhost:3000/api/products/bulk', {
+      await fetch('/api/products/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: payload, holdingRelations })
@@ -725,6 +725,11 @@ const DB = (() => {
     _safeSetItem(VISPERA_BATCH_KEY, JSON.stringify([]));
   }
 
+  function removeVisperaBatchItem(batchId) {
+    _visperaBatch = _visperaBatch.filter(b => b.batchId !== batchId);
+    _safeSetItem(VISPERA_BATCH_KEY, JSON.stringify(_visperaBatch));
+  }
+
   // ── Brands & Producers ──────────────────────
   function getBrandsProducers() { return _brandsProducers; }
 
@@ -829,7 +834,7 @@ const DB = (() => {
     }
     _safeSetItem(STORES_KEY, JSON.stringify(list));
     // Sincronizar con servidor local (best-effort)
-    fetch('http://localhost:3000/api/stores', {
+    fetch('/api/stores', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(list)
@@ -841,7 +846,7 @@ const DB = (() => {
     const list = getStores().filter(s => s.storeId !== storeId);
     _safeSetItem(STORES_KEY, JSON.stringify(list));
     // Sincronizar con servidor local (best-effort)
-    fetch('http://localhost:3000/api/stores', {
+    fetch('/api/stores', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(list)
@@ -1085,6 +1090,7 @@ const DB = (() => {
     addVisperaBatchItem,
     updateVisperaBatchItem,
     clearVisperaBatch,
+    removeVisperaBatchItem,
     // Brands & Producers
     getBrandsProducers,
     addBrandProducer,

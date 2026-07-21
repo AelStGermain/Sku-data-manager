@@ -1747,8 +1747,9 @@ html[data-theme="dark"] {
    ════════════════════════════════════════════ */
 .levantamiento-layout {
   display: grid;
-  grid-template-columns: 1fr 1.6fr;
+  grid-template-columns: 300px 1fr;
   gap: 20px;
+  align-items: start;
   margin-bottom: 24px;
 }
 @media (max-width: 900px) {

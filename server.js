@@ -4,118 +4,58 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// ── Firestore REST API ────────────────────────────────────────────────────────────────────
-// Usamos la REST API de Firestore en lugar del SDK para evitar problemas
-// de autenticación en entornos Node.js sin credenciales Google Cloud.
-// Las reglas actuales permiten lecturas públicas en la colección levantamientos.
-const FB_PROJECT = 'levantamiento-sku';
-const FB_BASE    = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents`;
-
-// Convierte un valor de Firestore REST ({stringValue, integerValue, timestampValue, mapValue...})
-// a un valor JavaScript plano.
-function parseFirestoreValue(fv) {
-  if (!fv) return null;
-  if (fv.stringValue  !== undefined) return fv.stringValue;
-  if (fv.integerValue !== undefined) return Number(fv.integerValue);
-  if (fv.doubleValue  !== undefined) return Number(fv.doubleValue);
-  if (fv.booleanValue !== undefined) return fv.booleanValue;
-  if (fv.nullValue    !== undefined) return null;
-  if (fv.timestampValue !== undefined) return fv.timestampValue; // ISO string
-  if (fv.arrayValue !== undefined)
-    return (fv.arrayValue.values || []).map(parseFirestoreValue);
-  if (fv.mapValue !== undefined) {
-    const out = {};
-    for (const [k, v] of Object.entries(fv.mapValue.fields || {}))
-      out[k] = parseFirestoreValue(v);
-    return out;
-  }
-  return null;
-}
-
-// Convierte un documento REST de Firestore a un objeto JS plano.
-// Excluye automáticamente fotoUrl y fotoFlejeUrl (son Base64 muy pesados).
-function parseFirestoreDoc(doc) {
-  const fields = doc.fields || {};
-  const EXCLUDED = new Set(['fotoUrl', 'fotoFlejeUrl']);
-  const result = { _id: doc.name.split('/').pop() };
-  for (const [k, v] of Object.entries(fields)) {
-    if (!EXCLUDED.has(k)) result[k] = parseFirestoreValue(v);
-  }
-  return result;
-}
-
-// Consulta la colección levantamientos via REST. Devuelve array de documentos planos.
-// Acepta filtro de fecha (campo `fecha`) y pageToken para paginación.
-async function firestoreQuery({ sinceDate = null, pageToken = null, pageSize = 200 } = {}) {
-  const TIMEOUT_MS = 60000;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-  try {
-    // Usamos el endpoint :runQuery con StructuredQuery para filtrar por fecha
-    const body = {
-      structuredQuery: {
-        from: [{ collectionId: 'levantamientos' }],
-        select: {
-          fields: [
-            { fieldPath: 'ean' },
-            { fieldPath: 'fecha' },
-            { fieldPath: 'holding' },
-            { fieldPath: 'holdingId' },
-            { fieldPath: 'dmu' },
-            { fieldPath: 'pasillo' },
-            { fieldPath: 'categoria' },
-            { fieldPath: 'local' },
-            { fieldPath: 'auditor' },
-            { fieldPath: 'productoWeb' },
-            { fieldPath: 'marcaWeb' },
-            { fieldPath: 'imagenProductoWeb' },
-            { fieldPath: 'nombreProductoOCR' },
-            { fieldPath: 'precioWeb' },
-            { fieldPath: 'precioOCR' },
-            { fieldPath: 'estado' }
-          ]
-        },
-        limit: pageSize,
-        ...(sinceDate ? {
-          where: {
-            fieldFilter: {
-              field:  { fieldPath: 'fecha' },
-              op:     'GREATER_THAN_OR_EQUAL',
-              value:  { timestampValue: sinceDate.toISOString() }
-            }
-          }
-        } : {})
-      }
-    };
-
-    const url = `${FB_BASE}:runQuery`;
-    const res = await fetch(url, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
-      signal:  controller.signal
-    });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`Firestore REST ${res.status}: ${txt.substring(0, 200)}`);
-    }
-
-    const rows = await res.json();
-    // runQuery devuelve un array; cada elemento tiene { document: {...} } o {}
-    return rows
-      .filter(r => r.document)
-      .map(r => parseFirestoreDoc(r.document));
-
-  } finally {
-    clearTimeout(timer);
-  }
-}
-// ──────────────────────────────────────────────────────────────────────────
+// ── Firestore Admin SDK ──────────────────────────────────────────────────────────────────
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const serviceAccountPath = path.join(__dirname, 'local_data', 'firebase-key.json');
+let db = null;
+try {
+  if (fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    initializeApp({
+      credential: cert(serviceAccount)
+    });
+    db = getFirestore();
+    console.log('[Firebase] Admin SDK inicializado correctamente.');
+  } else {
+    console.warn('[Firebase] Archivo firebase-key.json no encontrado. Las consultas fallarán.');
+  }
+} catch (e) {
+  console.error('[Firebase] Error inicializando Admin SDK:', e.message);
+}
+
+// Consulta la colección levantamientos via Admin SDK. Devuelve array de documentos planos.
+async function firestoreQuery({ sinceDate = null, pageSize = 2000 } = {}) {
+  if (!db) throw new Error("Firebase Admin SDK no está inicializado. Falta firebase-key.json.");
+  
+  try {
+    let query = db.collection('levantamientos')
+      .select('ean', 'fecha', 'holding', 'holdingId', 'dmu', 'pasillo', 'categoria', 'local', 'auditor', 'productoWeb', 'marcaWeb', 'imagenProductoWeb', 'nombreProductoOCR', 'precioWeb', 'precioOCR', 'estado')
+      .orderBy('fecha', 'desc');
+
+    if (sinceDate) {
+      query = query.where('fecha', '>=', sinceDate);
+    }
+
+    const snapshot = await query.get();
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      if (data.fecha && typeof data.fecha.toDate === 'function') {
+        data.fecha = data.fecha.toDate().toISOString();
+      }
+      return { _id: doc.id, ...data };
+    });
+
+  } catch (e) {
+    throw new Error(`Firestore SDK Error: ${e.message}`);
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────
 
 const app = express();
 const port = 3000;
@@ -333,10 +273,10 @@ async function syncFirebaseToCatalog(force = false, since = null) {
       sinceDate = new Date(lastSync);
     }
 
-    console.log(`[Firebase Sync] Consultando via REST${sinceDate ? ` desde ${sinceDate.toISOString()}` : ' (todos)'}...`);
+    console.log(`[Firebase Sync] Consultando via Admin SDK${sinceDate ? ` desde ${sinceDate.toISOString()}` : ' (todos)'}...`);
     let docs;
     try {
-      docs = await firestoreQuery({ sinceDate, pageSize: 500 });
+      docs = await firestoreQuery({ sinceDate, pageSize: 2000 });
     } catch(fetchErr) {
       console.error('[Firebase Sync] Error de red:', fetchErr.message);
       return { success: false, error: `Error de red: ${fetchErr.message}` };
@@ -392,7 +332,7 @@ async function syncFirebaseToCatalog(force = false, since = null) {
       let brand     = reg.marcaWeb || (existing ? existing.brand : null) || 'Por Definir';
       let imageUrl  = reg.imagenProductoWeb || (existing ? existing.imageUrl : null) || null;
 
-      if (!nombre && !existing) {
+      if (!nombre && !existing && docs.length <= 100) {
         const apiData = await fetchEnrichment(eanStr);
         if (apiData?.name) {
           nombre = apiData.name;
@@ -415,8 +355,23 @@ async function syncFirebaseToCatalog(force = false, since = null) {
         estado: reg.estado || null
       };
 
+      const holdingObj = {
+        holdingInternalId: '',
+        customerId: '',
+        localProductName: nombre,
+        name: nombre,
+        localCategoryName: category,
+        category: category,
+        dmu: dmu,
+        pasillo: reg.pasillo || '',
+        local: reg.local || '',
+        isActiveHolding: true,
+        stockStatus: true,
+        updatedAt: timestamp
+      };
+
       if (existing) {
-        master[idx] = {
+        const updatedProduct = {
           ...existing,
           name: (!existing.name || existing.name === 'Nuevo SKU de Terreno') ? nombre : existing.name,
           brand: (!existing.brand || existing.brand === 'Por Definir') ? brand : existing.brand,
@@ -428,9 +383,16 @@ async function syncFirebaseToCatalog(force = false, since = null) {
           // Preservar el status existente — no sobreescribir
           status: existing.status || 'review'
         };
+        
+        updatedProduct.holdings = updatedProduct.holdings || {};
+        if (holding && !updatedProduct.holdings[holding]) {
+          updatedProduct.holdings[holding] = holdingObj;
+        }
+        
+        master[idx] = updatedProduct;
         updated++;
       } else {
-        master.push({
+        const newProduct = {
           ean: eanStr,
           name: nombre,
           brand,
@@ -443,14 +405,20 @@ async function syncFirebaseToCatalog(force = false, since = null) {
           offAttempted: false,
           levantamientoMeta,
           holdings: {}
-        });
+        };
+        
+        if (holding) {
+          newProduct.holdings[holding] = holdingObj;
+        }
+        
+        master.push(newProduct);
         added++;
       }
     }
 
     saveMaster(master);
     fs.writeFileSync(lastSyncFile, String(Date.now()));
-    return { success: true, count: snapshot.size, added, updated, sinEanList };
+    return { success: true, count: docs.length, added, updated, sinEanList };
 
   } catch(e) {
     console.error('[Firebase Sync Error]', e.message);

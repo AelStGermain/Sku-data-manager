@@ -1,0 +1,37 @@
+[
+  {
+    "storeId": "tkm_kennedy",
+    "holdingId": "tottus",
+    "retailerId": "tottus",
+    "city": "Santiago",
+    "branchName": "Sucursal Kennedy"
+  },
+  {
+    "storeId": "tottus_nunoa",
+    "holdingId": "tottus",
+    "retailerId": "tottus",
+    "city": "Santiago",
+    "branchName": "Sucursal Ñuñoa"
+  },
+  {
+    "storeId": "jumbo_bilbao",
+    "holdingId": "jumbo",
+    "retailerId": "jumbo",
+    "city": "Santiago",
+    "branchName": "Sucursal Francisco Bilbao"
+  },
+  {
+    "storeId": "jumbo_kennedy",
+    "holdingId": "jumbo",
+    "retailerId": "jumbo",
+    "city": "Santiago",
+    "branchName": "Sucursal Portal La Reina"
+  },
+  {
+    "storeId": "unimarc_los_leones",
+    "holdingId": "unimarc",
+    "retailerId": "unimarc",
+    "city": "Santiago",
+    "branchName": "Sucursal Los Leones"
+  }
+]

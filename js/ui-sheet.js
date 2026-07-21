@@ -57,7 +57,7 @@ const UISheet = (() => {
       ean: '', name: '', brand: '', packageType: 'other', 
       status: 'active', nameSource: 'manual', masterCategory: null, universalCategory: null,
       offAttempted: false, width_cm: null, height_cm: null, depth_cm: null,
-      weight_g: null, imageUrl: null, images: [], dataSource: 'manual', history: [], 
+      weight_g: null, weight_unit: 'g', producer: '', imageUrl: null, images: [], dataSource: 'manual', history: [], 
       planogram: {}, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       holdings: {}
     };
@@ -154,7 +154,11 @@ const UISheet = (() => {
   function addToHolding(hid) {
     _data.holdings = _data.holdings || {};
     _data.holdings[hid] = {
-      holdingInternalId: null, customerId: null, localProductName: _data.name || '', name: _data.name || '', localCategoryName: null, category: null,
+      holdingProductId: `mock_${Date.now()}`,
+      masterProductId: _data.ean,
+      holdingInternalId: '',
+      customerId: '',
+      localProductName: _data.name || '', name: _data.name || '', localCategoryName: null, category: null,
       stockStatus: true, isActiveHolding: true, imageUrl: null, updatedAt: new Date().toISOString()
     };
     _holding = hid;
@@ -618,9 +622,9 @@ ${tabsHtml}
           Enriquecer SKU
         </button>
       </div>
-      ${!_isCreate ? `<button class="btn-close-sheet" onclick="UISheet.close()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>` : ''}
+      <button class="btn-close-sheet" style="background:var(--danger); color:white; border:none; padding:6px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; width:28px; height:28px; box-shadow:0 2px 4px rgba(0,0,0,0.2);" onclick="UISheet.close()" title="Cerrar (X)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
 
     <input class="sheet-title-inp" type="text" id="sheet-name"
@@ -652,6 +656,11 @@ ${tabsHtml}
         <p class="section-lbl">INFORMACIÓN CENTRAL</p>
 
         <div class="form-group">
+          <label>Producer / Manufacturer</label>
+          <input type="text" class="form-input" value="${esc(_data.producer || '')}"
+            placeholder="Ej: Nestlé" oninput="UISheet.updateField('producer', this.value)">
+        </div>
+        <div class="form-group">
           <label>Marca Universal</label>
           <input type="text" class="form-input" value="${esc(_data.brand || '')}"
             placeholder="—" oninput="UISheet.updateField('brand', this.value)">
@@ -675,10 +684,31 @@ ${tabsHtml}
           ${_isCreate ? '<p class="form-hint" id="ean-hint">Introduce el EAN para validar el dígito de control.</p>' : ''}
         </div>
         <div class="form-group">
-          <label>Peso neto (g)</label>
-          <input type="number" class="form-input" value="${_data.weight_g || ''}"
-            placeholder="—" min="0"
-            oninput="UISheet.updateField('weight_g', parseFloat(this.value)||null)">
+          <label>Vispera ID</label>
+          ${_data.visperaId 
+            ? `<div style="padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; font-family: monospace; font-weight: bold; color: var(--text-main); display: flex; justify-content: space-between; align-items: center;">
+                 ${esc(_data.visperaId)}
+               </div>`
+            : `<div style="padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+                 Sin ID asignado
+                 <button class="btn-mini" style="color: var(--warning); border: 1px solid var(--warning); background: transparent; padding: 2px 6px; border-radius: 4px;" onclick="UISheet.sendToReview()">Enviar a Revisión</button>
+               </div>`
+          }
+        </div>
+        <div class="form-group">
+          <label>Peso / Volumen Neto</label>
+          <div style="display:flex; gap:6px;">
+            <input type="number" class="form-input" value="${_data.weight_g || ''}"
+              placeholder="—" min="0" style="flex:1;"
+              oninput="UISheet.updateField('weight_g', parseFloat(this.value)||null)">
+            <select class="form-select" style="width: 80px;" onchange="UISheet.updateField('weight_unit', this.value)">
+              <option value="g" ${(!_data.weight_unit || _data.weight_unit === 'g') ? 'selected' : ''}>g</option>
+              <option value="ml" ${_data.weight_unit === 'ml' ? 'selected' : ''}>ml</option>
+              <option value="kg" ${_data.weight_unit === 'kg' ? 'selected' : ''}>kg</option>
+              <option value="l" ${_data.weight_unit === 'l' ? 'selected' : ''}>l</option>
+              <option value="oz" ${_data.weight_unit === 'oz' ? 'selected' : ''}>oz</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -712,9 +742,9 @@ ${tabsHtml}
         <button class="btn-primary" style="padding:4px 8px; font-size:11px;" onclick="UISheet.addToHolding('${esc(_holding)}')">Reactivar</button>
       </div>` : ''}
       <div class="form-group">
-        <label>ID del Holding (holding_internal_id)</label>
+        <label>ID del Holding (Customer ID / Internal ID)</label>
         <input type="text" class="form-input" value="${esc(rData.holdingInternalId || rData.customerId || '')}"
-          placeholder="ej. TOT-44921-X"
+          placeholder="ej. TOT-44921-X (Dejar en blanco si no tiene)"
           oninput="UISheet.updateHoldingField('holdingInternalId', this.value); UISheet.updateHoldingField('customerId', this.value);">
       </div>
       <div class="form-group">
@@ -906,6 +936,15 @@ ${tabsHtml}
     close();
   }
 
+  function sendToReview() {
+    if (!_data) return;
+    _data.visperaId = null;
+    _data.status = 'review';
+    _markDirty();
+    App.showToast('Marcado para revisión. Guarda los cambios de la ficha para aplicar.', 'info');
+    _render();
+  }
+
   // Legacy aliases for backward compatibility with external calls
   function updateRetailerField(field, value) { updateHoldingField(field, value); }
   function addToRetailer(rid) { addToHolding(rid); }
@@ -920,6 +959,6 @@ ${tabsHtml}
     updateRetailerField, addToRetailer, removeFromRetailer, setRetailer,
     setCreateMode, _fdHandleImage, _fdSetFile, _fdValidateEAN, submitFieldDiscovery,
     _fdAddCat, _fdRemoveCat, _fdRenderCatTags,
-    toggleArrayField
+    toggleArrayField, sendToReview
   };
 })();

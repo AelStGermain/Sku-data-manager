@@ -62,6 +62,17 @@ const UIDashboard = (() => {
     const noCat = products.filter(p => (!p.universalCategory || p.universalCategory.length === 0) && (!p.category || p.category.length === 0)).length;
     const noImage = products.filter(p => !p.imageUrl).length;
     
+    const noCustomerId = products.filter(p => {
+      const hData = p.holdings || p.retailers || {};
+      const hKeys = Object.keys(hData);
+      if (hKeys.length === 0) return false;
+      return hKeys.some(k => {
+        const h = hData[k];
+        const hasData = h && (h.name || h.localProductName || h.dmu || h.category);
+        return hasData && !h.customerId && !h.holdingInternalId;
+      });
+    }).length;
+    
     const avgCompleteness = total > 0 ? Math.round(products.reduce((s, p) => s + DB.computeCompleteness(p), 0) / total) : 0;
     const enrichRate = total > 0 ? Math.round(enriched / total * 100) : 0;
     const imgRate = total > 0 ? Math.round(withImage / total * 100) : 0;
@@ -84,19 +95,20 @@ const UIDashboard = (() => {
     }).filter(h => h.count > 0);
     holdingStats.sort((a, b) => b.count - a.count);
 
-    const statusCounts = { active: 0, review: 0 };
+    const statusCounts = { withVispera: 0, withoutVispera: 0 };
     products.forEach(p => {
-      const s = p.status || 'active';
-      if (s === 'review') statusCounts.review++;
-      else statusCounts.active++;
+      if (p.status === 'discontinued') return;
+      if (p.visperaId || p.is_ready_for_vispera) statusCounts.withVispera++;
+      else statusCounts.withoutVispera++;
     });
 
     const noEanCount = DB.getStagingNoEan().length;
     const visperaCount = DB.getVisperaBatch().length;
 
     const alerts = [];
-    if (noEanCount > 0) alerts.push({ icon: '🔍', label: `${noEanCount} producto(s) SIN EAN por identificar`, action: 'App.navigateTo("staging")' });
-    if (visperaCount > 0) alerts.push({ icon: '🎫', label: `${visperaCount} ticket(s) pendientes a Vispera`, action: 'App.navigateTo("staging")' });
+    if (noEanCount > 0) alerts.push({ icon: '🔍', label: `${noEanCount} producto(s) SIN EAN por identificar`, action: 'App.navigateTo("auditoria")' });
+    if (visperaCount > 0) alerts.push({ icon: '🎫', label: `${visperaCount} ticket(s) pendientes a Vispera`, action: 'App.navigateTo("auditoria")' });
+    if (statusCounts.withoutVispera > 0) alerts.push({ icon: '⚠️', label: `${statusCounts.withoutVispera} SKU(s) sin Vispera ID`, action: 'App.navigateTo("auditoria")' });
     if (noBrand > 0) alerts.push({ icon: '🏷️', label: `${noBrand} SKU${noBrand > 1 ? 's' : ''} sin marca`, action: 'App.navigateTo("bulk")' });
     if (noImage > 0) alerts.push({ icon: '🖼️', label: `${noImage} SKU${noImage > 1 ? 's' : ''} sin imagen`, action: 'App.navigateTo("bulk")' });
     if (noCat > 0)   alerts.push({ icon: '🗂️', label: `${noCat} SKU${noCat > 1 ? 's' : ''} sin categoría Vispera`, action: 'App.navigateTo("bulk")' });
@@ -145,24 +157,34 @@ const UIDashboard = (() => {
       <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${avgCompleteness}%;background:#4ac99b"></div></div>
     </div>
   </div>
-  <div class="dash-kpi-card">
+  <div class="dash-kpi-card" style="cursor:pointer" onclick="App.navigateTo('auditoria')">
     <div class="dash-kpi-icon" style="background:rgba(255,193,7,0.12);color:#FFC107">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     </div>
     <div class="dash-kpi-body">
-      <span class="dash-kpi-val">${enriched.toLocaleString('es-CL')}</span>
-      <span class="dash-kpi-label">Enriquecidos vía API (${enrichRate}%)</span>
-      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${enrichRate}%;background:#FFC107"></div></div>
+      <span class="dash-kpi-val">${statusCounts.withoutVispera.toLocaleString('es-CL')}</span>
+      <span class="dash-kpi-label">Falta Vispera ID</span>
+      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${total ? Math.round(statusCounts.withoutVispera/total*100) : 0}%;background:#FFC107"></div></div>
     </div>
   </div>
-  <div class="dash-kpi-card">
+  <div class="dash-kpi-card" style="cursor:pointer" onclick="App.navigateTo('staging')">
     <div class="dash-kpi-icon" style="background:rgba(229,57,53,0.1);color:var(--danger)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="dash-kpi-body">
+      <span class="dash-kpi-val">${noCustomerId.toLocaleString('es-CL')}</span>
+      <span class="dash-kpi-label">Falta Customer ID</span>
+      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${total ? Math.round(noCustomerId/total*100) : 0}%;background:var(--danger)"></div></div>
+    </div>
+  </div>
+  <div class="dash-kpi-card" style="cursor:pointer" onclick="App.navigateTo('bulk')">
+    <div class="dash-kpi-icon" style="background:rgba(156,39,176,0.1);color:#9C27B0">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
     </div>
     <div class="dash-kpi-body">
-      <span class="dash-kpi-val">${withImage.toLocaleString('es-CL')}</span>
-      <span class="dash-kpi-label">Con imagen (${imgRate}%)</span>
-      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${imgRate}%;background:var(--danger)"></div></div>
+      <span class="dash-kpi-val">${noImage.toLocaleString('es-CL')}</span>
+      <span class="dash-kpi-label">Falta Imagen</span>
+      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${total ? Math.round(noImage/total*100) : 0}%;background:#9C27B0"></div></div>
     </div>
   </div>
 </div>
@@ -210,7 +232,7 @@ const UIDashboard = (() => {
   <div class="dash-panel">
     <h3 class="dash-panel-title">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      Estado de SKUs
+      Asignación Vispera ID
     </h3>
     <div style="position:relative;height:200px;display:flex;justify-content:center;">
       <canvas id="dash-status-chart" style="max-width:200px;"></canvas>
@@ -218,13 +240,13 @@ const UIDashboard = (() => {
     <div class="dash-cat-legend">
       <div class="dash-cat-item">
         <span class="dash-cat-dot" style="background:#4ac99b"></span>
-        <span class="dash-cat-name">Activos</span>
-        <span class="dash-cat-count">${statusCounts.active}</span>
+        <span class="dash-cat-name">Con ID o Ticket</span>
+        <span class="dash-cat-count">${statusCounts.withVispera}</span>
       </div>
       <div class="dash-cat-item">
         <span class="dash-cat-dot" style="background:#FFC107"></span>
-        <span class="dash-cat-name">En Revisión</span>
-        <span class="dash-cat-count">${statusCounts.review}</span>
+        <span class="dash-cat-name">Sin Vispera ID</span>
+        <span class="dash-cat-count">${statusCounts.withoutVispera}</span>
       </div>
     </div>
   </div>
@@ -314,13 +336,13 @@ const UIDashboard = (() => {
     }
 
     const statCtx = document.getElementById('dash-status-chart');
-    if (statCtx && typeof Chart !== 'undefined' && (statusCounts.active > 0 || statusCounts.review > 0)) {
+    if (statCtx && typeof Chart !== 'undefined' && (statusCounts.withVispera > 0 || statusCounts.withoutVispera > 0)) {
       _statusChart = new Chart(statCtx, {
         type: 'doughnut',
         data: {
-          labels: ['Activos', 'En Revisión'],
+          labels: ['Con ID o Ticket', 'Sin Vispera ID'],
           datasets: [{
-            data: [statusCounts.active, statusCounts.review],
+            data: [statusCounts.withVispera, statusCounts.withoutVispera],
             backgroundColor: ['#4ac99b', '#FFC107'],
             borderWidth: 2,
             borderColor: 'transparent'

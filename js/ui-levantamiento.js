@@ -410,58 +410,8 @@ const UILevantamiento = (() => {
         <button class="btn-clear" style="flex:1" onclick="UILevantamiento.clearFilters()">Limpiar Filtros</button>
       </div>
     </div>
-
-    <!-- Info sobre la arquitectura -->
-    <div style="margin-top:16px; padding:12px; background:rgba(79,110,247,0.06); border:1px solid rgba(79,110,247,0.15); border-radius:8px; font-size:12px; color:var(--text-sec); line-height:1.5;">
-      <strong style="color:#4F6EF7;">ℹ️ Sobre los datos</strong><br>
-      Al sincronizar Firebase, los SKUs se guardan permanentemente en el catálogo maestro. La vista siempre muestra lo que ya está guardado — no necesitas re-sincronizar para ver datos anteriores.
-    </div>
-
-    <!-- Agregar manualmente -->
-    <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
-      <details>
-        <summary style="cursor:pointer;font-weight:600;color:var(--text-muted);display:flex;align-items:center;gap:8px;font-size:13px;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Agregar SKU Manualmente
-        </summary>
-        <div class="lev-form" style="margin-top:12px;">
-          <div class="form-group">
-            <label>Holding</label>
-            <select class="form-select" id="lev-holding">${holdingOpts}</select>
-          </div>
-          <div class="form-group">
-            <label>EAN (Código de Barra)</label>
-            <input type="text" class="form-input" id="lev-ean" placeholder="7801320242247" maxlength="14">
-          </div>
-          <div class="form-row">
-            <div class="form-group" style="flex:1">
-              <label>DMU / Góndola</label>
-              <input type="text" list="lev-dmus-list" class="form-input" id="lev-dmu" placeholder="Ej: ACEITES">
-              <datalist id="lev-dmus-list">${_dmusOpts}</datalist>
-            </div>
-            <div class="form-group" style="flex:1">
-              <label>Pasillo</label>
-              <input type="text" class="form-input" id="lev-pasillo" placeholder="Ej: Pasillo 1">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group" style="flex:1">
-              <label>Categoría</label>
-              <select class="form-select" id="lev-cat">${catOpts}</select>
-            </div>
-            <div class="form-group" style="flex:1">
-              <label>Auditor</label>
-              <input type="text" list="lev-auditores-list" class="form-input" id="lev-auditor" placeholder="Nombre del auditor">
-              <datalist id="lev-auditores-list">${_auditoresOpts}</datalist>
-            </div>
-          </div>
-          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-            <button class="btn-primary" onclick="UILevantamiento.addEntry()">Guardar en Catálogo</button>
-          </div>
-        </div>
-      </details>
-    </div>
   </div>
+
 
   <!-- Panel derecho: Tabla desde catálogo maestro -->
   <div class="lev-panel lev-raw-panel">
@@ -519,7 +469,7 @@ const UILevantamiento = (() => {
 
   async function _fetchLastSync() {
     try {
-      const res = await fetch('http://localhost:3000/api/last-sync');
+      const res = await fetch('/api/last-sync');
       if (res.ok) {
         const data = await res.json();
         if (data.lastSync > 0) {
@@ -550,12 +500,12 @@ const UILevantamiento = (() => {
     try {
       App.showToast('⬇️ Sincronizando con el servidor...', 'info');
       
-      const res = await fetch('http://localhost:3000/api/sync-firebase', {
+      const res = await fetch('/api/sync-firebase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // El servidor decide qué registros traer según su propio estado (last_fb_sync.json)
         // No se pasa 'since' desde el cliente — el servidor es la fuente de verdad
-        body: JSON.stringify({ force: true })
+        body: JSON.stringify({ force: force })
       });
       
       const result = await res.json();

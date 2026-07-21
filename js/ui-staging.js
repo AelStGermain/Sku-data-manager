@@ -4,7 +4,32 @@ const UIStaging = (() => {
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   let _enriching = false;
-  let _activeTab = 'batch'; // 'batch' | 'orphans'
+  let _activeTab = 'review'; // 'review' | 'tickets' | 'orphans' | 'history'
+  let _reviewPage = 1;
+  let _reviewSearch = '';
+  let _auditorFilter = 'all';
+  let _searchTimeout = null;
+  const _itemsPerPage = 50;
+
+  function handleSearchInput(val) {
+    if (_searchTimeout) clearTimeout(_searchTimeout);
+    _searchTimeout = setTimeout(() => {
+      _reviewSearch = (val || '').toLowerCase();
+      _reviewPage = 1;
+      render();
+    }, 400);
+  }
+
+  function setReviewPage(p) {
+    _reviewPage = p;
+    render();
+  }
+
+  function setAuditorFilter(val) {
+    _auditorFilter = val;
+    _reviewPage = 1;
+    render();
+  }
 
   function render() {
     const el = document.getElementById('view-auditoria');
@@ -13,10 +38,15 @@ const UIStaging = (() => {
     const matches = DB.getRecentMatches ? DB.getRecentMatches() : [];
     const noEan = DB.getStagingNoEan();
 
-    // Tab 1: SKUs sin Vispera ID (no necesariamente status='review')
-    const inReview = DB.getProductsArray().filter(p => !p.visperaId && p.status !== 'discontinued');
+    // Tab 1: SKUs sin Vispera ID y no en tickets
+    const visperaBatch = DB.getVisperaBatch() || [];
+    const batchEans = new Set(visperaBatch.map(b => b.ean));
+    let inReview = DB.getProductsArray().filter(p => !p.visperaId && p.status !== 'discontinued' && !batchEans.has(p.ean));
 
-    // Tab 2: SKUs que TIENEN al menos un holding pero a ese holding le falta customerId
+    // Tab 2: Tickets Vispera
+    let inTickets = visperaBatch;
+
+    // Tab 3: SKUs que TIENEN al menos un holding pero a ese holding le falta customerId
     // (Productos sin ningún holding no van aquí — eso es otro problema)
     const orphans = DB.getProductsArray().filter(p => {
       const hData = p.holdings || p.retailers || {};
@@ -31,6 +61,24 @@ const UIStaging = (() => {
     });
 
 
+    // Tab 4: Nuevos ID Vispera (Historial) - Solo los procesados recientemente en la UI
+    let inHistory = DB.getProductsArray().filter(p => p.is_ready_for_vispera === true && p.visperaId);
+
+    // Obtener todos los auditores únicos
+    const allAuditors = [...new Set(DB.getProductsArray().map(p => p.levantamientoMeta?.auditor).filter(Boolean))].sort();
+
+    // Aplicar filtro de auditor global
+    if (_auditorFilter !== 'all') {
+      inReview = inReview.filter(p => p.levantamientoMeta?.auditor === _auditorFilter);
+      inTickets = inTickets.filter(b => {
+        const p = DB.getProduct(b.ean) || {};
+        return p.levantamientoMeta?.auditor === _auditorFilter;
+      });
+      inHistory = inHistory.filter(p => p.levantamientoMeta?.auditor === _auditorFilter);
+      // Opcional: no filtrar orphans, o sí. Asumamos que sí.
+      // orphans = orphans.filter(p => p.levantamientoMeta?.auditor === _auditorFilter);
+    }
+
     el.innerHTML = `
 <header class="view-header">
   <div>
@@ -38,19 +86,37 @@ const UIStaging = (() => {
   </div>
 </header>
 
-<!-- Tabs -->
-<div class="staging-tabs">
-  <button class="staging-tab ${_activeTab === 'batch' ? 'active' : ''}" onclick="UIStaging.setTab('batch')">
-    Sin Vispera ID
-    <span class="staging-tab-count">${inReview.length}</span>
-  </button>
-  <button class="staging-tab ${_activeTab === 'orphans' ? 'active' : ''}" onclick="UIStaging.setTab('orphans')">
-    Falta Customer ID
-    <span class="staging-tab-count">${orphans.length}</span>
-  </button>
+<div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid var(--border); margin-bottom:24px;">
+  <div class="staging-tabs" style="border-bottom:none; margin-bottom:0;">
+    <button class="staging-tab ${_activeTab === 'review' ? 'active' : ''}" onclick="UIStaging.setTab('review')">
+      Sin Vispera ID
+      <span class="staging-tab-count">${inReview.length}</span>
+    </button>
+    <button class="staging-tab ${_activeTab === 'tickets' ? 'active' : ''}" onclick="UIStaging.setTab('tickets')">
+      Tickets Vispera
+      <span class="staging-tab-count">${inTickets.length}</span>
+    </button>
+    <button class="staging-tab ${_activeTab === 'history' ? 'active' : ''}" onclick="UIStaging.setTab('history')">
+      Nuevos ID Vispera
+      <span class="staging-tab-count">${inHistory.length}</span>
+    </button>
+    <button class="staging-tab ${_activeTab === 'orphans' ? 'active' : ''}" onclick="UIStaging.setTab('orphans')">
+      Falta Customer ID
+      <span class="staging-tab-count">${orphans.length}</span>
+    </button>
+  </div>
+  
+  <div style="padding-bottom:12px; display:flex; align-items:center; gap:8px;">
+    <span style="font-size:13px; color:var(--text-sec); font-weight:500;">Auditor:</span>
+    <select class="form-input" style="padding:4px 8px; font-size:13px; width:auto; background:#fff;" onchange="UIStaging.setAuditorFilter(this.value)">
+      <option value="all" ${_auditorFilter === 'all' ? 'selected' : ''}>Todos los Auditores</option>
+      ${allAuditors.map(a => `<option value="${esc(a)}" ${_auditorFilter === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
+    </select>
+  </div>
+</div>
 </div>
 
-${_activeTab === 'orphans' ? renderOrphans(orphans) : renderReview(inReview)}
+${_activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ? renderTickets(inTickets) : _activeTab === 'history' ? renderHistory(inHistory) : renderReview(inReview)}
 `;
   }
 
@@ -162,49 +228,202 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : renderReview(inReview)}
   }
 
   function renderReview(items) {
-    if (items.length === 0) {
-      return `
+    let filtered = items;
+    if (_reviewSearch) {
+      filtered = filtered.filter(i => {
+        const d = i.createdAt || i.levantamientoMeta?.timestamp || i.updatedAt || Date.now();
+        const dateStr = new Date(d).toLocaleDateString('es-CL');
+        return (i.ean || '').toLowerCase().includes(_reviewSearch) ||
+        (i.name || '').toLowerCase().includes(_reviewSearch) ||
+        (i.levantamientoMeta?.auditor || '').toLowerCase().includes(_reviewSearch) ||
+        dateStr.includes(_reviewSearch);
+      });
+    }
+
+    // Ordenar por fecha de levantamiento descendente (los más recientes primero)
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.levantamientoMeta?.timestamp || a.createdAt || a.updatedAt || 0).getTime();
+      const dateB = new Date(b.levantamientoMeta?.timestamp || b.createdAt || b.updatedAt || 0).getTime();
+      return dateB - dateA;
+    });
+    
+    const totalPages = Math.ceil(filtered.length / _itemsPerPage) || 1;
+    if (_reviewPage > totalPages) _reviewPage = totalPages;
+    if (_reviewPage < 1) _reviewPage = 1;
+    
+    const start = (_reviewPage - 1) * _itemsPerPage;
+    const paginated = filtered.slice(start, start + _itemsPerPage);
+
+    let searchBar = `
+      <div class="staging-info-bar" style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="staging-info-left" style="display:flex; align-items:center; gap:16px;">
+          <span class="staging-info-label">SKUs sin Vispera ID: <strong>${filtered.length}</strong> ${items.length !== filtered.length ? `(de ${items.length})` : ''}</span>
+          <button class="btn-primary btn-mini" onclick="UIStaging.cruzarDatos()" ${_enriching ? 'disabled' : ''} style="display:flex; align-items:center; gap:6px;">
+            ${_enriching ? '<div class="spinning-loader" style="width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div> Cruzando...' : '🔍 Cruzar datos / Sugerir'}
+          </button>
+        </div>
+        <div>
+          <input type="text" class="form-input" placeholder="Buscar EAN, Nombre, Auditor, Fecha..." value="${esc(_reviewSearch)}" oninput="UIStaging.handleSearchInput(this.value)" style="width: 300px;">
+        </div>
+      </div>
+      <p style="font-size: 13px; color: var(--text-sec); margin-top: -8px; margin-bottom: 16px;">
+        <em>SKUs nuevos detectados en terreno que aún no tienen un Vispera ID. Asegúrate de que sus datos estén correctos antes de enviarlos a Tickets Vispera.</em>
+      </p>
+    `;
+
+    if (filtered.length === 0 && items.length === 0) {
+      return searchBar + `
 <div class="empty-state" style="padding:40px;">
   <div class="empty-icon">✅</div>
   <h3>Todos los SKUs tienen Vispera ID</h3>
   <p>No hay SKUs pendientes de asignar su Vispera ID.</p>
 </div>`;
+    } else if (filtered.length === 0) {
+      return searchBar + `
+<div class="empty-state" style="padding:40px;">
+  <div class="empty-icon">🔍</div>
+  <h3>Sin resultados</h3>
+  <p>No hay SKUs que coincidan con la búsqueda.</p>
+</div>`;
+    }
+
+    let paginationControls = '';
+    if (totalPages > 1) {
+      paginationControls = `
+        <div style="display:flex; justify-content:center; gap:8px; margin-top:12px; align-items:center;">
+          <button class="btn-outline btn-mini" ${_reviewPage === 1 ? 'disabled' : ''} onclick="UIStaging.setReviewPage(${_reviewPage - 1})">← Ant</button>
+          <span style="font-size:12px; color:var(--text-sec)">Página ${_reviewPage} de ${totalPages}</span>
+          <button class="btn-outline btn-mini" ${_reviewPage === totalPages ? 'disabled' : ''} onclick="UIStaging.setReviewPage(${_reviewPage + 1})">Sig →</button>
+        </div>
+      `;
+    }
+
+    return searchBar + `
+<div class="preview-table-wrap" style="max-height:60vh;">
+  <table class="preview-table">
+    <thead>
+      <tr>
+        <th>EAN</th>
+        <th>Nombre detectado</th>
+        <th>Categoría</th>
+        <th>Auditor</th>
+        <th>Creado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${paginated.map(item => {
+        const hasSuggestion = item.suggestedData ? `<span style="font-size:10px; background:var(--accent); color:#fff; padding:2px 4px; border-radius:4px; margin-left:6px;" title="Datos sugeridos por la API">💡 API</span>` : '';
+        return `
+      <tr>
+        <td class="mono">${esc(item.ean)}</td>
+        <td style="font-weight:500;">
+          <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(item.name || 'Sin nombre')}</a>
+          ${hasSuggestion}
+        </td>
+        <td>${(Array.isArray(item.category) ? item.category : [item.category || '—']).map(c => `<span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[c] : '#888'}">${esc(c)}</span>`).join(' ')}</td>
+        <td style="font-size:12px;">${esc(item.levantamientoMeta?.auditor || '—')}</td>
+        <td style="font-size:12px; color:var(--text-sec)">${new Date(item.levantamientoMeta?.timestamp || item.createdAt || item.updatedAt || Date.now()).toLocaleDateString('es-CL')}</td>
+        <td style="display:flex; gap:6px;">
+          <button class="btn-primary btn-mini" style="background:#FF9800; color:white;" onclick="UIStaging.enviarATicket('${esc(item.ean)}')">Enviar a Ticket ➡️</button>
+        </td>
+      </tr>`}).join('')}
+    </tbody>
+  </table>
+</div>
+${paginationControls}`;
+  }
+
+  function renderTickets(items) {
+    if (items.length === 0) {
+      return `
+<div class="empty-state" style="padding:40px;">
+  <div class="empty-icon">✅</div>
+  <h3>No hay tickets pendientes</h3>
+  <p>Todos los SKUs han sido identificados con Vispera ID.</p>
+</div>`;
     }
 
     return `
-<div class="staging-info-bar">
+<div class="staging-info-bar" style="display:flex; justify-content:space-between; align-items:center;">
   <div class="staging-info-left">
-    <span class="staging-info-label">SKUs sin Vispera ID: <strong>${items.length}</strong></span>
+    <span class="staging-info-label">Tickets Vispera: <strong>${items.length}</strong></span>
   </div>
+  <button class="btn-primary" onclick="UIStaging.exportToExcel('tickets')">Exportar a Excel</button>
 </div>
+<p style="font-size: 13px; color: var(--text-sec); margin-top: -8px; margin-bottom: 16px;">
+  <em>Lista de espera para exportar a Excel y enviar al equipo de Vispera. Marca como "Listo" los SKUs que tengan toda su información completa antes de exportar.</em>
+</p>
 
 <div class="preview-table-wrap" style="max-height:60vh;">
   <table class="preview-table">
     <thead>
       <tr>
         <th>EAN</th>
-        <th>Nombre Master</th>
+        <th>Nombre detectado</th>
         <th>Categoría</th>
-        <th>Creado</th>
+        <th>Auditor / Fecha</th>
         <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
-      ${items.map(item => `
+      ${items.map(item => {
+        const p = DB.getProduct(item.ean) || {};
+        return `
       <tr>
         <td class="mono">${esc(item.ean)}</td>
         <td style="font-weight:500;">
           <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(item.name || 'Sin nombre')}</a>
         </td>
-        <td>${(Array.isArray(item.category) ? item.category : [item.category || '—']).map(c => `<span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[c] : '#888'}">${esc(c)}</span>`).join(' ')}</td>
-        <td style="font-size:12px; color:var(--text-sec)">${new Date(item.createdAt).toLocaleDateString('es-CL')}</td>
-        <td style="display:flex; gap:6px;">
-          <button class="btn-primary btn-mini" style="background:#4CAF50" onclick="UIStaging.markAsReady('${esc(item.ean)}')">Marcar como Listo ✓</button>
+        <td>${esc(item.dmuCategory || item.category || '—')}</td>
+        <td style="font-size:12px;">
+          ${esc(p.levantamientoMeta?.auditor || 'Desconocido')}<br>
+          <span style="color:var(--text-sec)">${new Date(item.createdAt).toLocaleDateString('es-CL')}</span>
         </td>
-      </tr>`).join('')}
+        <td style="display:flex; gap:6px;">
+          ${(()=>{
+            const isComplete = p.name && p.brand && p.universalCategory && p.imageUrl;
+            if (!isComplete) {
+              return `<button class="btn-outline btn-mini" title="Faltan datos (Nombre, Marca, Categoría o Imagen)" onclick="App.showToast('Debes completar Nombre, Marca, Categoría e Imagen antes de marcar como listo.', 'error')" style="opacity:0.5;">Listo</button>`;
+            }
+            if (item.isListo) {
+              return `<button class="btn-primary btn-mini" style="background:#4CAF50" onclick="UIStaging.toggleListo('${esc(item.batchId)}')">Listo ✓</button>`;
+            } else {
+              return `<button class="btn-outline btn-mini" onclick="UIStaging.toggleListo('${esc(item.batchId)}')">Marcar Listo</button>`;
+            }
+          })()}
+          <button class="btn-mini" style="color:var(--danger)" onclick="UIStaging.rejectBatch('${esc(item.batchId)}')">Volver a Revisión</button>
+        </td>
+      </tr>`}).join('')}
     </tbody>
   </table>
 </div>`;
+  }
+
+  function enviarATicket(ean) {
+    const p = DB.getProduct(ean);
+    if (p) {
+      DB.addVisperaBatchItem({
+        ean: p.ean,
+        name: p.name,
+        category: p.universalCategory,
+        dmuCategory: p.universalCategory,
+        reason: 'NEW_SKU_NO_VISPERA_ID',
+        createdAt: new Date().toISOString()
+      });
+      App.showToast('Producto enviado a Tickets Vispera', 'success');
+      render();
+    }
+  }
+
+  function toggleListo(batchId) {
+    const batch = DB.getVisperaBatch();
+    const item = batch.find(i => i.batchId === batchId);
+    if (item) {
+      item.isListo = !item.isListo;
+      DB.saveVisperaBatch(batch);
+      render();
+    }
   }
 
   function renderOrphans(items) {
@@ -223,6 +442,9 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : renderReview(inReview)}
     <span class="staging-info-label">SKUs sin Customer ID: <strong>${items.length}</strong></span>
   </div>
 </div>
+<p style="font-size: 13px; color: var(--text-sec); margin-top: -8px; margin-bottom: 16px;">
+  <em>SKUs que carecen del código interno del holding (Customer ID). Este código es crucial para que Vispera envíe reportes correctos a la cadena.</em>
+</p>
 
 <div class="preview-table-wrap" style="max-height:60vh;">
   <table class="preview-table">
@@ -262,6 +484,77 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : renderReview(inReview)}
     </tbody>
   </table>
 </div>`;
+  }
+
+  function renderHistory(items) {
+    if (items.length === 0) {
+      return `
+<div class="empty-state" style="padding:40px;">
+  <div class="empty-icon">✅</div>
+  <h3>Historial Vacío</h3>
+  <p>Todavía no hay SKUs levantados que tengan Vispera ID asignado.</p>
+</div>`;
+    }
+
+    return `
+<div class="staging-info-bar" style="display:flex; justify-content:space-between; align-items:center;">
+  <div class="staging-info-left">
+    <span class="staging-info-label">Nuevos ID Vispera: <strong>${items.length}</strong></span>
+  </div>
+  <button class="btn-primary" onclick="UIStaging.exportToExcel('history')">Exportar a Excel</button>
+</div>
+<p style="font-size: 13px; color: var(--text-sec); margin-top: -8px; margin-bottom: 16px;">
+  <em>Historial de SKUs que ya fueron exportados. Aquí puedes ingresar su nuevo Vispera ID una vez que el equipo de Vispera te lo asigne.</em>
+</p>
+
+<div class="preview-table-wrap" style="max-height:60vh;">
+  <table class="preview-table">
+    <thead>
+      <tr>
+        <th>Fecha Levantamiento</th>
+        <th>EAN</th>
+        <th>Nombre Master</th>
+        <th>Categoría Vispera</th>
+        <th>Vispera ID Asignado</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map(item => `
+      <tr>
+        <td style="font-size:12px; color:var(--text-sec)">${new Date(item.levantamientoMeta?.timestamp || item.createdAt || item.updatedAt || Date.now()).toLocaleString('es-CL')}</td>
+        <td class="mono">${esc(item.ean)}</td>
+        <td style="font-weight:500;">
+          <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(item.name || 'Sin nombre')}</a>
+        </td>
+        <td>
+          <span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[item.universalCategory] : '#888'}">${esc(item.universalCategory || '—')}</span>
+        </td>
+        <td>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <input type="text" id="vispera-edit-${esc(item.ean)}" value="${esc(item.visperaId)}" class="form-input" style="width:120px; padding:4px;">
+            <button class="btn-outline btn-mini" onclick="UIStaging.actualizarVisperaId('${esc(item.ean)}')">Actualizar</button>
+          </div>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>`;
+  }
+
+  function actualizarVisperaId(ean) {
+    const input = document.getElementById(`vispera-edit-${ean}`);
+    const vId = input ? input.value.trim() : '';
+    if (!vId) {
+      App.showToast('Vispera ID no puede estar vacío. Si deseas quitarlo, hazlo desde la ficha.', 'error');
+      return;
+    }
+    const p = DB.getProduct(ean);
+    if (p) {
+      p.visperaId = vId;
+      DB.saveProduct(p);
+      App.showToast('Vispera ID actualizado correctamente', 'success');
+      render();
+    }
   }
 
   function markAsReady(ean) {
@@ -344,6 +637,45 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : renderReview(inReview)}
 
     _enriching = false;
     App.showToast(`${enriched} de ${unmatched.length} EANs enriquecidos`, 'success');
+    render();
+  }
+
+  async function cruzarDatos() {
+    const inReview = DB.getProductsArray().filter(p => !p.visperaId && p.status !== 'discontinued');
+    if (inReview.length === 0) {
+      App.showToast('No hay SKUs en Revisión para cruzar datos', 'info');
+      return;
+    }
+
+    _enriching = true;
+    render();
+    App.showToast(`Cruzando datos para ${inReview.length} SKUs... Esto puede tomar un momento.`, 'info');
+
+    let enriched = 0;
+    const chunkSize = 5; // Lotes más pequeños para no saturar la API
+    
+    for (let i = 0; i < inReview.length; i += chunkSize) {
+      const chunk = inReview.slice(i, i + chunkSize);
+      
+      await Promise.all(chunk.map(async (item) => {
+        const apiData = await API.enrichProduct(item.ean);
+        if (apiData && apiData.name) {
+          item.suggestedData = {
+            name: apiData.name,
+            brand: apiData.brand,
+            category: apiData.masterCategory || apiData.category,
+            imageUrl: apiData.imageUrl
+          };
+          DB.saveProduct(item);
+          enriched++;
+        }
+      }));
+      
+      await new Promise(r => setTimeout(r, 1000)); // Pausa entre lotes para respetar rate limits
+    }
+    
+    _enriching = false;
+    App.showToast(`Cruce terminado. ${enriched} SKUs tienen sugerencias de la API.`, 'success');
     render();
   }
 
@@ -433,9 +765,11 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : renderReview(inReview)}
   }
 
   function rejectBatch(batchId) {
-    DB.updateVisperaBatchItem(batchId, { status: 'REJECTED' });
-    App.showToast('Ticket cancelado', 'info');
-    render();
+    if (confirm('¿Deshacer este cambio y devolver el SKU a la cola de Revisión?')) {
+      DB.removeVisperaBatchItem(batchId);
+      App.showToast('SKU devuelto a Revisión', 'info');
+      render();
+    }
   }
 
   function clearMatches() {
@@ -472,17 +806,64 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : renderReview(inReview)}
         NombreApp: i.firebaseName
       }));
       filename = 'auditoria_sin_ean.csv';
-    } else if (type === 'batch') {
-      const items = DB.getVisperaBatch();
-      data = items.map(i => ({
-        EAN: i.ean,
-        Nombre: i.name,
-        Categoria: i.dmuCategory,
-        Motivo: i.reason,
-        Status: i.status,
-        Fecha: new Date(i.createdAt).toLocaleString('es-CL')
-      }));
-      filename = 'auditoria_tickets_vispera.csv';
+    } else if (type === 'tickets' || type === 'history') {
+      if (typeof XLSX === 'undefined') {
+        App.showToast('Librería Excel no cargada', 'error');
+        return;
+      }
+      const items = type === 'tickets' ? DB.getVisperaBatch() : DB.getProductsArray().filter(p => p.visperaId && (p.dataSource === 'levantamiento' || p.fromLevantamiento === true));
+      if (items.length === 0) {
+        App.showToast('No hay datos para exportar', 'warning');
+        return;
+      }
+      const rows = [
+        ['Fecha Levantamiento', 'Auditor', 'Pasillo', 'Customer ID', 'Producer / Manufacturer', 'Brand', 'Sub-Brand', 'SKU name', 'Category', 'Sub-Category', 'Barcode / EAN Code (must be unique)', 'Existe en Master Data?', 'Size', 'Size unit', 'Number of units inside (if multi-pack)', 'Width', 'Height', 'Depth', 'Public image link']
+      ];
+      items.forEach(i => {
+        if (type === 'tickets' && i.isListo) {
+          const pp = DB.getProduct(i.ean);
+          if (pp) {
+            pp.is_ready_for_vispera = true;
+            pp.status = 'active';
+            DB.saveProduct(pp);
+          }
+          DB.removeVisperaBatchItem(i.batchId);
+        }
+        const p = DB.getProduct(i.ean) || {};
+        const holdings = p.holdings || p.retailers || {};
+        let customerId = '';
+        let localCat = '';
+        const hKeys = Object.keys(holdings);
+        if (hKeys.length > 0) {
+           const hd = holdings[hKeys[0]];
+           customerId = hd.holdingInternalId || hd.customerId || '';
+           localCat = Array.isArray(hd.localCategoryName) ? hd.localCategoryName.join(', ') : (Array.isArray(hd.category) ? hd.category.join(', ') : (hd.localCategoryName || hd.category || ''));
+        }
+        rows.push([
+          new Date(p.levantamientoMeta?.timestamp || p.createdAt || p.updatedAt || Date.now()).toLocaleString('es-CL'),
+          p.levantamientoMeta?.auditor || '',
+          p.levantamientoMeta?.pasillo || p.levantamientoMeta?.aisle || '',
+          customerId,
+          p.producer || '',
+          p.brand || '',
+          '', // Sub-Brand
+          i.name || p.name || '',
+          p.universalCategory || i.category || '',
+          localCat,
+          i.ean,
+          type === 'history' ? 'Sí (Asignado)' : 'No', // Existe en Master Data?
+          p.weight_g || '',
+          p.weight_unit || 'g',
+          '', '', '', '', // Number of units, Width, Height, Depth
+          p.imageUrl || ''
+        ]);
+      });
+      if (type === 'tickets') setTimeout(render, 500);
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, type === 'history' ? "Historial Vispera" : "Tickets Vispera");
+      XLSX.writeFile(wb, `${type === 'history' ? 'Historial' : 'Tickets'}_Vispera_${new Date().toISOString().slice(0,10)}.xlsx`);
+      return;
     }
 
     if (data.length === 0) {
@@ -508,15 +889,22 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : renderReview(inReview)}
   return {
     render,
     setTab,
+    handleSearchInput,
+    setReviewPage,
+    setAuditorFilter,
+    exportToExcel,
+    actualizarVisperaId,
+    toggleListo,
+    rejectBatch,
+    clearBatch,
+    enrichAll,
+    cruzarDatos,
+    clearMatches,
     identifyEan,
     removeNoEan,
     clearNoEan,
     sendToVispera,
-    rejectBatch,
-    clearBatch,
-    enrichAll,
-    clearMatches,
-    exportToExcel,
-    markAsReady
+    markAsReady,
+    enviarATicket
   };
 })();

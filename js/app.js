@@ -121,7 +121,7 @@ const App = {
     const dot = document.getElementById('status-dot');
     const lbl = document.getElementById('status-label');
     try {
-      const res = await fetch('http://localhost:3000/api/holdings', { signal: AbortSignal.timeout(3000) });
+      const res = await fetch('/api/holdings', { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         if (dot) { dot.className = 'status-dot online'; }
         if (lbl) lbl.textContent = 'Servidor local activo';
@@ -208,7 +208,7 @@ const App = {
 
     const rows = [
       // Header
-      ['EAN','Nombre','Marca','Categoría Vispera','Tipo Paquete','Ancho cm','Alto cm','Prof cm','Peso g','Imagen URL','Fuente',
+      ['EAN','Vispera ID','Nombre','Marca','Categoría Vispera','Tipo Paquete','Ancho cm','Alto cm','Prof cm','Valor Neto','Unidad','Imagen URL','Fuente',
        ...holdings.flatMap(h => [`${h.name}_ID`,`${h.name}_Nombre`,`${h.name}_Categoria`,`${h.name}_Activo`])
       ]
     ];
@@ -216,8 +216,8 @@ const App = {
     products.forEach(p => {
       const hlds = p.holdings || p.retailers || {};
       const row = [
-        p.ean, p.name||'', p.brand||'', Array.isArray(p.universalCategory) ? p.universalCategory.join(', ') : (Array.isArray(p.category) ? p.category.join(', ') : (p.universalCategory || p.category || '')), p.packageType||'',
-        p.width_cm||'', p.height_cm||'', p.depth_cm||'', p.weight_g||'',
+        p.ean, p.visperaId||'', p.name||'', p.brand||'', Array.isArray(p.universalCategory) ? p.universalCategory.join(', ') : (Array.isArray(p.category) ? p.category.join(', ') : (p.universalCategory || p.category || '')), p.packageType||'',
+        p.width_cm||'', p.height_cm||'', p.depth_cm||'', p.weight_g||'', p.weight_unit||'g',
         p.imageUrl||'', p.dataSource||''
       ];
       holdings.forEach(h => {
@@ -280,7 +280,7 @@ const App = {
     });
 
     const wb = XLSX.utils.book_new();
-    const headers = ['EAN', 'Nombre', 'Marca', 'ID Holding', 'Categoría', 'DMU', 'Posición', 'Peso (g)', 'Tipo Envase', 'Imagen URL'];
+    const headers = ['EAN', 'Nombre', 'Marca', 'ID Holding', 'Categoría', 'DMU', 'Posición', 'Valor Neto', 'Unidad', 'Tipo Envase', 'Imagen URL'];
 
     Object.entries(groups).forEach(([dmu, items]) => {
       items.sort((a, b) => (a.hd.position || 9999) - (b.hd.position || 9999));
@@ -295,6 +295,7 @@ const App = {
           Array.isArray(hd.dmu) ? hd.dmu.join(', ') : (hd.dmu || ''),
           hd.position || '',
           p.weight_g || '',
+          p.weight_unit || 'g',
           p.packageType || '',
           hd.imageUrl || p.imageUrl || ''
         ]);
@@ -321,7 +322,7 @@ const App = {
     });
 
     const rows = [
-      ['EAN', `Nombre (${hInfo.name})`, `ID SKU (${hInfo.name})`, `Categoría (${hInfo.name})`, `Activo (${hInfo.name})`, 'Marca', 'Peso/Gramaje (g)', 'Tipo Envase', 'Imagen URL', 'Ancho cm', 'Alto cm', 'Profundidad cm']
+      ['EAN', 'Vispera ID', `Nombre (${hInfo.name})`, `ID SKU (${hInfo.name})`, `Categoría (${hInfo.name})`, `Activo (${hInfo.name})`, 'Marca', 'Valor Neto', 'Unidad', 'Tipo Envase', 'Imagen URL', 'Ancho cm', 'Alto cm', 'Profundidad cm']
     ];
 
     filteredProducts.forEach(p => {
@@ -329,12 +330,14 @@ const App = {
       const hd = hlds[holdingId];
       const row = [
         p.ean,
+        p.visperaId || '',
         hd.localProductName || hd.name || p.name || '',
         hd.holdingInternalId || hd.customerId || '',
         Array.isArray(hd.localCategoryName) ? hd.localCategoryName.join(', ') : (Array.isArray(hd.category) ? hd.category.join(', ') : (hd.localCategoryName || hd.category || '')),
         hd.isActiveHolding !== false ? 'SI' : 'NO',
         p.brand || '',
         p.weight_g || '',
+        p.weight_unit || 'g',
         p.packageType || '',
         hd.imageUrl || p.imageUrl || '',
         p.width_cm || '',

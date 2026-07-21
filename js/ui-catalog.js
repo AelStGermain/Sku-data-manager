@@ -5,8 +5,9 @@ const UICatalog = (() => {
 
   // ── filter / sort state ─────────────────────
   let _search        = '';
-  let _retailer      = 'all';
-  let _category      = 'all';
+  let _retailer          = 'all';
+  let _universalCategory = 'all';
+  let _localCategory     = 'all';
   let _source        = 'all';
   let _statusFilter  = 'all';
   let _showIncomplete= false;
@@ -251,10 +252,20 @@ const UICatalog = (() => {
       return false;
     });
     if (_retailer !== 'all')  filtered = filtered.filter(p => { const h = p.holdings || p.retailers || {}; return h[_retailer]; });
-    if (_category !== 'all')  filtered = filtered.filter(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).some(r => {
-      const rCats = Array.isArray(r.localCategoryName) ? r.localCategoryName : (Array.isArray(r.category) ? r.category : [r.localCategoryName || r.category]);
-      return rCats.includes(_category);
-    }); });
+    if (_universalCategory !== 'all') {
+      filtered = filtered.filter(p => {
+        return (p.universalCategory === _universalCategory) || (Array.isArray(p.universalCategory) && p.universalCategory.includes(_universalCategory));
+      });
+    }
+    if (_localCategory !== 'all') {
+      filtered = filtered.filter(p => {
+        const h = p.holdings || p.retailers || {};
+        return Object.values(h).some(r => {
+          const rCats = Array.isArray(r.localCategoryName) ? r.localCategoryName : (Array.isArray(r.category) ? r.category : [r.localCategoryName || r.category]);
+          return rCats.includes(_localCategory);
+        });
+      });
+    }
     if (_source   !== 'all')  filtered = filtered.filter(p => p.dataSource === _source);
     if (_statusFilter === 'new') {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -278,7 +289,12 @@ const UICatalog = (() => {
 
     const enriched = all.filter(p => p.dataSource !== 'manual').length;
     const noData   = all.filter(p => DB.computeCompleteness(p) < 40).length;
-    const cats = [...new Set(all.flatMap(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).flatMap(r => Array.isArray(r.localCategoryName) ? r.localCategoryName : (Array.isArray(r.category) ? r.category : [r.localCategoryName || r.category])).filter(Boolean); }))].sort();
+    
+    let productsForCats = all;
+    if (_retailer !== 'all') productsForCats = all.filter(p => { const h = p.holdings || p.retailers || {}; return h[_retailer]; });
+    const holdingCats = [...new Set(productsForCats.flatMap(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).flatMap(r => Array.isArray(r.localCategoryName) ? r.localCategoryName : (Array.isArray(r.category) ? r.category : [r.localCategoryName || r.category])).filter(Boolean); }))].sort();
+    
+    const visperaCats = Object.keys(window.VISPERA_CATEGORY_COLORS || {}).sort();
 
     el.innerHTML = `
 <header class="view-header">
@@ -358,9 +374,13 @@ const UICatalog = (() => {
     <svg class="search-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input id="cat-search" class="search-inp" type="text" placeholder="Buscar por nombre, marca o EAN…" value="${esc(_search)}" oninput="UICatalog.setSearch(this.value)">
   </div>
-  <select class="filter-sel" onchange="UICatalog.setCategory(this.value)">
-    <option value="all" ${_category==='all'?'selected':''}>Todas las categorías</option>
-    ${cats.map(c=>`<option value="${esc(c)}" ${_category===c?'selected':''}>${esc(c)}</option>`).join('')}
+  <select class="filter-sel" onchange="UICatalog.setUniversalCategory(this.value)">
+    <option value="all" ${_universalCategory==='all'?'selected':''}>Categoría Vispera</option>
+    ${visperaCats.map(c=>`<option value="${esc(c)}" ${_universalCategory===c?'selected':''}>${esc(c)}</option>`).join('')}
+  </select>
+  <select class="filter-sel" onchange="UICatalog.setLocalCategory(this.value)">
+    <option value="all" ${_localCategory==='all'?'selected':''}>Categoría Holding</option>
+    ${holdingCats.map(c=>`<option value="${esc(c)}" ${_localCategory===c?'selected':''}>${esc(c)}</option>`).join('')}
   </select>
   <select class="filter-sel" onchange="UICatalog.setSource(this.value)">
     <option value="all" ${_source==='all'?'selected':''}>Todas las fuentes</option>
@@ -376,7 +396,7 @@ const UICatalog = (() => {
     <option value="off" ${_imagePref==='off'?'selected':''}>👁️ Imagen: API</option>
     ${retailers.map(r=>`<option value="retailer_${esc(r.id)}" ${_imagePref===`retailer_${r.id}`?'selected':''}>👁️ Imagen: ${esc(r.name)}</option>`).join('')}
   </select>
-  ${(_search||_retailer!=='all'||_category!=='all'||_source!=='all') ? '<button class="btn-clear" onclick="UICatalog.clearFilters()">Limpiar ×</button>' : ''}
+  ${(_search||_retailer!=='all'||_universalCategory!=='all'||_localCategory!=='all'||_source!=='all') ? '<button class="btn-clear" onclick="UICatalog.clearFilters()">Limpiar ×</button>' : ''}
 </div>
 
 <p class="result-count">${filtered.length} resultado${filtered.length!==1?'s':''}${filtered.length>PAGE_SIZE?` &nbsp;·&nbsp; Página ${_page+1} de ${Math.ceil(filtered.length/PAGE_SIZE)}`:''}</p>
@@ -418,7 +438,8 @@ ${renderPagination(filtered.length)}`;
   }
 
   function setRetailer(v)      { _retailer      = v;   _page = 0; render(); }
-  function setCategory(v)      { _category      = v;   _page = 0; render(); }
+  function setUniversalCategory(v) { _universalCategory = v; _page = 0; render(); }
+  function setLocalCategory(v) { _localCategory = v; _page = 0; render(); }
   function setSource(v)        { _source        = v;   _page = 0; render(); }
   function setStatusFilter(v)  { _statusFilter  = v;   _page = 0; render(); }
   function setSortBy(k)        { if(_sortBy===k) _sortDir=_sortDir==='asc'?'desc':'asc'; else {_sortBy=k;_sortDir='asc';} _page=0; render(); }
@@ -427,7 +448,7 @@ ${renderPagination(filtered.length)}`;
   function setViewMode(m)      { _viewMode = m; localStorage.setItem('ss_viewMode', m); render(); }
   function goPage(n)           { _page = n; render(); document.querySelector('.main-content')?.scrollTo({top:0,behavior:'smooth'}); }
   function clearFilters() {
-    _search=''; _retailer='all'; _category='all'; _source='all';
+    _search=''; _retailer='all'; _universalCategory='all'; _localCategory='all'; _source='all';
     _statusFilter='all'; _showIncomplete=false; _page=0;
     const inp = document.getElementById('cat-search');
     if (inp) inp.value = '';
@@ -511,7 +532,8 @@ ${renderPagination(filtered.length)}`;
 
   return {
     render,
-    setSearch, setRetailer, setCategory, setSource, setStatusFilter, setSortBy, toggleIncomplete, setImagePref,
+    setSearch, setRetailer, setUniversalCategory,
+    setLocalCategory, setSource, setStatusFilter, setSortBy, toggleIncomplete, setImagePref,
     clearFilters, setViewMode, goPage, enrichAll, deleteOne,
     toggleExportDropdown
   };

@@ -33,6 +33,7 @@ async function importExcel(filePath) {
     const name = row['name'] || row['Name'] || row['Nombre'] || row['Descripción'] || row['display_name'] || 'SKU Importado';
     const brand = row['brand'] || row['Brand'] || row['Marca'] || row['brand_name'] || 'N/A';
     const category = row['category'] || row['Category'] || row['Categoría'] || row['category_name'] || 'GROCERY STORE';
+    const visperaId = row['Vispera ID'] || row['vispera_id'] || row['Vispera Id'] || null;
     
     // Holding data (Opcional)
     const holdingId = (row['holding_id'] || row['Holding'] || '')?.toString().trim().toLowerCase();
@@ -40,7 +41,7 @@ async function importExcel(filePath) {
     const holdingCat = row['holding_category'] || row['Categoría Holding'] || category;
 
     // 1. Añadir al Master Catalog
-    products.push({
+    const productData = {
       ean,
       product_name: name,
       brand,
@@ -49,7 +50,13 @@ async function importExcel(filePath) {
       package_type: row['package_type'] || row['Envase'] || 'other',
       status: 'active',
       updated_at: new Date().toISOString()
-    });
+    };
+
+    if (visperaId) {
+      productData.visperaId = visperaId;
+    }
+
+    products.push(productData);
 
     // 2. Si se especificó un Holding, añadir la relación al Retailer Catalog
     if (holdingId) {

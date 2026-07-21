@@ -151,11 +151,51 @@ const API = (() => {
     };
   }
 
+  // ── Nueva API Personalizada (Solotodo) ────────────────────
+  async function fetchFromCustomAPI(ean) {
+    try {
+      const response = await fetch(`https://publicapi.solotodo.com/products/?search=${ean}`);
+      if (!response.ok) return null;
+      const json = await response.json();
+      if (!json.results || json.results.length === 0) return null;
+      
+      const item = json.results[0];
+      const specs = item.specs || {};
+      
+      // Verificar coincidencia estricta de EAN si la API devuelve algo parecido
+      if (specs.ean && String(specs.ean) !== String(ean)) return null;
+
+      // Calcular peso/volumen en gramos/ml
+      let weight_g = null;
+      if (specs.net_content) {
+        const val = parseFloat(specs.net_content);
+        const unit = (specs.net_content_unit_name || '').toLowerCase();
+        if (unit.includes('mili') || unit === 'ml' || unit === 'g' || unit.includes('gramo') || unit === 'cc') {
+          weight_g = val;
+        } else if (unit.includes('litro') || unit === 'l' || unit === 'kg' || unit.includes('kilo')) {
+          weight_g = val * 1000;
+        }
+      }
+      
+      return {
+        name: item.name || null,
+        brand: specs.brand_name || null,
+        masterCategory: specs.subcategory_name || null,
+        imageUrl: item.picture_url || null,
+        weight_g: weight_g
+      };
+    } catch (err) {
+      console.error("Error en Solotodo API:", err);
+      return null;
+    }
+  }
+
   // ── Enrich single product ──────────────────────
   async function enrichProduct(ean) {
-    let data = await fetchFromOFF(ean);
-    if (!data) data = await fetchFromOPF(ean);
-    return data; // null if not found
+    let data = await fetchFromCustomAPI(ean); // PRIORIDAD 1: Tu nueva API
+    if (!data) data = await fetchFromOFF(ean); // PRIORIDAD 2: Open Food Facts
+    if (!data) data = await fetchFromOPF(ean); // PRIORIDAD 3: Open Products Facts
+    return data; // null si no se encuentra en ninguna
   }
 
   // Enrich and save single product from DB
@@ -218,5 +258,5 @@ const API = (() => {
     return merged;
   }
 
-  return { fetchFromOFF, fetchFromOPF, enrichProduct, enrichAndSave, enrichBatch, mergeEnriched };
+  return { fetchFromCustomAPI, fetchFromOFF, fetchFromOPF, enrichProduct, enrichAndSave, enrichBatch, mergeEnriched };
 })();

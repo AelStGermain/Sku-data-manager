@@ -1,0 +1,27 @@
+[
+  {
+    "id": "tottus",
+    "name": "Tottus",
+    "color": "#E8001C",
+    "logoUrl": "tottus_logo.png"
+  },
+  {
+    "id": "jumbo",
+    "name": "Jumbo",
+    "color": "#009A44",
+    "logoUrl": "jumbo_logo.png"
+  },
+  {
+    "id": "unimarc",
+    "name": "Unimarc",
+    "color": "#005BAC",
+    "logoUrl": "unimarc_logo.png"
+  },
+  {
+    "id": "copec_id",
+    "name": "Pronto Copec",
+    "color": "#ff2e4d",
+    "logoUrl": null,
+    "categories": []
+  }
+]

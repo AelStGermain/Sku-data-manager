@@ -1,4 +1,10 @@
 node_modules/
-local_data/
 .env
 .DS_Store
+
+# Permitir que se suban los catálogos JSON
+!local_data/
+!local_data/*.json
+
+# Pero ignorar estrictamente la clave privada de Firebase por seguridad
+local_data/firebase-key.json
