@@ -35,7 +35,8 @@ async function firestoreQuery({ sinceDate = null, pageSize = 2000 } = {}) {
   try {
     let query = db.collection('levantamientos')
       .select('ean', 'fecha', 'holding', 'holdingId', 'dmu', 'pasillo', 'categoria', 'local', 'auditor', 'productoWeb', 'marcaWeb', 'imagenProductoWeb', 'nombreProductoOCR', 'precioWeb', 'precioOCR', 'estado')
-      .orderBy('fecha', 'desc');
+      .orderBy('fecha', 'desc')
+      .limit(pageSize);
 
     if (sinceDate) {
       query = query.where('fecha', '>=', sinceDate);
@@ -59,12 +60,21 @@ async function firestoreQuery({ sinceDate = null, pageSize = 2000 } = {}) {
 
 const app = express();
 const port = process.env.PORT || 3000;
+const firebaseSyncEnabled = process.env.DISABLE_FIREBASE_SYNC !== '1';
 
+app.disable('x-powered-by');
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 // ── Servir archivos estáticos del frontend (on-premises) ──────────────────
-app.use(express.static(path.join(__dirname)));
+app.use('/css', express.static(path.join(__dirname, 'css'), { dotfiles: 'deny' }));
+app.use('/js', express.static(path.join(__dirname, 'js'), { dotfiles: 'deny' }));
+for (const asset of ['logo.png', 'jumbo_logo.png', 'tottus_logo.png', 'unimarc_logo.png']) {
+  // The workspace may live below a hidden directory (for example `.gemini`).
+  // These are fixed, explicitly allow-listed public files, so allowing dot path
+  // segments here does not expose arbitrary hidden files.
+  app.get(`/${asset}`, (_req, res) => res.sendFile(path.join(__dirname, asset), { dotfiles: 'allow' }));
+}
 
 const dataDir = path.join(__dirname, 'local_data');
 
@@ -105,10 +115,30 @@ function getRetailer() { return JSON.parse(fs.readFileSync(retailerFile, 'utf8')
 function getHoldings() { return JSON.parse(fs.readFileSync(holdingsFile, 'utf8')); }
 function getStores()   { return JSON.parse(fs.readFileSync(storesFile,   'utf8')); }
 
-function saveMaster(data)   { fs.writeFileSync(masterFile,   JSON.stringify(data, null, 2)); }
-function saveRetailer(data) { fs.writeFileSync(retailerFile, JSON.stringify(data, null, 2)); }
-function saveHoldings(data) { fs.writeFileSync(holdingsFile, JSON.stringify(data, null, 2)); }
-function saveStores(data)   { fs.writeFileSync(storesFile,   JSON.stringify(data, null, 2)); }
+function atomicWriteJson(filePath, data) {
+  const tempPath = `${filePath}.${process.pid}.tmp`;
+  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2));
+  fs.renameSync(tempPath, filePath);
+}
+
+function saveMaster(data)   { atomicWriteJson(masterFile, data); }
+function saveRetailer(data) { atomicWriteJson(retailerFile, data); }
+function saveHoldings(data) { atomicWriteJson(holdingsFile, data); }
+function saveStores(data)   { atomicWriteJson(storesFile, data); }
+
+function isValidEan(value) {
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) return false;
+  const normalized = value.length === 11 ? `0${value}` : value;
+  if (![8, 12, 13, 14].includes(normalized.length)) return false;
+  const digits = normalized.split('').map(Number);
+  let sum = 0;
+  let weight = 3;
+  for (let i = digits.length - 2; i >= 0; i--) {
+    sum += digits[i] * weight;
+    weight = weight === 3 ? 1 : 3;
+  }
+  return (10 - (sum % 10)) % 10 === digits.at(-1);
+}
 
 // ── API: Productos (Master Catalog + Holding SKU Catalog) ─────────────────
 app.get('/api/products', (req, res) => {
@@ -119,6 +149,12 @@ app.get('/api/products', (req, res) => {
 
 app.post('/api/products', (req, res) => {
   const { product, holdingRelations } = req.body;
+  if (!product || !isValidEan(product.ean)) {
+    return res.status(400).json({ success: false, error: 'Producto o EAN inválido' });
+  }
+  if (holdingRelations !== undefined && !Array.isArray(holdingRelations)) {
+    return res.status(400).json({ success: false, error: 'holdingRelations debe ser un array' });
+  }
   const master = getMaster();
   
   const idx = master.findIndex(p => p.ean === product.ean);
@@ -149,6 +185,12 @@ app.post('/api/products', (req, res) => {
 
 app.post('/api/products/bulk', (req, res) => {
   const { products, holdingRelations } = req.body;
+  if (!Array.isArray(products) || products.some(product => !product || !isValidEan(product.ean))) {
+    return res.status(400).json({ success: false, error: 'products debe contener EANs válidos' });
+  }
+  if (holdingRelations !== undefined && !Array.isArray(holdingRelations)) {
+    return res.status(400).json({ success: false, error: 'holdingRelations debe ser un array' });
+  }
   
   const master = getMaster();
   products.forEach(product => {
@@ -176,7 +218,9 @@ app.post('/api/products/bulk', (req, res) => {
 
 app.delete('/api/products', (req, res) => {
   const { eans } = req.body;
-  if (!eans || !eans.length) return res.json({ success: false });
+  if (!Array.isArray(eans) || eans.length === 0 || eans.some(ean => !isValidEan(ean))) {
+    return res.status(400).json({ success: false, error: 'EANs inválidos' });
+  }
   
   let master   = getMaster();
   let retailer = getRetailer();
@@ -203,6 +247,16 @@ app.post('/api/holdings', (req, res) => {
   }
   saveHoldings(holdings);
   res.json({ success: true, count: holdings.length });
+});
+
+app.delete('/api/holdings/:id', (req, res) => {
+  const id = req.params.id;
+  if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+    return res.status(400).json({ success: false, error: 'ID inválido' });
+  }
+  saveHoldings(getHoldings().filter(holding => holding.id !== id));
+  saveRetailer(getRetailer().filter(relation => relation.retailer_id !== id));
+  res.json({ success: true });
 });
 
 // ── API: Stores (Sucursales Físicas) ──────────────────────────────────────
@@ -246,7 +300,8 @@ app.post('/api/staging/:key', (req, res) => {
     return res.status(400).json({ error: 'Llave inválida' });
   }
   const filePath = path.join(dataDir, `${key}.json`);
-  fs.writeFileSync(filePath, JSON.stringify(req.body, null, 2));
+  if (!Array.isArray(req.body)) return res.status(400).json({ error: 'La cola debe ser un array' });
+  atomicWriteJson(filePath, req.body);
   res.json({ success: true });
 });
 
@@ -294,6 +349,7 @@ async function syncFirebaseToCatalog(force = false, since = null) {
     let sinceDate = null;
     if (since) {
       sinceDate = new Date(since);
+      if (Number.isNaN(sinceDate.getTime())) return { success: false, error: 'Fecha since inválida' };
     } else if (lastSync > 0) {
       sinceDate = new Date(lastSync);
     }
@@ -309,7 +365,6 @@ async function syncFirebaseToCatalog(force = false, since = null) {
     console.log(`[Firebase Sync] Documentos encontrados: ${docs.length}`);
 
     if (docs.length === 0) {
-      fs.writeFileSync(lastSyncFile, String(Date.now()));
       return { success: true, count: 0, added: 0, updated: 0, message: 'No hay nuevos datos en Firebase' };
     }
 
@@ -328,12 +383,16 @@ async function syncFirebaseToCatalog(force = false, since = null) {
       }
       
       const eanStr = String(reg.ean || '').trim().replace(/\D/g, '');
-      const holding = reg.holdingId || reg.holding || 'tottus';
+      const holdingRaw = String(reg.holdingId || reg.holding || 'tottus').trim();
+      const holding = getHoldings().find(item =>
+        item.id.toLowerCase() === holdingRaw.toLowerCase() || item.name.toLowerCase() === holdingRaw.toLowerCase()
+      )?.id || holdingRaw.toLowerCase();
       const dmu = reg.dmu || reg.pasillo || reg.categoria || '';
 
       if (!eanStr || eanStr.length < 8) {
         sinEanList.push({
-          firebaseId: reg.id,
+          id: reg._id,
+          firebaseId: reg._id,
           holdingId:  holding,
           dmu,
           pasillo:  reg.pasillo || '',
@@ -428,6 +487,8 @@ async function syncFirebaseToCatalog(force = false, since = null) {
           fromLevantamiento: true,
           fromFirebase: true,
           offAttempted: false,
+          createdAt: timestamp,
+          updatedAt: timestamp,
           levantamientoMeta,
           holdings: {}
         };
@@ -442,7 +503,16 @@ async function syncFirebaseToCatalog(force = false, since = null) {
     }
 
     saveMaster(master);
-    fs.writeFileSync(lastSyncFile, String(Date.now()));
+    if (sinEanList.length > 0) {
+      const noEanFile = path.join(dataDir, 'ss_staging_no_ean.json');
+      const existingNoEan = fs.existsSync(noEanFile) ? JSON.parse(fs.readFileSync(noEanFile, 'utf8')) : [];
+      const byId = new Map(existingNoEan.map(item => [item.id || item.firebaseId, item]));
+      sinEanList.forEach(item => byId.set(item.id || item.firebaseId, item));
+      atomicWriteJson(noEanFile, [...byId.values()]);
+    }
+    const processedTimes = docs.map(doc => Date.parse(doc.fecha)).filter(Number.isFinite);
+    const safeCheckpoint = processedTimes.length > 0 ? Math.max(...processedTimes) : lastSync;
+    fs.writeFileSync(lastSyncFile, String(safeCheckpoint));
     return { success: true, count: docs.length, added, updated, sinEanList };
 
   } catch(e) {
@@ -455,7 +525,7 @@ async function syncFirebaseToCatalog(force = false, since = null) {
 
 // ── Cron Job: Sync incremental cada 1 hora ──────────────────────────────
 // El servidor es la fuente de verdad — los clientes solo leen, no sincronizan.
-setInterval(() => {
+if (firebaseSyncEnabled) setInterval(() => {
   console.log('⏰ [Cron] Ejecutando sync incremental Firebase...');
   syncFirebaseToCatalog(false).then(res => {
     if (res.success && (res.added > 0 || res.updated > 0)) {
@@ -476,6 +546,10 @@ app.post('/api/sync-firebase', async (req, res) => {
 });
 
 app.get('/api/last-sync', (req, res) => {
+  if (!firebaseSyncEnabled) {
+    console.log('[Startup] Sincronización Firebase deshabilitada por entorno.');
+    return;
+  }
   const lastSyncFile = path.join(dataDir, 'last_fb_sync.json');
   let lastSync = 0;
   if (fs.existsSync(lastSyncFile)) {
@@ -484,32 +558,9 @@ app.get('/api/last-sync', (req, res) => {
   res.json({ lastSync });
 });
 
-// ── API: Staging Queues (Global Persistence) ──────────────────────────────
-app.get('/api/staging/:key', (req, res) => {
-  const key = req.params.key;
-  // Sanitizamos el key para evitar path traversal
-  const safeKey = key.replace(/[^a-z0-9_]/gi, '');
-  const filePath = path.join(dataDir, `${safeKey}.json`);
-  if (fs.existsSync(filePath)) {
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    res.json(data);
-  } else {
-    res.json([]);
-  }
-});
-
-app.post('/api/staging/:key', (req, res) => {
-  const key = req.params.key;
-  const safeKey = key.replace(/[^a-z0-9_]/gi, '');
-  const filePath = path.join(dataDir, `${safeKey}.json`);
-  const data = req.body;
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-  res.json({ success: true });
-});
-
 // ── Ruta catch-all: devolver index.html para navegación SPA ───────────────
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'), { dotfiles: 'allow' });
 });
 
 app.listen(port, () => {

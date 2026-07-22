@@ -15,6 +15,44 @@ window.UNIVERSAL_CATEGORIES = [
 // Legacy alias for backward compat
 window.CATEGORIES = window.UNIVERSAL_CATEGORIES;
 
+window.CATEGORY_ALIASES = {
+  'COOKIES AND SWEETS': 'SWEET',
+  'SWEETS': 'SWEET',
+  'CONFITES': 'SWEET',
+  'DULCES': 'SWEET',
+  'DULCE': 'SWEET',
+  'GALLETAS': 'SWEET',
+  'GALLETAS Y DULCES': 'SWEET',
+  'CHOCOLATES': 'SWEET',
+  'ABARROTES': 'GROCERY STORE',
+  'DESPENSA': 'GROCERY STORE',
+  'BEBIDAS': 'DRINKS',
+  'BEBIDAS Y LICORES': 'DRINKS',
+  'LICORES': 'ALCOHOL',
+  'VINOS Y LICORES': 'ALCOHOL',
+  'VINOS': 'ALCOHOL',
+  'CERVEZAS': 'ALCOHOL',
+  'LIMPIEZA': 'CLEANING',
+  'LACTEOS': 'DAIRYS',
+  'LÁCTEOS': 'DAIRYS',
+  'CONGELADOS': 'FROZEN',
+  'DESAYUNO': 'BREAKFAST',
+  'SNACK': 'SNACKS',
+  'SNACKS Y PIQUEOS': 'SNACKS',
+  'MASCOTAS': 'PET',
+  'POSTRES': 'DESSERT',
+  'CEREALES': 'CEREALS',
+  'CONSERVAS': 'CANNED FOOD',
+  'DETERGENTE': 'DETERGENTS',
+  'SALUDABLE': 'HEALTHY',
+  'PAPEL': 'PAPER ITEMS',
+  'PAPELES': 'PAPER ITEMS',
+  'HIGIENE': 'HYGIENE',
+  'CUIDADO PERSONAL': 'HYGIENE',
+  'PERFUMERIA': 'HYGIENE',
+  'PERFUMERÍA': 'HYGIENE'
+};
+
 window.PACKAGE_TYPES = [
   { value: 'bottle',    label: 'Botella'       },
   { value: 'can',       label: 'Lata / Tarro'  },
@@ -59,14 +97,12 @@ const DB = (() => {
     try {
       localStorage.setItem(key, value);
     } catch (e) {
-      console.warn('LocalStorage quota exceeded for ' + key);
       if (key !== PRODUCTS_CACHE_KEY) {
+        console.warn('LocalStorage quota exceeded for ' + key);
         localStorage.removeItem(PRODUCTS_CACHE_KEY);
         try {
           localStorage.setItem(key, value);
-        } catch (e2) {
-          console.warn('Still exceeded quota for ' + key);
-        }
+        } catch (e2) {}
       }
     }
 
@@ -213,6 +249,12 @@ const DB = (() => {
 
      // Cargar productos (siempre, independientemente de Supabase)
      await fetchProducts();
+
+     const count = Object.keys(_memoryProducts).length;
+     return {
+       sources: { catalog: count > 0 ? 'server' : 'local' },
+       counts: { products: count }
+     };
   }
 
   function _toArray(val, defaultVal) {
@@ -1079,11 +1121,25 @@ const DB = (() => {
     }
   }
 
+  function normalizeUniversalCategory(cat) {
+    if (!cat) return null;
+    const clean = String(cat).trim().toUpperCase();
+    if (!clean || clean === 'GENERAL' || clean === 'SELECCIONAR...' || clean === 'SIN CATEGORÍA' || clean === 'N/A' || clean === 'INDEFINIDO') return null;
+    if (window.UNIVERSAL_CATEGORIES.includes(clean)) return clean;
+    if (window.CATEGORY_ALIASES && window.CATEGORY_ALIASES[clean]) return window.CATEGORY_ALIASES[clean];
+    return null;
+  }
+
+  function reloadCatalog() {
+    return fetchProducts();
+  }
+
   return {
     init,
     fetchProducts,
     getProduct,
     getProductsArray,
+    normalizeUniversalCategory,
     // Holdings (new) + legacy aliases
     getHoldings,
     getRetailers,
@@ -1105,6 +1161,7 @@ const DB = (() => {
     exportBackup,
     importBackup,
     resetToDefaults,
+    reloadCatalog,
     getUndo,
     applyUndo,
     // Stores

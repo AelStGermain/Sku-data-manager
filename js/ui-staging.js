@@ -31,12 +31,44 @@ const UIStaging = (() => {
     render();
   }
 
+  function openProduct(ean) {
+    const cleanEan = String(ean || '').trim();
+    const product = DB.getProduct(cleanEan);
+    if (!product) {
+      console.error('Revisión no encontró el producto solicitado', { ean, cleanEan });
+      App.showToast(`No se encontró el SKU ${cleanEan} en el catálogo cargado`, 'error');
+      return;
+    }
+    UISheet.open(String(product.ean).trim());
+  }
+
+  function _getCategoryList(p) {
+    const list = [];
+    if (Array.isArray(p.universalCategory)) list.push(...p.universalCategory);
+    else if (p.universalCategory) list.push(p.universalCategory);
+
+    if (Array.isArray(p.category)) list.push(...p.category);
+    else if (p.category) list.push(p.category);
+
+    return list
+      .map(c => String(c).trim())
+      .filter(c => c && c !== 'General' && c !== 'Seleccionar...' && c !== 'Sin categoría' && c !== 'N/A' && c !== 'INDEFINIDO');
+  }
+
+  function _isNoUniversalCategory(p) {
+    if (!p) return true;
+    const cats = _getCategoryList(p);
+    if (cats.length === 0) return true;
+    return !cats.some(c => {
+      if (DB.normalizeUniversalCategory && DB.normalizeUniversalCategory(c)) return true;
+      const u = String(c).trim().toUpperCase();
+      return (window.UNIVERSAL_CATEGORIES || []).includes(u) || (window.CATEGORY_ALIASES && window.CATEGORY_ALIASES[u]);
+    });
+  }
+
   function render() {
     const el = document.getElementById('view-revision');
     if (!el) return;
-
-    const matches = DB.getRecentMatches ? DB.getRecentMatches() : [];
-    const noEan = DB.getStagingNoEan();
 
     // Tab 1: SKUs sin Vispera ID y no en tickets
     const visperaBatch = DB.getVisperaBatch() || [];
@@ -44,25 +76,25 @@ const UIStaging = (() => {
     let inReview = DB.getProductsArray().filter(p => !p.visperaId && p.status !== 'discontinued' && !batchEans.has(p.ean));
 
     // Tab 2: Tickets Vispera
-    let inTickets = visperaBatch;
+    let inTickets = visperaBatch.filter(item => item.status !== 'AWAITING_VISPERA_ID');
+
+    // Tab 1.5: SKUs cuyas categorías NO coinciden con las 18 categorías universales de Vispera
+    let noCatProducts = DB.getProductsArray().filter(p => _isNoUniversalCategory(p));
 
     // Tab 3: SKUs que TIENEN al menos un holding pero a ese holding le falta customerId
-    // (Productos sin ningún holding no van aquí — eso es otro problema)
     const orphans = DB.getProductsArray().filter(p => {
       const hData = p.holdings || p.retailers || {};
       const hKeys = Object.keys(hData);
-      if (hKeys.length === 0) return false; // Sin holdings → no aplica
-      // Solo si ALGÚN holding tiene datos pero le falta customerId
+      if (hKeys.length === 0) return false;
       return hKeys.some(k => {
         const h = hData[k];
-        const hasData = h && (h.name || h.localProductName || h.dmu || h.category);
+        const hasData = h && (h.name || h.localProductName || h.dmu || h.category || h.relationStatus === 'pending');
         return hasData && !h.customerId && !h.holdingInternalId;
       });
     });
 
-
-    // Tab 4: Nuevos ID Vispera (Historial) - Solo los procesados recientemente en la UI
-    let inHistory = DB.getProductsArray().filter(p => p.is_ready_for_vispera === true && p.visperaId);
+    // Tab 4: tickets ya exportados, a la espera del ID asignado por Vispera
+    let inHistory = visperaBatch.filter(item => item.status === 'AWAITING_VISPERA_ID');
 
     // Obtener todos los auditores únicos
     const allAuditors = [...new Set(DB.getProductsArray().map(p => p.levantamientoMeta?.auditor).filter(Boolean))].sort();
@@ -70,19 +102,18 @@ const UIStaging = (() => {
     // Aplicar filtro de auditor global
     if (_auditorFilter !== 'all') {
       inReview = inReview.filter(p => p.levantamientoMeta?.auditor === _auditorFilter);
+      noCatProducts = noCatProducts.filter(p => p.levantamientoMeta?.auditor === _auditorFilter);
       inTickets = inTickets.filter(b => {
         const p = DB.getProduct(b.ean) || {};
         return p.levantamientoMeta?.auditor === _auditorFilter;
       });
-      inHistory = inHistory.filter(p => p.levantamientoMeta?.auditor === _auditorFilter);
-      // Opcional: no filtrar orphans, o sí. Asumamos que sí.
-      // orphans = orphans.filter(p => p.levantamientoMeta?.auditor === _auditorFilter);
+      inHistory = inHistory.filter(item => DB.getProduct(item.ean)?.levantamientoMeta?.auditor === _auditorFilter);
     }
 
     el.innerHTML = `
 <header class="view-header">
   <div>
-    <h1 class="view-title">Revisión</h1>
+    <h1 class="view-title">Revisión y Homologación</h1>
   </div>
 </header>
 
@@ -91,6 +122,10 @@ const UIStaging = (() => {
     <button class="staging-tab ${_activeTab === 'review' ? 'active' : ''}" onclick="UIStaging.setTab('review')">
       Sin Vispera ID
       <span class="staging-tab-count">${inReview.length}</span>
+    </button>
+    <button class="staging-tab ${_activeTab === 'no-cat' ? 'active' : ''}" onclick="UIStaging.setTab('no-cat')">
+      Sin Categoría Universal
+      <span class="staging-tab-count">${noCatProducts.length}</span>
     </button>
     <button class="staging-tab ${_activeTab === 'tickets' ? 'active' : ''}" onclick="UIStaging.setTab('tickets')">
       Tickets Vispera
@@ -106,62 +141,9 @@ const UIStaging = (() => {
     </button>
   </div>
 </div>
-</div>
 
-${_activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ? renderTickets(inTickets) : _activeTab === 'history' ? renderHistory(inHistory) : renderReview(inReview)}
+${_activeTab === 'no-cat' ? renderNoCategory(noCatProducts) : _activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ? renderTickets(inTickets) : _activeTab === 'history' ? renderHistory(inHistory) : renderReview(inReview)}
 `;
-  }
-
-  function renderMatches(items) {
-    if (items.length === 0) {
-      return `
-<div class="empty-state" style="padding:40px;">
-  <div class="empty-icon">✨</div>
-  <h3>No hay matches recientes</h3>
-  <p>Los productos que crucen exitosamente al descargar datos de Firebase aparecerán aquí.</p>
-</div>`;
-    }
-
-    return `
-<div class="staging-info-bar">
-  <div class="staging-info-left">
-    <span class="staging-info-label">Total: <strong>${items.length}</strong> matches recientes</span>
-  </div>
-  <button class="btn-primary" onclick="UIStaging.exportToExcel('matches')">Exportar a Excel</button>
-  <button class="btn-clear" onclick="UIStaging.clearMatches()">Limpiar historial</button>
-</div>
-
-<div class="preview-table-wrap" style="max-height:60vh;">
-  <table class="preview-table">
-    <thead>
-      <tr>
-        <th>EAN</th>
-        <th>Nombre Master</th>
-        <th>Categoría Vispera</th>
-        <th>Holding / DMU</th>
-        <th>Tipo de Match</th>
-        <th>Fecha / Auditor</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${items.map(item => `
-      <tr>
-        <td class="mono">${esc(item.ean)}</td>
-        <td style="font-weight:500;">${esc(item.name)}</td>
-        <td>${(Array.isArray(item.category) ? item.category : [item.category || '—']).map(c => `<span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[c] : '#888'}">${esc(c)}</span>`).join(' ')}</td>
-        <td>
-          <span class="holding-badge-sm">${esc(item.holdingId)}</span><br>
-          <span style="font-size:12px; color:var(--text-sec)">DMU: ${esc(Array.isArray(item.dmu) ? item.dmu.join(', ') : (item.dmu || '—'))}</span>
-        </td>
-        <td><span class="status-badge ${item.type === 'NUEVO_SKU' ? 'new' : 'active'}">${esc(item.type)}</span></td>
-        <td style="font-size:12px;">
-          ${new Date(item.matchDate).toLocaleString('es-CL')}<br>
-          <span style="color:var(--text-muted)">${esc(item.auditor)}</span>
-        </td>
-      </tr>`).join('')}
-    </tbody>
-  </table>
-</div>`;
   }
 
   function renderNoEan(items) {
@@ -268,7 +250,7 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ?
         </div>
       </div>
       <p class="highlight-text">
-        <em>SKUs nuevos detectados en terreno que aún no tienen un Vispera ID. Abre la ficha del SKU para completar sus datos. <strong>Una vez que los datos requeridos estén completos, el SKU se moverá automáticamente a Tickets Vispera.</strong></em>
+        <em>SKUs que aún no tienen un Vispera ID. Abre la ficha, revisa los datos obligatorios y confirma manualmente el envío a Tickets Vispera.</em>
       </p>
     `;
 
@@ -306,7 +288,8 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ?
       <tr>
         <th>EAN</th>
         <th>Nombre detectado</th>
-        <th>Categoría</th>
+        <th>Categoría / Subcategoría</th>
+        <th>Holding</th>
         <th>Auditor</th>
         <th>Creado</th>
         <th>Acciones</th>
@@ -315,18 +298,22 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ?
     <tbody>
       ${paginated.map(item => {
         const hasSuggestion = item.suggestedData ? `<span style="font-size:10px; background:var(--accent); color:#fff; padding:2px 4px; border-radius:4px; margin-left:6px;" title="Datos sugeridos por la API">💡 API</span>` : '';
+        const holdingId = Object.keys(item.holdings || item.retailers || {})[0];
+        const holding = DB.getHoldings().find(h => h.id === holdingId);
+        const readiness = UISheet.getVisperaReadiness(item, holdingId);
         return `
       <tr>
         <td class="mono">${esc(item.ean)}</td>
         <td style="font-weight:500;">
-          <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(item.name || 'Sin nombre')}</a>
+          <button type="button" class="link-button" onclick="UIStaging.openProduct('${esc(String(item.ean).trim())}')">${esc(item.name || 'Sin nombre')}</button>
           ${hasSuggestion}
         </td>
-        <td>${(Array.isArray(item.category) ? item.category : [item.category || '—']).map(c => `<span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[c] : '#888'}">${esc(c)}</span>`).join(' ')}</td>
+        <td>${(Array.isArray(item.universalCategory) ? item.universalCategory : [item.universalCategory || item.category || '—']).map(c => `<span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[c] : '#888'}">${esc(c)}</span>`).join(' ')}<br><span style="font-size:11px;color:var(--text-sec)">${esc(readiness.subCategory || '—')}</span></td>
+        <td style="font-size:12px;">${esc(holding?.name || holdingId || '—')}</td>
         <td style="font-size:12px;">${esc(item.levantamientoMeta?.auditor || '—')}</td>
         <td style="font-size:12px; color:var(--text-sec)">${new Date(item.levantamientoMeta?.timestamp || item.createdAt || item.updatedAt || Date.now()).toLocaleDateString('es-CL')}</td>
         <td style="display:flex; gap:6px;">
-          <span style="font-size:11px; font-weight:600; color:var(--danger); padding:4px 8px; border-radius:4px; background:var(--danger-dim);">Faltan Datos</span>
+          <button type="button" class="btn-mini" onclick="UIStaging.openProduct('${esc(String(item.ean).trim())}')">${readiness.ready ? 'Revisar y confirmar' : `Completar (${readiness.missing.length})`}</button>
         </td>
       </tr>`}).join('')}
     </tbody>
@@ -341,7 +328,7 @@ ${paginationControls}`;
 <div class="empty-state" style="padding:40px;">
   <div class="empty-icon">✅</div>
   <h3>No hay tickets pendientes</h3>
-  <p>Todos los SKUs han sido identificados con Vispera ID.</p>
+  <p>No hay SKUs confirmados pendientes de exportación.</p>
 </div>`;
     }
 
@@ -363,6 +350,7 @@ ${paginationControls}`;
         <th>EAN</th>
         <th>Nombre detectado</th>
         <th>Categoría</th>
+        <th>Holding</th>
         <th>Auditor / Fecha</th>
         <th>Acciones</th>
       </tr>
@@ -376,7 +364,8 @@ ${paginationControls}`;
         <td style="font-weight:500;">
           ${esc(item.name || 'Sin nombre')}
         </td>
-        <td>${esc(item.dmuCategory || item.category || '—')}</td>
+        <td>${esc(item.category || '—')}<br><span style="font-size:11px;color:var(--text-sec)">${esc(item.subCategory || '—')}</span></td>
+        <td>${esc(DB.getHoldings().find(h => h.id === item.holdingId)?.name || item.holdingId || '—')}</td>
         <td style="font-size:12px;">
           ${esc(p.levantamientoMeta?.auditor || 'Desconocido')}<br>
           <span style="color:var(--text-sec)">${new Date(item.createdAt).toLocaleDateString('es-CL')}</span>
@@ -388,32 +377,6 @@ ${paginationControls}`;
     </tbody>
   </table>
 </div>`;
-  }
-
-  function enviarATicket(ean) {
-    const p = DB.getProduct(ean);
-    if (p) {
-      DB.addVisperaBatchItem({
-        ean: p.ean,
-        name: p.name,
-        category: p.universalCategory,
-        dmuCategory: p.universalCategory,
-        reason: 'NEW_SKU_NO_VISPERA_ID',
-        createdAt: new Date().toISOString()
-      });
-      App.showToast('Producto enviado a Tickets Vispera', 'success');
-      render();
-    }
-  }
-
-  function toggleListo(batchId) {
-    const batch = DB.getVisperaBatch();
-    const item = batch.find(i => i.batchId === batchId);
-    if (item) {
-      item.isListo = !item.isListo;
-      DB.saveVisperaBatch(batch);
-      render();
-    }
   }
 
   function renderOrphans(items) {
@@ -455,7 +418,8 @@ ${paginationControls}`;
         if (hKeys.length > 0) {
           holdingsStr = hKeys.map(k => {
              const missing = !hData[k].customerId && !hData[k].holdingInternalId;
-             return missing ? `<span style="color:var(--danger); font-weight:bold;" title="Falta Customer ID">⚠️ ${esc(k)}</span>` : `<span style="color:var(--success)">✓ ${esc(k)}</span>`;
+             const pending = hData[k].relationStatus === 'pending';
+             return missing ? `<span style="color:var(--danger); font-weight:bold;" title="${pending ? 'Relación homologada pendiente de completar' : 'Falta Customer ID'}">⚠️ ${esc(k)}${pending ? ' (homologación pendiente)' : ''}</span>` : `<span style="color:var(--success)">✓ ${esc(k)}</span>`;
           }).join(', ');
         }
         return `
@@ -481,8 +445,8 @@ ${paginationControls}`;
       return `
 <div class="empty-state" style="padding:40px;">
   <div class="empty-icon">✅</div>
-  <h3>Historial Vacío</h3>
-  <p>Todavía no hay SKUs levantados que tengan Vispera ID asignado.</p>
+  <h3>No hay IDs pendientes</h3>
+  <p>Los tickets exportados aparecerán aquí hasta que registres el ID entregado por Vispera.</p>
 </div>`;
     }
 
@@ -491,10 +455,9 @@ ${paginationControls}`;
   <div class="staging-info-left">
     <span class="staging-info-label">Nuevos ID Vispera: <strong>${items.length}</strong></span>
   </div>
-  <button class="btn-primary" onclick="UIStaging.exportToExcel('history')">Exportar a Excel</button>
 </div>
 <p class="highlight-text">
-  <em>Historial de SKUs que ya fueron exportados. Aquí puedes ingresar su nuevo Vispera ID una vez que el equipo de Vispera te lo asigne.</em>
+  <em>Estos SKUs ya fueron exportados. Ingresa el ID entregado por Vispera para cerrar el ticket y marcarlos como Nuevo lanzamiento.</em>
 </p>
 
 <div class="preview-table-wrap" style="max-height:60vh;">
@@ -509,29 +472,29 @@ ${paginationControls}`;
       </tr>
     </thead>
     <tbody>
-      ${items.map(item => `
+      ${items.map(item => { const p = DB.getProduct(item.ean) || {}; return `
       <tr>
-        <td style="font-size:12px; color:var(--text-sec)">${new Date(item.levantamientoMeta?.timestamp || item.createdAt || item.updatedAt || Date.now()).toLocaleString('es-CL')}</td>
+        <td style="font-size:12px; color:var(--text-sec)">${new Date(p.levantamientoMeta?.timestamp || p.createdAt || item.createdAt || Date.now()).toLocaleString('es-CL')}</td>
         <td class="mono">${esc(item.ean)}</td>
         <td style="font-weight:500;">
-          <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(item.name || 'Sin nombre')}</a>
+          <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(p.name || item.name || 'Sin nombre')}</a>
         </td>
         <td>
-          <span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[item.universalCategory] : '#888'}">${esc(item.universalCategory || '—')}</span>
+          <span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[p.universalCategory] : '#888'}">${esc(p.universalCategory || item.category || '—')}</span>
         </td>
         <td>
           <div style="display:flex; gap:6px; align-items:center;">
-            <input type="text" id="vispera-edit-${esc(item.ean)}" value="${esc(item.visperaId)}" class="form-input" style="width:120px; padding:4px;">
+            <input type="text" id="vispera-edit-${esc(item.ean)}" value="" class="form-input" style="width:120px; padding:4px;" placeholder="ID Vispera">
             <button class="btn-outline btn-mini" onclick="UIStaging.actualizarVisperaId('${esc(item.ean)}')">Actualizar</button>
           </div>
         </td>
-      </tr>`).join('')}
+      </tr>`; }).join('')}
     </tbody>
   </table>
 </div>`;
   }
 
-  function actualizarVisperaId(ean) {
+  async function actualizarVisperaId(ean) {
     const input = document.getElementById(`vispera-edit-${ean}`);
     const vId = input ? input.value.trim() : '';
     if (!vId) {
@@ -541,19 +504,18 @@ ${paginationControls}`;
     const p = DB.getProduct(ean);
     if (p) {
       p.visperaId = vId;
-      DB.saveProduct(p);
-      App.showToast('Vispera ID actualizado correctamente', 'success');
-      render();
-    }
-  }
-
-  function markAsReady(ean) {
-    const p = DB.getProduct(ean);
-    if (p) {
+      p.status = 'new';
       p.is_ready_for_vispera = true;
-      p.status = 'active'; // force out of review
-      DB.saveProduct(p);
-      App.showToast('Producto marcado como Listo', 'success');
+      p.visperaAssignedAt = new Date().toISOString();
+      const persisted = await DB.saveProduct(p);
+      if (!persisted) {
+        App.showToast('El ID quedó guardado localmente, pero el servidor no lo confirmó. El ticket seguirá pendiente.', 'warning');
+        render();
+        return;
+      }
+      const ticket = DB.getVisperaBatch().find(item => item.ean === ean);
+      if (ticket) DB.removeVisperaBatchItem(ticket.batchId);
+      App.showToast('ID registrado. SKU marcado como Nuevo lanzamiento.', 'success');
       render();
     }
   }
@@ -696,16 +658,12 @@ ${paginationControls}`;
     return 'GROCERY STORE';
   }
 
-  function setTab(tab) {
-    _activeTab = tab;
-    render();
-  }
-
   function identifyEan(id) {
     const input = document.getElementById(`noean-input-${id}`);
     const ean = input ? input.value.trim() : '';
-    if (!ean || ean.length < 6) {
-      App.showToast('Ingresa un EAN válido de al menos 6 dígitos', 'error');
+    const validation = DB.validateEAN(ean);
+    if (!validation.valid) {
+      App.showToast(validation.reason, 'error');
       return;
     }
 
@@ -745,12 +703,6 @@ ${paginationControls}`;
     if (!confirm('¿Limpiar todos los tickets de Vispera?')) return;
     DB.clearVisperaBatch();
     App.showToast('Tickets limpiados', 'info');
-    render();
-  }
-
-  function sendToVispera(batchId) {
-    DB.updateVisperaBatchItem(batchId, { status: 'SENT_TO_VISPERA' });
-    App.showToast('Ticket marcado como enviado a Vispera', 'success');
     render();
   }
 
@@ -796,12 +748,12 @@ ${paginationControls}`;
         NombreApp: i.firebaseName
       }));
       filename = 'auditoria_sin_ean.csv';
-    } else if (type === 'tickets' || type === 'history') {
+    } else if (type === 'tickets') {
       if (typeof XLSX === 'undefined') {
         App.showToast('Librería Excel no cargada', 'error');
         return;
       }
-      const items = type === 'tickets' ? DB.getVisperaBatch() : DB.getProductsArray().filter(p => p.visperaId && (p.dataSource === 'levantamiento' || p.fromLevantamiento === true));
+      const items = DB.getVisperaBatch().filter(item => item.status !== 'AWAITING_VISPERA_ID');
       if (items.length === 0) {
         App.showToast('No hay datos para exportar', 'warning');
         return;
@@ -809,23 +761,23 @@ ${paginationControls}`;
       const rows = [
         ['Fecha Levantamiento', 'Auditor', 'Pasillo', 'Customer ID', 'Producer / Manufacturer', 'Brand', 'Sub-Brand', 'SKU name', 'Category', 'Sub-Category', 'Barcode / EAN Code (must be unique)', 'Existe en Master Data?', 'Size', 'Size unit', 'Number of units inside (if multi-pack)', 'Width', 'Height', 'Depth', 'Public image link']
       ];
+      const invalid = items.find(item => {
+        const product = DB.getProduct(item.ean);
+        const holdingId = item.holdingId || Object.keys(product?.holdings || product?.retailers || {})[0];
+        return !product || !UISheet.getVisperaReadiness(product, holdingId).ready;
+      });
+      if (invalid) {
+        App.showToast(`El SKU ${invalid.ean} ya no cumple los campos obligatorios. Devuélvelo a Revisión.`, 'error');
+        return;
+      }
       items.forEach(i => {
-        if (type === 'tickets' && i.isListo) {
-          const pp = DB.getProduct(i.ean);
-          if (pp) {
-            pp.is_ready_for_vispera = true;
-            pp.status = 'active';
-            DB.saveProduct(pp);
-          }
-          DB.removeVisperaBatchItem(i.batchId);
-        }
         const p = DB.getProduct(i.ean) || {};
         const holdings = p.holdings || p.retailers || {};
         let customerId = '';
         let localCat = '';
-        const hKeys = Object.keys(holdings);
-        if (hKeys.length > 0) {
-           const hd = holdings[hKeys[0]];
+        const selectedHoldingId = i.holdingId || Object.keys(holdings)[0];
+        if (selectedHoldingId && holdings[selectedHoldingId]) {
+           const hd = holdings[selectedHoldingId];
            customerId = hd.holdingInternalId || hd.customerId || '';
            localCat = Array.isArray(hd.localCategoryName) ? hd.localCategoryName.join(', ') : (Array.isArray(hd.category) ? hd.category.join(', ') : (hd.localCategoryName || hd.category || ''));
         }
@@ -836,23 +788,29 @@ ${paginationControls}`;
           customerId,
           p.producer || '',
           p.brand || '',
-          '', // Sub-Brand
+          p.subBrand || '',
           i.name || p.name || '',
           p.universalCategory || i.category || '',
           localCat,
-          i.ean,
-          type === 'history' ? 'Sí (Asignado)' : 'No', // Existe en Master Data?
+          DB.validateEAN(i.ean).normalized || i.ean,
+          'No', // Aún no existe en la Master Data de Vispera
           p.weight_g || '',
           p.weight_unit || 'g',
-          '', '', '', '', // Number of units, Width, Height, Depth
+          p.numberOfUnits || '',
+          p.width_cm || '',
+          p.height_cm || '',
+          p.depth_cm || '',
           p.imageUrl || ''
         ]);
       });
-      if (type === 'tickets') setTimeout(render, 500);
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, type === 'history' ? "Historial Vispera" : "Tickets Vispera");
-      XLSX.writeFile(wb, `${type === 'history' ? 'Historial' : 'Tickets'}_Vispera_${new Date().toISOString().slice(0,10)}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, "Tickets Vispera");
+      XLSX.writeFile(wb, `Tickets_Vispera_${new Date().toISOString().slice(0,10)}.xlsx`);
+      const exportedAt = new Date().toISOString();
+      items.forEach(item => DB.updateVisperaBatchItem(item.batchId, { status: 'AWAITING_VISPERA_ID', exportedAt }));
+      App.showToast(`${items.length} ticket${items.length === 1 ? '' : 's'} exportado${items.length === 1 ? '' : 's'}; ahora esperan ID Vispera.`, 'success');
+      setTab('history');
       return;
     }
 
@@ -876,15 +834,114 @@ ${paginationControls}`;
     document.body.removeChild(link);
   }
 
+  function renderNoCategory(items) {
+    if (items.length === 0) {
+      return `
+<div class="empty-state" style="padding:40px; text-align:center;">
+  <div class="empty-icon">✅</div>
+  <h3>¡Todas las categorías están homologadas!</h3>
+  <p style="color:var(--text-muted)">Todos los SKUs del catálogo tienen asignada una categoría universal Vispera válida.</p>
+</div>`;
+    }
+
+    const start = (_reviewPage - 1) * _itemsPerPage;
+    const paginated = items.slice(start, start + _itemsPerPage);
+    const totalPages = Math.ceil(items.length / _itemsPerPage);
+
+    return `
+<div class="staging-info-bar" style="background:rgba(255,193,7,0.1); border:1px solid rgba(255,193,7,0.3); border-radius:10px; padding:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+  <div>
+    <div style="font-weight:700; font-size:15px; color:var(--text); margin-bottom:4px;">
+      ⚠️ ${items.length} SKU(s) requieren asignación de Categoría Universal Vispera
+    </div>
+    <div style="font-size:12px; color:var(--text-sec);">
+      La categorización masiva o individual se realiza centralizadamente en el <strong>Modo Edición</strong> con vista previa y deshacer.
+    </div>
+  </div>
+  <button class="btn-primary" style="padding:9px 18px; font-size:13px; font-weight:600; white-space:nowrap; gap:8px;" onclick="UIBulk.setErrorFilter('no-cat'); App.navigateTo('bulk');">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Abrir en Modo Edición (${items.length} SKUs)
+  </button>
+</div>
+
+<div class="preview-table-wrap" style="max-height:60vh; overflow-y:auto;">
+  <table class="preview-table">
+    <thead>
+      <tr>
+        <th width="40">Img</th>
+        <th width="120">EAN</th>
+        <th>Nombre del Producto</th>
+        <th width="140">Marca</th>
+        <th width="180">Categoría Actual (Inválida / Sin Asignar)</th>
+        <th width="140">Acción</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${paginated.map(p => {
+        const catRaw = Array.isArray(p.category) ? p.category.join(', ') : (p.category || 'Sin categoría');
+        return `
+          <tr>
+            <td>
+              <div style="width:34px; height:34px; border-radius:6px; background-size:contain; background-repeat:no-repeat; background-position:center; background-image:url('${p.imageUrl || 'logo.png'}'); background-color:var(--surface-el); border:1px solid var(--border);"></div>
+            </td>
+            <td class="mono">${esc(p.ean)}</td>
+            <td style="font-weight:500;">${esc(p.name || 'Sin Nombre')}</td>
+            <td>${esc(p.brand || 'N/A')}</td>
+            <td>
+              <span class="vispera-cat-badge" style="background:rgba(255,193,7,0.15); color:var(--warning); border:1px solid var(--warning); padding:3px 8px; border-radius:6px; font-size:11px;">
+                ⚠️ ${esc(catRaw)}
+              </span>
+            </td>
+            <td>
+              <button class="btn-secondary-sm" style="font-size:11px; padding:4px 8px;" onclick="UIBulk.setErrorFilter('no-cat'); App.navigateTo('bulk');">
+                ✏️ Categorizar en Bulk
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('')}
+    </tbody>
+  </table>
+</div>
+
+${totalPages > 1 ? `
+  <div class="pagination" style="margin-top:16px;">
+    <span class="page-info">${items.length} SKUs &middot; Página ${_reviewPage} de ${totalPages}</span>
+    <div class="page-controls">
+      <button class="page-btn" ${_reviewPage === 1 ? 'disabled' : ''} onclick="UIStaging.setReviewPage(${_reviewPage - 1})">Anterior</button>
+      <button class="page-btn" ${_reviewPage === totalPages ? 'disabled' : ''} onclick="UIStaging.setReviewPage(${_reviewPage + 1})">Siguiente</button>
+    </div>
+  </div>
+` : ''}
+`;
+  }
+
+  async function assignUniversalCategory(ean) {
+    const sel = document.getElementById(`no-cat-sel-${ean}`);
+    if (!sel || !sel.value) {
+      App.showToast('Selecciona una categoría universal de la lista', 'warning');
+      return;
+    }
+    const cat = sel.value;
+    const prod = DB.getProduct(ean);
+    if (prod) {
+      prod.category = [cat];
+      prod.universalCategory = [cat];
+      await DB.saveProduct(prod);
+      App.showToast(`Categoría ${cat} asignada al SKU ${ean}`, 'success');
+      render();
+    }
+  }
+
   return {
     render,
     setTab,
     handleSearchInput,
     setReviewPage,
     setAuditorFilter,
+    openProduct,
     exportToExcel,
     actualizarVisperaId,
-    toggleListo,
     rejectBatch,
     clearBatch,
     enrichAll,
@@ -893,8 +950,7 @@ ${paginationControls}`;
     identifyEan,
     removeNoEan,
     clearNoEan,
-    sendToVispera,
-    markAsReady,
-    enviarATicket
+    renderNoCategory,
+    assignUniversalCategory
   };
 })();

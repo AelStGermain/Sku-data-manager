@@ -22,7 +22,7 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
 
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=8">
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="logo.png">
 </head>
@@ -43,12 +43,12 @@
   <aside class="sidebar">
 
     <!-- Brand -->
-    <a href="index.html" class="sidebar-brand" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; margin-bottom: 32px;">
+    <a href="#dashboard" onclick="App.navigateTo('dashboard'); return false;" class="sidebar-brand" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 14px 16px;">
       <img src="logo.png" alt="FollowUP" class="brand-logo" onerror="this.style.display='none';document.getElementById('brand-icon-fallback').style.display='flex'">
       <div class="brand-icon" id="brand-icon-fallback" style="display:none">SS</div>
       <div class="brand-text">
         <span class="brand-name">Smart Shelf</span>
-        <span class="brand-subtitle">MULTI-HOLDING DW</span>
+        <span class="brand-subtitle">FollowUp Master Data</span>
       </div>
     </a>
 
@@ -131,28 +131,9 @@
 
     <!-- Footer -->
     <div class="sidebar-footer">
-      <!-- Server Status Indicator -->
-      <div id="server-status" class="server-status-bar">
-        <span class="status-dot" id="status-dot"></span>
-        <span id="status-label">Verificando conexión…</span>
-      </div>
-      <!-- Backup / Restore -->
-      <div class="sidebar-backup-btns">
-        <button class="sidebar-action-btn" onclick="App.exportBackup()" title="Descargar backup JSON">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Backup
-        </button>
-        <button class="sidebar-action-btn" onclick="App.importBackup()" title="Restaurar desde backup JSON">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Restaurar
-        </button>
-        <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="App.handleBackupFile(this.files[0])">
-      </div>
       <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="App.toggleTheme()">
         <span class="theme-icon">🌙</span> Modo oscuro
       </button>
-      <button class="reset-btn-small" id="reset-btn">↺ Resetear demo</button>
-      <button class="reset-btn-small" onclick="localStorage.clear(); location.reload();" style="margin-top: 8px;">🧹 Limpiar Memoria</button>
       <div class="dev-credit">
         <span>Elaborado por</span>
         <a href="https://github.com/AelStGermain/" target="_blank" rel="noopener" class="dev-credit-link">
@@ -235,21 +216,21 @@
 <!-- Firebase es manejado server-side (server.js) — no se necesita cliente Firebase en el browser -->
 
 <!-- App Scripts -->
-<script src="js/db.js?v=7"></script>
-<script src="js/api.js?v=7"></script>
-<script src="js/excel-image-parser.js?v=7"></script>
-<script src="js/importer.js?v=7"></script>
-<script src="js/ui-dashboard.js?v=7"></script>
-<script src="js/ui-catalog.js?v=7"></script>
-<script src="js/ui-sheet.js?v=7"></script>
-<script src="js/ui-import.js?v=7"></script>
-<script src="js/ui-bulk.js?v=7"></script>
-<script src="js/ui-retailers.js?v=7"></script>
-<script src="js/ui-levantamiento.js?v=7"></script>
-<script src="js/ui-avistamientos.js?v=7"></script>
-<script src="js/ui-staging.js?v=7"></script>
+<script src="js/db.js?v=99"></script>
+<script src="js/api.js?v=99"></script>
+<script src="js/excel-image-parser.js?v=99"></script>
+<script src="js/importer.js?v=99"></script>
+<script src="js/ui-dashboard.js?v=99"></script>
+<script src="js/ui-catalog.js?v=99"></script>
+<script src="js/ui-sheet.js?v=99"></script>
+<script src="js/ui-import.js?v=99"></script>
+<script src="js/ui-bulk.js?v=99"></script>
+<script src="js/ui-retailers.js?v=99"></script>
+<script src="js/ui-levantamiento.js?v=99"></script>
+<script src="js/ui-avistamientos.js?v=99"></script>
+<script src="js/ui-staging.js?v=99"></script>
 
-<script src="js/app.js?v=7"></script>
+<script src="js/app.js?v=99"></script>
 
 </body>
 </html>

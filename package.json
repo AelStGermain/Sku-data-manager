@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "check": "node scripts/check-syntax.js",
+    "test": "npm run check && node --test",
     "enrich": "node scripts/enrich-cron.js",
     "import": "node scripts/import-excel.js"
   },

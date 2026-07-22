@@ -108,8 +108,8 @@ const Importer = (() => {
 
     return rows
       .map(row => {
-        const ean = get(row, mapping.ean);
-        if (!ean || ean.length < 6) return null;
+        const rawEan = get(row, mapping.ean);
+        const ean = String(rawEan || '').replace(/\D/g, '');
 
         const product = {
           ean,
@@ -166,8 +166,7 @@ const Importer = (() => {
         }
 
         return product;
-      })
-      .filter(Boolean);
+      });
   }
 
   // ────────────────────────────────────────────
@@ -226,7 +225,7 @@ const Importer = (() => {
   // ────────────────────────────────────────────
   //  IMPORT WITH MODE → detailed results
   // ────────────────────────────────────────────
-  function importWithMode(mappedProducts, mode) {
+  async function importWithMode(mappedProducts, mode) {
     let created = 0, updated = 0, skipped = 0;
     const conflictLog = [];
     const prodsToSave = [];
@@ -250,15 +249,13 @@ const Importer = (() => {
       }
     });
 
-    if (prodsToSave.length > 0) {
-      DB.saveProducts(prodsToSave);
-    }
+    const persisted = prodsToSave.length === 0 ? true : await DB.saveProducts(prodsToSave);
 
-    return { created, updated, skipped, conflictLog };
+    return { created, updated, skipped, conflictLog, persisted };
   }
 
   // Legacy (kept for compatibility)
-  function importProducts(mappedProducts) {
+  async function importProducts(mappedProducts) {
     return importWithMode(mappedProducts, 'fill_empty');
   }
 

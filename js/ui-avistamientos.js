@@ -205,7 +205,6 @@ const UIAvistamientos = (() => {
 
   return {
     render,
-    render,
     resolveInline,
     deleteItem
   };

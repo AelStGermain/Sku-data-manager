@@ -1,0 +1,7 @@
+.git
+.github
+node_modules
+.env
+local_data/firebase-key.json
+*.xlsx
+npm-debug.log*

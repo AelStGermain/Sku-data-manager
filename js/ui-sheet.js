@@ -34,19 +34,37 @@ const UISheet = (() => {
     if (!_data.holdings && _data.retailers) _data.holdings = _data.retailers;
     if (!_data.holdings) _data.holdings = {};
 
+    // Firebase sometimes sends display names/uppercase IDs (e.g. "TOTTUS")
+    // while the catalog uses canonical lowercase IDs ("tottus").
+    const configuredHoldings = DB.getHoldings();
+    const normalizedHoldings = {};
+    Object.entries(_data.holdings).forEach(([rawId, relation]) => {
+      const canonical = configuredHoldings.find(holding =>
+        holding.id.toLowerCase() === rawId.toLowerCase() || holding.name.toLowerCase() === rawId.toLowerCase()
+      )?.id || rawId;
+      normalizedHoldings[canonical] = { ...(normalizedHoldings[canonical] || {}), ...relation };
+    });
+    _data.holdings = normalizedHoldings;
+
     _dirty    = false;
     _isCreate = false;
     _activeImageIndex = -1; // special flag for auto-select
-    const holdings = DB.getHoldings();
+    const holdings = configuredHoldings;
     const pref = localStorage.getItem('ss_imagePref');
     let defHolding = holdings.length > 0 ? holdings[0].id : null;
     if (pref && pref.startsWith('retailer_')) {
       const rid = pref.split('_')[1];
       if (holdings.find(r => r.id === rid)) defHolding = rid;
     }
-    _holding = defHolding;
-    _render();
-    _showModal();
+    const productHolding = Object.keys(_data.holdings).find(id => holdings.some(holding => holding.id === id));
+    _holding = productHolding || defHolding;
+    try {
+      _render();
+      _showModal();
+    } catch (error) {
+      console.error(`No se pudo abrir la ficha ${ean}:`, error);
+      App.showToast(`No se pudo abrir la ficha ${ean}. Revisa la consola para más detalles.`, 'error');
+    }
   }
 
   function openCreate(mode = 'master', stagingId = null) {
@@ -133,8 +151,10 @@ const UISheet = (() => {
     if (modal) {
        if (_isCreate && _createMode === 'field') {
           modal.style.maxWidth = '600px';
+          modal.style.height = 'min(88vh, 760px)';
        } else {
-          modal.style.maxWidth = '880px';
+          modal.style.maxWidth = '1120px';
+          modal.style.height = 'min(94vh, 900px)';
        }
     }
     ov.classList.remove('hidden');
@@ -250,7 +270,29 @@ const UISheet = (() => {
   function updateField(key, val) {
     if (!_data) return;
     _data[key] = val;
+    _data.fieldSources = _data.fieldSources || {};
+    _data.fieldLocks = _data.fieldLocks || {};
+    _data.fieldSources[key] = 'manual';
+    _data.fieldLocks[key] = true;
     _markDirty();
+  }
+
+  function applyApiCandidate(field, source) {
+    const candidate = _data?.enrichmentSources?.[source];
+    if (!candidate || candidate[field] === undefined || candidate[field] === null) return;
+    _data[field] = candidate[field];
+    _data.fieldSources = _data.fieldSources || {};
+    _data.fieldLocks = _data.fieldLocks || {};
+    _data.fieldSources[field] = source;
+    _data.fieldLocks[field] = true;
+    if (field === 'weight_g' && candidate.weight_unit) {
+      _data.weight_unit = candidate.weight_unit;
+      _data.fieldSources.weight_unit = source;
+      _data.fieldLocks.weight_unit = true;
+    }
+    _markDirty();
+    _render();
+    App.showToast('Alternativa seleccionada. Guarda para confirmar el cambio.', 'info');
   }
 
   function updateHoldingField(key, val) {
@@ -259,6 +301,73 @@ const UISheet = (() => {
     if (!_data.holdings[_holding]) _data.holdings[_holding] = {};
     _data.holdings[_holding][key] = val;
     _markDirty();
+  }
+
+  function updateVisperaMeta(key, value) {
+    if (!_data) return;
+    _data.levantamientoMeta = _data.levantamientoMeta || {};
+    _data.levantamientoMeta[key] = value;
+    _markDirty();
+  }
+
+  function getVisperaReadiness(product = _data, holdingId = _holding) {
+    const missing = [];
+    const relation = product?.holdings?.[holdingId] || product?.retailers?.[holdingId];
+    const subCategory = Array.isArray(relation?.localCategoryName)
+      ? relation.localCategoryName.filter(Boolean).join(', ')
+      : (relation?.localCategoryName || relation?.category || '');
+    const captureDate = product?.levantamientoMeta?.timestamp || product?.createdAt;
+    const imageIsPublic = /^https?:\/\//i.test(String(product?.imageUrl || ''));
+
+    if (!captureDate || Number.isNaN(Date.parse(captureDate))) missing.push('Fecha de levantamiento');
+    if (!String(product?.levantamientoMeta?.auditor || '').trim()) missing.push('Auditor');
+    if (!String(product?.producer || '').trim()) missing.push('Producer / Manufacturer');
+    if (!String(product?.brand || '').trim()) missing.push('Brand');
+    if (!String(product?.name || '').trim()) missing.push('SKU name');
+    if (!(Array.isArray(product?.universalCategory) ? product.universalCategory.some(Boolean) : String(product?.universalCategory || '').trim())) missing.push('Category');
+    if (!holdingId || !relation) missing.push('Holding');
+    else if (!String(subCategory).trim()) missing.push('Sub-Category');
+    if (!DB.validateEAN(product?.ean).valid) missing.push('EAN válido');
+    if (!imageIsPublic) missing.push('Public image link');
+
+    return { ready: missing.length === 0, missing, relation, subCategory, captureDate };
+  }
+
+  async function confirmToVispera() {
+    if (!_data || _isCreate) {
+      App.showToast('Guarda primero la ficha antes de enviarla a Vispera', 'warning');
+      return;
+    }
+    if (_dirty) {
+      App.showToast('Guarda los cambios antes de confirmar el envío', 'warning');
+      return;
+    }
+    const readiness = getVisperaReadiness();
+    if (!readiness.ready) {
+      App.showToast(`Faltan campos obligatorios: ${readiness.missing.join(', ')}`, 'error');
+      return;
+    }
+    const existing = DB.getVisperaBatch().find(item => item.ean === _data.ean);
+    if (existing) {
+      App.showToast('Este SKU ya está dentro del flujo Vispera', 'info');
+      return;
+    }
+    const holdingName = DB.getHoldings().find(item => item.id === _holding)?.name || _holding;
+    if (!confirm(`¿Confirmar la revisión y enviar este SKU a Tickets Vispera para ${holdingName}?`)) return;
+
+    DB.addVisperaBatchItem({
+      ean: _data.ean,
+      name: _data.name,
+      category: _data.universalCategory,
+      subCategory: readiness.subCategory,
+      holdingId: _holding,
+      reason: 'NEW_SKU_NO_VISPERA_ID',
+      status: 'PENDING_EXPORT',
+      createdAt: new Date().toISOString()
+    });
+    App.showToast('SKU confirmado y enviado a Tickets Vispera', 'success');
+    _render();
+    if (typeof UIStaging !== 'undefined' && document.getElementById('view-revision')?.classList.contains('active')) UIStaging.render();
   }
 
   function toggleArrayField(field, value, isHolding = false, event = null) {
@@ -342,11 +451,10 @@ const UISheet = (() => {
   async function save() {
     if (!_data || !_data.ean) { App.showToast('El EAN es requerido', 'error'); return; }
     if (_isCreate && DB.getProduct(_data.ean)) { App.showToast('Ya existe un producto con el EAN ' + _data.ean, 'error'); return; }
-    
-    // EAN validation warning (non-blocking)
-    if (_isCreate) {
-      const v = DB.validateEAN(_data.ean);
-      if (!v.valid) App.showToast(`⚠️ EAN posiblemente inválido: ${v.reason}`, 'warning');
+    const eanValidation = DB.validateEAN(_data.ean);
+    if (!eanValidation.valid) {
+      App.showToast(`No se puede guardar: ${eanValidation.reason}`, 'error');
+      return;
     }
     
     // Auto-enrichment for resolved Avistamientos
@@ -382,34 +490,7 @@ const UISheet = (() => {
       }
     }
     
-    // Auto-forward to tickets if complete and missing Vispera ID
-    const isComplete = _data.name && _data.brand && _data.universalCategory && _data.imageUrl;
-    let autoForwarded = false;
-    
-    if (isComplete && !_data.visperaId) {
-      const visperaBatch = DB.getVisperaBatch() || [];
-      const inBatch = visperaBatch.some(b => b.ean === _data.ean);
-      if (!inBatch) {
-        DB.addVisperaBatchItem({
-          ean: _data.ean,
-          name: _data.name,
-          category: _data.universalCategory,
-          dmuCategory: _data.universalCategory,
-          reason: 'NEW_SKU_NO_VISPERA_ID',
-          createdAt: new Date().toISOString()
-        });
-        autoForwarded = true;
-      }
-    }
-    
-    if (autoForwarded) {
-      App.showToast(autoEnriched ? 'Datos enriquecidos. Producto completo movido a Tickets Vispera.' : 'Cambios guardados. Datos completos: el SKU se movió automáticamente a Tickets Vispera.', 'success');
-      if (typeof UIStaging !== 'undefined' && document.getElementById('view-revision')?.classList.contains('active')) {
-        UIStaging.render();
-      }
-    } else {
-      App.showToast(autoEnriched ? '✓ Producto guardado y enriquecido con APIs.' : 'Cambios guardados correctamente', 'success');
-    }
+    App.showToast(autoEnriched ? '✓ Producto guardado y enriquecido con APIs. Revísalo antes de enviarlo a Vispera.' : 'Cambios guardados correctamente', 'success');
     
     _render();
     // Refresh catalog in background
@@ -437,7 +518,7 @@ const UISheet = (() => {
         _data.offAttempted = true;
         _data.enrichFailed = true;
         DB.saveProduct(_data);
-        App.showToast('EAN no encontrado en Open Food Facts ni Open Products Facts', 'warning');
+        App.showToast('EAN no encontrado en SoloTodo, Open Food Facts ni Open Products Facts', 'warning');
         _render();
       } else {
         const before = JSON.parse(JSON.stringify(_data));
@@ -481,11 +562,15 @@ const UISheet = (() => {
         _original = JSON.parse(JSON.stringify(_data));
         _dirty = false;
 
-        if (changed.length === 0) {
-          App.showToast('Sin datos nuevos — el producto ya estaba completo', 'info');
+        const suggestionFields = ['name', 'brand', 'packageType', 'weight_g', 'width_cm', 'height_cm', 'depth_cm', 'masterCategory'];
+        const suggestionCount = Object.keys(apiData.sources || {}).reduce((total, source) => total + suggestionFields
+          .filter(field => apiData.sources[source]?.[field] !== null && apiData.sources[source]?.[field] !== undefined && apiData.sources[source]?.[field] !== '' && String(apiData.sources[source][field]) !== String(_data[field] ?? '')).length, 0);
+        if (changed.length === 0 && suggestionCount === 0) {
+          App.showToast('APIs actualizadas: no se encontraron cambios', 'info');
+        } else if (changed.length === 0) {
+          App.showToast(`APIs actualizadas: ${suggestionCount} sugerencia(s) disponible(s)`, 'success');
         } else {
-          const src = apiData.dataSource === 'open_food_facts' ? 'Open Food Facts' : 'Open Products Facts';
-          App.showToast(`✓ Guardado automáticamente (${src}): ${changed.length} campo(s) completado(s)`, 'success');
+          App.showToast(`✓ APIs actualizadas: ${changed.length} campo(s) completado(s) y ${suggestionCount} sugerencia(s)`, 'success');
         }
         _render();
       }
@@ -566,6 +651,7 @@ const UISheet = (() => {
 
   function setAsMainImage(url) {
     if (!url) return;
+    _data.images = [url, ...(_data.images || []).filter(image => image && image !== url)];
     updateField('imageUrl', url);
     _activeImageIndex = 0;
     _render();
@@ -585,6 +671,9 @@ const UISheet = (() => {
     const rInfo = holdings.find(r => r.id === _holding);
     const rData = _holding ? (_data.holdings?.[_holding] || null) : null;
     const inStock = rData?.stockStatus ?? true;
+    const visperaReadiness = getVisperaReadiness(_data, _holding);
+    const visperaTicket = DB.getVisperaBatch().find(item => item.ean === _data.ean);
+    const gtinValidation = DB.validateEAN(_data.ean);
 
     // -- IMAGE TABS LOGIC --
     const imageTabs = [];
@@ -592,12 +681,18 @@ const UISheet = (() => {
     const offImg = _data.offImageUrl;
     const rImg = rData?.imageUrl;
     
-    const gallery = _data.images || [];
-    if (mainImg && !gallery.includes(mainImg)) gallery.unshift(mainImg);
+    const gallery = [...(_data.images || [])];
+    if (mainImg) {
+      const withoutMain = gallery.filter(image => image && image !== mainImg);
+      gallery.splice(0, gallery.length, mainImg, ...withoutMain);
+    }
     
     if (gallery.length > 0) {
       gallery.forEach((imgUrl, i) => {
-        imageTabs.push({ id: `main_${i}`, label: `Principal ${i+1}`, src: imgUrl });
+        const imageSource = Object.entries(_data.enrichmentSources || {})
+          .find(([, source]) => (source.images || [source.imageUrl]).includes(imgUrl))?.[0];
+        const sourceNames = { solotodo: 'SoloTodo', open_food_facts: 'Open Food Facts', open_products_facts: 'Open Products Facts' };
+        imageTabs.push({ id: `main_${i}`, label: i === 0 ? 'Principal' : (sourceNames[imageSource] || `Imagen ${i+1}`), src: imgUrl });
       });
     } else {
       imageTabs.push({ id: 'main', label: 'Principal', src: mainImg || null });
@@ -647,6 +742,30 @@ const UISheet = (() => {
     const pkgOpts = PACKAGE_TYPES.map(pt =>
       `<option value="${pt.value}" ${_data.packageType===pt.value?'selected':''}>${esc(pt.label)}</option>`
     ).join('');
+
+    const apiSourceNames = { solotodo: 'SoloTodo', open_food_facts: 'Open Food Facts', open_products_facts: 'Open Products Facts' };
+    const apiCandidates = field => {
+      const seen = new Set([String(_data[field] ?? '')]);
+      return Object.entries(_data.enrichmentSources || {}).flatMap(([source, values]) => {
+        const value = values?.[field];
+        const key = String(value ?? '');
+        if (value === undefined || value === null || value === '' || seen.has(key)) return [];
+        seen.add(key);
+        return [{ source, value }];
+      });
+    };
+    const candidateDatalist = (field, format = value => value) => {
+      const options = apiCandidates(field);
+      if (!options.length) return '';
+      return `<datalist id="api-${field}-options">
+        ${options.map(option => `<option value="${esc(option.value)}" label="${esc(format(option.value))} — ${esc(apiSourceNames[option.source] || option.source)}"></option>`).join('')}
+      </datalist>`;
+    };
+    const candidateListAttr = field => apiCandidates(field).length ? `list="api-${field}-options"` : '';
+    const packageSuggestions = apiCandidates('packageType');
+    const packageSuggestionOptions = packageSuggestions.length ? `<optgroup label="Sugerencias de APIs">
+      ${packageSuggestions.map(option => `<option value="${esc(option.value)}">${esc(PACKAGE_TYPES.find(type => type.value === option.value)?.label || option.value)} — ${esc(apiSourceNames[option.source] || option.source)}</option>`).join('')}
+    </optgroup>` : '';
     
     function _buildMultiSelect(opts, selectedArray, fieldName, isHolding) {
       const availableOpts = opts.filter(o => !selectedArray.includes(o));
@@ -681,6 +800,7 @@ const UISheet = (() => {
     const sourceLabel = {
       'open_food_facts': 'Open Food Facts',
       'open_products_facts': 'Open Products Facts',
+      'solotodo': 'SoloTodo',
       'manual': 'Carga manual',
       'levantamiento': 'App de Levantamiento',
       'mixed': 'Múltiple fuentes'
@@ -801,7 +921,7 @@ ${tabsHtml}
         <span class="badge-master">UNIVERSAL PRODUCTS</span>
         <button class="btn-sync" id="sync-btn" onclick="UISheet.syncOFF()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-          Enriquecer SKU
+          Actualizar desde APIs
         </button>
       </div>
       <button class="btn-close-sheet" style="background:var(--danger); color:white; border:none; padding:6px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; width:28px; height:28px; box-shadow:0 2px 4px rgba(0,0,0,0.2);" onclick="UISheet.close()" title="Cerrar (X)">
@@ -809,9 +929,10 @@ ${tabsHtml}
       </button>
     </div>
 
-    <input class="sheet-title-inp" type="text" id="sheet-name"
+    <input class="sheet-title-inp" type="text" id="sheet-name" ${candidateListAttr('name')}
       value="${esc(_data.name || '')}" placeholder="Nombre Universal del producto…"
       oninput="UISheet.updateField('name', this.value)">
+    ${candidateDatalist('name')}
 
     <div class="sheet-body-row">
       <!-- Image -->
@@ -844,8 +965,9 @@ ${tabsHtml}
         </div>
         <div class="form-group">
           <label>Marca Universal</label>
-          <input type="text" class="form-input" value="${esc(_data.brand || '')}"
+          <input type="text" class="form-input" ${candidateListAttr('brand')} value="${esc(_data.brand || '')}"
             placeholder="—" oninput="UISheet.updateField('brand', this.value)">
+          ${candidateDatalist('brand')}
         </div>
         <div class="form-group">
           <label>Categoría Vispera</label>
@@ -854,16 +976,18 @@ ${tabsHtml}
         <div class="form-group">
           <label>Tipo de envase</label>
           <select class="form-select" onchange="UISheet.updateField('packageType', this.value)">
-            <option value="">Seleccionar…</option>${pkgOpts}
+            <option value="">Seleccionar…</option>${packageSuggestionOptions}${pkgOpts}
           </select>
         </div>
         <div class="form-group">
-          <label>EAN-13 / master_product_id</label>
+          <label>GTIN / master_product_id</label>
           <div style="position:relative;">
-            <input type="text" class="form-input ${_isCreate ? '' : 'readonly-inp'}" id="sheet-ean-inp" value="${esc(_data.ean)}" ${_isCreate ? 'maxlength="13" oninput="UISheet.validateEANInput(this.value)"' : 'readonly'} oninput="UISheet.updateField('ean', this.value)">
+            <input type="text" class="form-input ${_isCreate ? '' : 'readonly-inp'}" id="sheet-ean-inp" value="${esc(_data.ean)}" ${_isCreate ? 'maxlength="14" oninput="UISheet.validateEANInput(this.value)"' : 'readonly'} oninput="UISheet.updateField('ean', this.value)">
             ${_isCreate ? `<span id="ean-validation-badge" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;"></span>` : ''}
           </div>
-          ${_isCreate ? '<p class="form-hint" id="ean-hint">Introduce el EAN para validar el dígito de control.</p>' : ''}
+          ${_isCreate
+            ? '<p class="form-hint" id="ean-hint">Introduce el EAN para validar el dígito de control.</p>'
+            : (gtinValidation.legacy ? `<p class="form-hint" style="color:var(--warning)">Código heredado de Excel. Se exportará como ${esc(gtinValidation.normalized)}.</p>` : '')}
         </div>
         <div class="form-group">
           <label>Vispera ID</label>
@@ -880,7 +1004,7 @@ ${tabsHtml}
         <div class="form-group">
           <label>Peso / Volumen Neto</label>
           <div style="display:flex; gap:6px;">
-            <input type="number" class="form-input" value="${_data.weight_g || ''}"
+            <input type="number" class="form-input" ${candidateListAttr('weight_g')} value="${_data.weight_g || ''}"
               placeholder="—" min="0" style="flex:1;"
               oninput="UISheet.updateField('weight_g', parseFloat(this.value)||null)">
             <select class="form-select" style="width: 80px;" onchange="UISheet.updateField('weight_unit', this.value)">
@@ -891,6 +1015,18 @@ ${tabsHtml}
               <option value="oz" ${_data.weight_unit === 'oz' ? 'selected' : ''}>oz</option>
             </select>
           </div>
+          ${candidateDatalist('weight_g', value => `${value} ${_data.weight_unit || 'g'}`)}
+        </div>
+        <div class="form-group">
+          <label>Dimensiones (cm)</label>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+            <input type="number" class="form-input" ${candidateListAttr('width_cm')} value="${_data.width_cm || ''}" min="0" placeholder="Ancho" oninput="UISheet.updateField('width_cm', parseFloat(this.value)||null)">
+            <input type="number" class="form-input" ${candidateListAttr('height_cm')} value="${_data.height_cm || ''}" min="0" placeholder="Alto" oninput="UISheet.updateField('height_cm', parseFloat(this.value)||null)">
+            <input type="number" class="form-input" ${candidateListAttr('depth_cm')} value="${_data.depth_cm || ''}" min="0" placeholder="Fondo" oninput="UISheet.updateField('depth_cm', parseFloat(this.value)||null)">
+          </div>
+          ${candidateDatalist('width_cm', value => `${value} cm`)}
+          ${candidateDatalist('height_cm', value => `${value} cm`)}
+          ${candidateDatalist('depth_cm', value => `${value} cm`)}
         </div>
       </div>
     </div>
@@ -971,6 +1107,28 @@ ${tabsHtml}
 
     <!-- Footer buttons -->
     <div class="sheet-footer">
+      ${!_data.visperaId ? `
+      <div style="padding:12px;border:1px solid ${visperaReadiness.ready ? 'var(--success)' : 'var(--border)'};border-radius:8px;background:var(--surface-el);">
+        <strong style="font-size:12px;display:block;margin-bottom:8px;">Preparación para Vispera</strong>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label>Fecha Levantamiento *</label>
+          <input type="date" class="form-input" value="${esc(String(visperaReadiness.captureDate || '').slice(0,10))}"
+            onchange="UISheet.updateVisperaMeta('timestamp', this.value ? new Date(this.value + 'T12:00:00').toISOString() : '')">
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label>Auditor *</label>
+          <input type="text" class="form-input" value="${esc(_data.levantamientoMeta?.auditor || '')}" placeholder="Nombre del auditor"
+            oninput="UISheet.updateVisperaMeta('auditor', this.value)">
+        </div>
+        ${visperaTicket
+          ? `<p style="font-size:12px;color:var(--success);margin:0;">✓ ${visperaTicket.status === 'AWAITING_VISPERA_ID' ? 'Exportado; esperando ID Vispera.' : 'Incluido en Tickets Vispera.'}</p>`
+          : visperaReadiness.ready
+            ? '<p style="font-size:11px;color:var(--success);margin:0 0 8px;">✓ Todos los campos obligatorios están completos.</p>'
+            : `<p style="font-size:11px;color:var(--warning);margin:0 0 8px;">Falta: ${visperaReadiness.missing.map(esc).join(', ')}</p>`}
+        ${!visperaTicket ? `<button class="btn-teal" style="width:100%;" ${(!visperaReadiness.ready || _dirty || _isCreate) ? 'disabled' : ''} onclick="UISheet.confirmToVispera()">
+          Confirmar y enviar a Vispera
+        </button>` : ''}
+      </div>` : ''}
       <button class="btn-save ${_dirty?'has-changes':''}" id="sheet-save-btn" onclick="UISheet.save()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         Guardar Cambios
@@ -1144,13 +1302,13 @@ ${tabsHtml}
 
   return {
     open, openCreate, close, save, discard, syncOFF, changeImage, changeImageUrl, setActiveImage, setAsMainImage,
-    updateField, updateHoldingField, toggleStock,
+    updateField, applyApiCandidate, updateHoldingField, updateVisperaMeta, toggleStock,
     setHolding, addToHolding, removeFromHolding,
     validateEANInput,
     updateRetailerField, addToRetailer, removeFromRetailer, setRetailer,
     setCreateMode, _fdHandleImage, _fdSetFile, _fdValidateEAN, submitFieldDiscovery,
     openEditField, resolveAvistamiento,
     _fdAddCat, _fdRemoveCat, _fdRenderCatTags,
-    toggleArrayField, sendToReview
+    toggleArrayField, sendToReview, confirmToVispera, getVisperaReadiness
   };
 })();

@@ -15,7 +15,12 @@ const App = {
     const t = document.createElement('div');
     t.className = `toast toast-${type}`;
     const icons = { success:'✓', error:'✕', info:'ℹ', warning:'⚠' };
-    t.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ'}</span><span>${msg}</span>`;
+    const icon = document.createElement('span');
+    icon.className = 'toast-icon';
+    icon.textContent = icons[type] || 'ℹ';
+    const message = document.createElement('span');
+    message.textContent = String(msg);
+    t.append(icon, message);
     container.appendChild(t);
     requestAnimationFrame(() => t.classList.add('visible'));
     setTimeout(() => {
@@ -26,43 +31,47 @@ const App = {
 
   // Data refresh callback (used by DB after saves)
   refreshData() {
-    // Re-render current view if visible
     const hash = window.location.hash.replace('#', '');
     if (hash === 'catalog' && typeof UICatalog !== 'undefined') UICatalog.render();
   },
 
   // ── routing ────────────────────────────────
   navigateTo(view) {
-    // Map legacy 'retailers' to 'holdings'
     if (view === 'retailers') view = 'holdings';
-    // Map legacy 'staging', 'pipeline' and 'auditoria' to 'revision'
     if (view === 'staging' || view === 'pipeline' || view === 'auditoria') view = 'revision';
 
     if (window.location.hash !== `#${view}`) {
-      window.location.hash = view; 
-      return; // hashchange listener will trigger the actual render
+      window.location.hash = view;
     }
     
     // hide all views
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const target = document.getElementById(`view-${view}`);
-    if (target) target.classList.add('active');
+    if (target) {
+      target.classList.add('active');
+    } else {
+      console.warn(`No se encontró el contenedor DOM #view-${view}`);
+    }
 
-    // update nav
+    // update nav items
     document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
 
-    // render appropriate view
-    if (view === 'catalog')        UICatalog.render();
-    if (view === 'bulk')           UIBulk.render();
-    if (view === 'import')         UIImport.render();
-    if (view === 'holdings')       { if (typeof UIHoldings !== 'undefined') UIHoldings.render(); else if (typeof UIRetailers !== 'undefined') UIRetailers.render(); }
-    if (view === 'levantamiento')  UILevantamiento.render();
-    if (view === 'revision')       UIStaging.render();
-    if (view === 'avistamientos')  UIAvistamientos.render();
-    if (view === 'dashboard')      UIDashboard.render();
+    // render appropriate view safely
+    try {
+      if (view === 'catalog')        UICatalog.render();
+      else if (view === 'bulk')      UIBulk.render();
+      else if (view === 'import')    UIImport.render();
+      else if (view === 'holdings')  { if (typeof UIHoldings !== 'undefined') UIHoldings.render(); else if (typeof UIRetailers !== 'undefined') UIRetailers.render(); }
+      else if (view === 'levantamiento') UILevantamiento.render();
+      else if (view === 'revision')  UIStaging.render();
+      else if (view === 'avistamientos') UIAvistamientos.render();
+      else if (view === 'dashboard') UIDashboard.render();
+    } catch (err) {
+      console.error(`Error al renderizar la vista '${view}':`, err);
+      this.showToast(`Error al cargar la vista ${view}`, 'error');
+    }
   },
 
-  // ── Technical Sheet modal ──────────────────
   openSheet(ean) {
     UISheet.open(ean);
   },
@@ -73,16 +82,20 @@ const App = {
     const el = document.getElementById('sidebar-holding-filters');
     if (!el) return;
 
-    el.innerHTML = `
-      <button class="sidebar-r-btn active" data-hid="all" onclick="App.filterByHolding('all')">
-        <span class="r-dot" style="background:var(--text-muted)"></span> Todos
-      </button>
-      ${holdings.map(h => `
-        <button class="sidebar-r-btn" data-hid="${h.id}" onclick="App.filterByHolding('${h.id}')">
-          <span class="r-dot" style="background:${h.color}"></span> ${h.name}
-        </button>
-      `).join('')}
-    `;
+    el.replaceChildren();
+    const addButton = (id, name, color, active = false) => {
+      const button = document.createElement('button');
+      button.className = `sidebar-r-btn${active ? ' active' : ''}`;
+      button.dataset.hid = id;
+      const dot = document.createElement('span');
+      dot.className = 'r-dot';
+      dot.style.background = color;
+      button.append(dot, document.createTextNode(` ${name}`));
+      button.addEventListener('click', () => this.filterByHolding(id));
+      el.appendChild(button);
+    };
+    addButton('all', 'Todos', 'var(--text-muted)', true);
+    holdings.forEach(h => addButton(String(h.id), String(h.name), /^#[0-9a-f]{6}$/i.test(h.color) ? h.color : '#4F6EF7'));
   },
 
   filterByHolding(hid) {
@@ -93,7 +106,6 @@ const App = {
     }
   },
 
-  // Legacy alias
   filterByRetailer(rid) { this.filterByHolding(rid); },
 
   // ── theme ─────────────────────────────────
@@ -124,31 +136,29 @@ const App = {
     try {
       const res = await fetch('/api/holdings', { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
-        if (dot) { dot.className = 'status-dot online'; }
+        if (dot) dot.className = 'status-dot online';
         if (lbl) lbl.textContent = 'Servidor local activo';
-      } else { throw new Error('not ok'); }
+      } else {
+        if (dot) dot.className = 'status-dot offline';
+        if (lbl) lbl.textContent = 'Servidor inaccesible';
+      }
     } catch {
-      if (dot) { dot.className = 'status-dot offline'; }
-      if (lbl) lbl.textContent = 'Modo offline (localStorage)';
+      if (dot) dot.className = 'status-dot offline';
+      if (lbl) lbl.textContent = 'Modo offline (LocalStorage)';
     }
   },
 
-  // ── add product (create mode) ──────────────
-  addProduct() {
-    UISheet.openCreate();
-  },
-
-  // ── backup / restore ───────────────────────
   exportBackup() {
-    const json = DB.exportBackup();
-    const blob = new Blob([json], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = `smart-shelf-backup-${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    this.showToast('Backup descargado correctamente', 'success');
+    const data = DB.exportBackup();
+    const str = JSON.stringify(data, null, 2);
+    const blob = new Blob([str], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `smart_shelf_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    this.showToast('Backup descargado exitosamente', 'success');
   },
 
   importBackup() {
@@ -161,216 +171,47 @@ const App = {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const result = DB.importBackup(e.target.result);
-        this.showToast(`Backup restaurado: ${result.products} productos`, 'success');
-        this.renderSidebar();
-        UICatalog.render();
-        this.checkUndo();
+        const json = JSON.parse(e.target.result);
+        if (DB.importBackup(json)) {
+          this.showToast('Backup restaurado correctamente', 'success');
+          this.navigateTo('catalog');
+        } else {
+          this.showToast('El archivo de backup no tiene un formato válido', 'error');
+        }
       } catch (err) {
-        this.showToast(`Error al restaurar: ${err.message}`, 'error');
+        this.showToast(`Error al leer archivo JSON: ${err.message}`, 'error');
       }
     };
     reader.readAsText(file);
   },
 
-  // ── undo ───────────────────────────────────
-  checkUndo() {
-    const u = DB.getUndo();
-    let btn = document.getElementById('undo-float-btn');
-    if (!btn) {
-      btn = document.createElement('button');
-      btn.id = 'undo-float-btn';
-      btn.className = 'undo-float-btn';
-      btn.onclick = () => this.undo();
-      document.body.appendChild(btn);
-    }
-    if (u) {
-      btn.innerHTML = `↩ Deshacer: ${u.label || 'cambios'}  <span class="undo-time">${this.formatDate(u.at)}</span>`;
-      btn.classList.add('visible');
-    } else {
-      btn.classList.remove('visible');
-    }
-  },
-
-  undo() {
-    if (DB.applyUndo()) {
-      this.showToast('Cambios deshechos correctamente', 'success');
-      UICatalog.render();
-      this.checkUndo();
-    } else {
-      this.showToast('No hay nada que deshacer', 'info');
-    }
-  },
-
-  // ── export CSV ────────────────────────────
-  exportCSV() {
-    const products  = DB.getProductsArray();
-    const holdings = DB.getHoldings();
-
-    const rows = [
-      // Header
-      ['EAN','Vispera ID','Nombre','Marca','Categoría Vispera','Tipo Paquete','Ancho cm','Alto cm','Prof cm','Valor Neto','Unidad','Imagen URL','Fuente',
-       ...holdings.flatMap(h => [`${h.name}_ID`,`${h.name}_Nombre`,`${h.name}_Categoria`,`${h.name}_Activo`])
-      ]
-    ];
-
-    products.forEach(p => {
-      const hlds = p.holdings || p.retailers || {};
-      const row = [
-        p.ean, p.visperaId||'', p.name||'', p.brand||'', Array.isArray(p.universalCategory) ? p.universalCategory.join(', ') : (Array.isArray(p.category) ? p.category.join(', ') : (p.universalCategory || p.category || '')), p.packageType||'',
-        p.width_cm||'', p.height_cm||'', p.depth_cm||'', p.weight_g||'', p.weight_unit||'g',
-        p.imageUrl||'', p.dataSource||''
-      ];
-      holdings.forEach(h => {
-        const hd = hlds[h.id];
-        if (hd) {
-          row.push(
-            hd.holdingInternalId || hd.customerId || '',
-            hd.localProductName || hd.name || '',
-            Array.isArray(hd.localCategoryName) ? hd.localCategoryName.join(', ') : (Array.isArray(hd.category) ? hd.category.join(', ') : (hd.localCategoryName || hd.category || '')),
-            hd.isActiveHolding !== false ? 'SI':'NO'
-          );
-        } else {
-          row.push('','','','');
-        }
-      });
-      rows.push(row);
-    });
-
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-    const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `smart-shelf-master-data-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    this.showToast('CSV exportado correctamente', 'success');
-  },
-
-  // ── export DMU Excel (one sheet per DMU) ──────────────
-  exportDMUExcel(holdingId) {
-    if (typeof XLSX === 'undefined') {
-      this.showToast('Librería Excel no cargada', 'error');
-      return;
-    }
-    const products  = DB.getProductsArray().filter(p => {
-      const hlds = p.holdings || p.retailers || {};
-      return hlds[holdingId];
-    });
-    const holdings = DB.getHoldings();
-    const hInfo     = holdings.find(h => h.id === holdingId);
-    if (!hInfo) return;
-
-    // Group by DMU
-    const groups = {};
-    products.forEach(p => {
-      const hlds = p.holdings || p.retailers || {};
-      const hd  = hlds[holdingId];
-      const dmus = Array.isArray(hd.dmu) ? hd.dmu : (hd.dmu ? [hd.dmu] : []);
-      if (dmus.length === 0) {
-         let fbDmu = Array.isArray(hd.localCategoryName) ? hd.localCategoryName[0] : hd.localCategoryName;
-         if (!fbDmu) fbDmu = Array.isArray(hd.category) ? hd.category[0] : hd.category;
-         dmus.push(fbDmu || 'Sin DMU');
-      }
-      
-      dmus.forEach(dmu => {
-        if (!groups[dmu]) groups[dmu] = [];
-        groups[dmu].push({ p, hd });
-      });
-    });
-
-    const wb = XLSX.utils.book_new();
-    const headers = ['EAN', 'Nombre', 'Marca', 'ID Holding', 'Categoría', 'DMU', 'Posición', 'Valor Neto', 'Unidad', 'Tipo Envase', 'Imagen URL'];
-
-    Object.entries(groups).forEach(([dmu, items]) => {
-      items.sort((a, b) => (a.hd.position || 9999) - (b.hd.position || 9999));
-      const rows = [headers];
-      items.forEach(({ p, hd }) => {
-        rows.push([
-          p.ean,
-          hd.localProductName || hd.name || p.name || '',
-          p.brand || '',
-          hd.holdingInternalId || hd.customerId || '',
-          Array.isArray(hd.localCategoryName) ? hd.localCategoryName.join(', ') : (Array.isArray(hd.category) ? hd.category.join(', ') : (hd.localCategoryName || hd.category || '')),
-          Array.isArray(hd.dmu) ? hd.dmu.join(', ') : (hd.dmu || ''),
-          hd.position || '',
-          p.weight_g || '',
-          p.weight_unit || 'g',
-          p.packageType || '',
-          hd.imageUrl || p.imageUrl || ''
-        ]);
-      });
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      const sheetName = String(dmu).replace(/[\\/*?:[\]]/g, '').slice(0, 31);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName || 'DMU');
-    });
-
-    const fname = `${hInfo.name.replace(/\s+/g,'-')}-DMUs-${new Date().toISOString().slice(0,10)}.xlsx`;
-    XLSX.writeFile(wb, fname);
-    this.showToast(`Excel DMU de ${hInfo.name} exportado`, 'success');
-  },
-
-  exportRetailerCSV(holdingId) {
-    const products = DB.getProductsArray();
-    const holdings = DB.getHoldings();
-    const hInfo = holdings.find(h => h.id === holdingId);
-    if (!hInfo) return;
-
-    const filteredProducts = products.filter(p => {
-      const hlds = p.holdings || p.retailers || {};
-      return hlds[holdingId];
-    });
-
-    const rows = [
-      ['EAN', 'Vispera ID', `Nombre (${hInfo.name})`, `ID SKU (${hInfo.name})`, `Categoría (${hInfo.name})`, `Activo (${hInfo.name})`, 'Marca', 'Valor Neto', 'Unidad', 'Tipo Envase', 'Imagen URL', 'Ancho cm', 'Alto cm', 'Profundidad cm']
-    ];
-
-    filteredProducts.forEach(p => {
-      const hlds = p.holdings || p.retailers || {};
-      const hd = hlds[holdingId];
-      const row = [
-        p.ean,
-        p.visperaId || '',
-        hd.localProductName || hd.name || p.name || '',
-        hd.holdingInternalId || hd.customerId || '',
-        Array.isArray(hd.localCategoryName) ? hd.localCategoryName.join(', ') : (Array.isArray(hd.category) ? hd.category.join(', ') : (hd.localCategoryName || hd.category || '')),
-        hd.isActiveHolding !== false ? 'SI' : 'NO',
-        p.brand || '',
-        p.weight_g || '',
-        p.weight_unit || 'g',
-        p.packageType || '',
-        hd.imageUrl || p.imageUrl || '',
-        p.width_cm || '',
-        p.height_cm || '',
-        p.depth_cm || ''
-      ];
-      rows.push(row);
-    });
-
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-    const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `smart-shelf-export-${holdingId}-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    this.showToast(`CSV de ${hInfo.name} exportado correctamente`, 'success');
-  },
-
   // ── init ──────────────────────────────────
   async init() {
-    // Wait for DB download into memory
-    await DB.init();
-    
-    // Hide global loader overlay
-    const loader = document.getElementById('global-loader');
-    if (loader) {
-      loader.style.opacity = '0';
-      loader.style.transition = 'opacity 0.5s ease';
-      setTimeout(() => loader.remove(), 500);
+    const loader = document.getElementById('global-loader') || document.getElementById('app-loader');
+    const hideLoader = () => {
+      if (loader) {
+        loader.style.opacity = '0';
+        loader.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => loader.remove(), 400);
+      }
+    };
+
+    try {
+      const initRes = await DB.init() || {};
+      const sources = initRes.sources || {};
+      const counts = initRes.counts || { products: (DB.getProductsArray() || []).length };
+
+      if (sources.catalog === 'server') {
+        this.showToast(`Catálogo cargado desde Servidor Local (${counts.products} SKUs)`, 'success');
+      } else {
+        this.showToast(`Catálogo cargado desde caché local (${counts.products} SKUs)`, 'info');
+      }
+    } catch (err) {
+      console.error('Error durante la inicialización de la base de datos:', err);
+    } finally {
+      hideLoader();
     }
+
     this.applyTheme();
     this.renderSidebar();
 
@@ -393,20 +234,19 @@ const App = {
       }
     });
 
-    // Bottom reset button (dev helper)
+    // Reload catalog button
     document.getElementById('reset-btn')?.addEventListener('click', () => {
-      if (confirm('¿Resetear todos los datos a los valores de demostración?')) {
-        DB.resetToDefaults();
+      DB.reloadCatalog().then(() => {
         this.navigateTo('catalog');
-        this.showToast('Datos reseteados a demo', 'info');
-      }
+        this.showToast('Catálogo recargado desde la fuente disponible', 'info');
+      });
     });
 
     // Hash tracking for F5 refreshes
     const validViews = ['dashboard', 'catalog', 'import', 'holdings', 'bulk', 'levantamiento', 'revision', 'auditoria', 'staging', 'avistamientos'];
     window.addEventListener('hashchange', () => {
       let hash = window.location.hash.replace('#', '');
-      if (hash === 'retailers') hash = 'holdings'; // legacy redirect
+      if (hash === 'retailers') hash = 'holdings';
       this.navigateTo(validViews.includes(hash) ? hash : 'dashboard');
     });
 
@@ -415,7 +255,6 @@ const App = {
     if (startHash === 'retailers') startHash = 'holdings';
     this.navigateTo(validViews.includes(startHash) ? startHash : 'dashboard');
 
-    // Server status check (immediate + every 30s)
     this.checkServerStatus();
     setInterval(() => this.checkServerStatus(), 30000);
   }

@@ -11,6 +11,27 @@ const UIRetailers = (() => {
   let _activeStoreView = 'list'; // 'list' | 'planogram' | 'sessions'
   let _storeEditId = null;     // store being edited
 
+  const _relationCategories = relation => {
+    const value = relation?.localCategoryName ?? relation?.category;
+    return (Array.isArray(value) ? value : [value]).map(category => String(category || '').trim()).filter(Boolean);
+  };
+  const _categoryKey = value => String(value || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  function holdingCategoryInventory(holdingId) {
+    const holding = DB.getHoldings().find(item => item.id === holdingId);
+    const declared = holding?.categories || [];
+    const inventory = new Map(declared.map(name => [_categoryKey(name), { name, status: 'confirmed', count: 0 }]));
+    DB.getProductsArray().forEach(product => {
+      _relationCategories((product.holdings || product.retailers || {})[holdingId]).forEach(name => {
+        const key = _categoryKey(name);
+        const row = inventory.get(key) || { name, status: 'observed', count: 0 };
+        row.count++;
+        inventory.set(key, row);
+      });
+    });
+    return [...inventory.values()].sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
+  }
+
   // ── stats helpers ───────────────────────────
   function retailerStats(rid) {
     const products = DB.getProductsArray();
@@ -80,7 +101,9 @@ const UIRetailers = (() => {
 
   function renderCard(r) {
     const s = retailerStats(r.id);
-    const cats = r.categories || [];
+    const categoryInventory = holdingCategoryInventory(r.id);
+    const confirmedCount = categoryInventory.filter(category => category.status === 'confirmed').length;
+    const observedCount = categoryInventory.filter(category => category.status === 'observed').length;
     return `
 <div class="retailer-card">
   ${r.logoUrl ? `<div class="retailer-card-banner" style="background-image: url('${esc(r.logoUrl)}');"></div>` : ''}
@@ -132,12 +155,12 @@ const UIRetailers = (() => {
     </div>
   </div>
 
-  ${cats.length > 0 ? `
+  ${categoryInventory.length > 0 ? `
   <div class="retailer-cats-preview">
-    <p class="retailer-cats-label">Categorías (${cats.length})</p>
+    <p class="retailer-cats-label">Categorías · ${confirmedCount} confirmadas · ${observedCount} observadas</p>
     <div class="retailer-cats-chips">
-      ${cats.slice(0,5).map(c => `<span class="rcat-chip">${esc(c)}</span>`).join('')}
-      ${cats.length > 5 ? `<span class="rcat-chip muted">+${cats.length-5} más</span>` : ''}
+      ${categoryInventory.slice(0,5).map(category => `<span class="rcat-chip ${category.status === 'observed' ? 'muted' : ''}" title="${category.status === 'observed' ? 'Observada en importaciones; no confirmada' : 'Confirmada'}">${esc(category.name)} (${category.count})</span>`).join('')}
+      ${categoryInventory.length > 5 ? `<span class="rcat-chip muted">+${categoryInventory.length-5} más</span>` : ''}
     </div>
   </div>` : ''}
 </div>`;
@@ -206,7 +229,7 @@ const UIRetailers = (() => {
   </div>
 
   <div class="form-group">
-    <label>Categorías Propias del Holding</label>
+    <label>Categorías oficiales declaradas</label>
     <div style="display:flex; gap:8px; margin-bottom:8px;">
       <input type="text" class="form-input" id="cat-new-input" placeholder="ej. Cuidado Personal" onkeydown="if(event.key==='Enter') { event.preventDefault(); UIRetailers.addCat(); }">
       <button class="btn-outline" onclick="UIRetailers.addCat()">Agregar</button>
@@ -214,8 +237,9 @@ const UIRetailers = (() => {
     <div class="cats-manager" id="cats-manager">
       ${_renderCatTags()}
     </div>
-    <p class="form-hint">Estas categorías son independientes a las categorías universales de Vispera.</p>
+    <p class="form-hint">Sólo agrega aquí categorías confirmadas por el holding. Son independientes de las categorías universales de Vispera.</p>
   </div>
+  ${isEdit ? _renderObservedCategories(r?.id) : ''}
 </div>
 
 <div class="form-modal-footer">
@@ -232,6 +256,18 @@ const UIRetailers = (() => {
     });
   }
 
+  function _renderObservedCategories(holdingId) {
+    const observed = holdingCategoryInventory(holdingId).filter(category => category.status === 'observed');
+    return `<div class="form-group">
+      <label>Categorías observadas en importaciones</label>
+      <p class="form-hint">No se consideran oficiales hasta confirmarlas. Se agrupan ignorando mayúsculas, espacios y tildes.</p>
+      ${observed.length ? `<div class="preview-table-wrap" style="max-height:220px"><table class="preview-table">
+        <thead><tr><th>Categoría observada</th><th>SKUs</th><th>Estado</th></tr></thead>
+        <tbody>${observed.map(category => `<tr><td>${esc(category.name)}</td><td>${category.count}</td><td><span class="status-badge conflict">Observada</span></td></tr>`).join('')}</tbody>
+      </table></div>` : '<p class="cats-empty">No hay categorías observadas sin confirmar.</p>'}
+    </div>`;
+  }
+
   function _renderCatTags() {
     if (_editCats.length === 0) return '<p class="cats-empty">Sin categorías aún.</p>';
     return _editCats.map((c, i) => `
@@ -245,7 +281,7 @@ const UIRetailers = (() => {
     const inp = document.getElementById('cat-new-input');
     if (!inp) return;
     const val = inp.value.trim();
-    if (!val || _editCats.includes(val)) { inp.focus(); return; }
+    if (!val || _editCats.some(category => _categoryKey(category) === _categoryKey(val))) { inp.focus(); return; }
     _editCats.push(val);
     inp.value = '';
     const mgr = document.getElementById('cats-manager');
@@ -272,6 +308,7 @@ const UIRetailers = (() => {
     } else {
       const idInput = document.getElementById('r-id')?.value.trim().toLowerCase().replace(/\s+/g,'-');
       if (!idInput) { App.showToast('El ID es obligatorio', 'error'); return; }
+      if (!/^[a-z0-9_-]+$/.test(idInput)) { App.showToast('El ID solo puede contener letras, números, guiones y guion bajo', 'error'); return; }
       const exists = DB.getRetailers().find(r => r.id === idInput);
       if (exists) { App.showToast(`Ya existe un Holding con ID "${idInput}"`, 'error'); return; }
       DB.addRetailer({ id: idInput, name, color, logoUrl, categories: _editCats });
@@ -283,7 +320,7 @@ const UIRetailers = (() => {
     App.renderSidebar();
   }
 
-  function deleteRetailer(rid) {
+  async function deleteRetailer(rid) {
     const r = DB.getRetailers().find(x => x.id === rid);
     if (!r) return;
     // Usar (holdings || retailers) para compatibilidad con ambas arquitecturas
@@ -292,10 +329,10 @@ const UIRetailers = (() => {
       ? `¿Eliminar "${r.name}"? Esto quitará sus datos de ${count} producto(s). Los productos seguirán en el catálogo.`
       : `¿Eliminar "${r.name}"?`;
     if (!confirm(msg)) return;
-    DB.deleteRetailer(rid);
+    const persisted = await DB.deleteRetailer(rid);
     render();
     App.renderSidebar();
-    App.showToast(`"${r.name}" eliminado`, 'info');
+    App.showToast(persisted ? `"${r.name}" eliminado` : `"${r.name}" eliminado solo en este navegador`, persisted ? 'info' : 'warning');
   }
 
   // ── homologate ───────────────────────────
@@ -332,7 +369,7 @@ const UIRetailers = (() => {
   </button>
 </div>
 <div class="form-modal-body">
-  <p class="form-hint" style="margin-bottom: 12px;">Copia masivamente productos desde otro retailer hacia <strong>${esc(targetRetailer.name)}</strong>.</p>
+  <p class="form-hint" style="margin-bottom: 12px;">Crea relaciones pendientes en <strong>${esc(targetRetailer.name)}</strong>. No copia Customer ID, nombre local, categoría local, DMU ni stock.</p>
   
   <div class="form-group">
     <label>Retailer de origen</label>
@@ -349,12 +386,7 @@ const UIRetailers = (() => {
     </select>
   </div>
 
-  <div class="form-group">
-    <label>Categoría destino en ${esc(targetRetailer.name)}</label>
-    <input type="text" class="form-input" id="homo-dest-cat" placeholder="Nombre en el retailer final">
-    <p class="form-hint">Si usas un nombre distinto, se adaptarán a la taxonomía de este retailer.</p>
-  </div>
-  
+  <div class="staging-info-bar" style="margin:8px 0"><span>Las nuevas relaciones quedarán <strong>pendientes e inactivas</strong> hasta completar sus datos locales.</span></div>
   <p id="homo-count-msg" style="font-weight:600; color:var(--accent); font-size:13px; margin-top:8px;"></p>
 </div>
 
@@ -370,10 +402,11 @@ const UIRetailers = (() => {
     const catSel = document.getElementById('homo-cat');
     if (!sId || !catSel) return;
     
-    const sRetailer = DB.getRetailers().find(x => x.id === sId);
     let opts = '<option value="__ALL__">Todo el catálogo (todas las categorías)</option>';
-    if (sRetailer && sRetailer.categories) {
-      sRetailer.categories.forEach(c => {
+    const categories = holdingCategoryInventory(sId);
+    if (categories.length) {
+      categories.forEach(category => {
+        const c = category.name;
         opts += `<option value="${esc(c)}">${esc(c)}</option>`;
       });
     }
@@ -383,47 +416,40 @@ const UIRetailers = (() => {
 
   function updateHomoDestCat() {
     const cat = document.getElementById('homo-cat')?.value;
-    const dest = document.getElementById('homo-dest-cat');
     const msg = document.getElementById('homo-count-msg');
     const source = document.getElementById('homo-source')?.value;
-    
-    if (dest) {
-       dest.value = (cat && cat !== '__ALL__') ? cat : '';
-    }
     
     if (!source || !cat) {
       if (msg) msg.textContent = '';
       return;
     }
 
-    let count = 0;
+    let matches = 0;
+    let newRelations = 0;
+    let existing = 0;
     const products = DB.getProductsArray();
     products.forEach(p => {
       // Acceder a (holdings || retailers) para compatibilidad
       const hlds = p.holdings || p.retailers || {};
       const rData = hlds[source];
-      if (rData) {
-        if (cat === '__ALL__' || rData.category === cat || rData.localCategoryName === cat) count++;
+      if (rData && (cat === '__ALL__' || _relationCategories(rData).some(value => _categoryKey(value) === _categoryKey(cat)))) {
+        matches++;
+        if ((p.holdings || p.retailers || {})[_homologateTarget]) existing++;
+        else newRelations++;
       }
     });
-    
-    if (msg) msg.textContent = count > 0 ? `Se integrarán ${count} SKUs a la ficha de este retailer.` : 'No hay productos que coincidan.';
+
+    if (msg) msg.textContent = matches > 0 ? `${matches} encontrados · ${newRelations} relaciones nuevas · ${existing} ya existen. Las nuevas quedarán sin Customer ID, nombre ni categoría local.` : 'No hay productos que coincidan.';
   }
 
   function executeHomologate() {
     const source = document.getElementById('homo-source')?.value;
     const cat = document.getElementById('homo-cat')?.value;
-    const destCat = document.getElementById('homo-dest-cat')?.value.trim();
     
     if (!source || !cat) {
       App.showToast('Selecciona origen y categoría', 'warning');
       return;
     }
-    if (cat !== '__ALL__' && !destCat) {
-      App.showToast('Escribe una categoría de destino', 'warning');
-      return;
-    }
-    
     let updatedProducts = [];
     const products = DB.getProductsArray();
     
@@ -433,22 +459,30 @@ const UIRetailers = (() => {
       if (!p.holdings) p.holdings = {};
 
       const rData = p.holdings[source];
-      if (rData && (cat === '__ALL__' || rData.category === cat || rData.localCategoryName === cat)) {
+      if (rData && (cat === '__ALL__' || _relationCategories(rData).some(value => _categoryKey(value) === _categoryKey(cat)))) {
          if (!p.holdings[_homologateTarget]) {
-            const sourceCategory = cat === '__ALL__' 
-              ? (rData.localCategoryName || rData.category || 'Categoría por Defecto') 
-              : destCat;
+            const universalFields = ['brand', 'producer', 'packageType', 'weight_g', 'weight_unit', 'numberOfUnits', 'width_cm', 'height_cm', 'depth_cm'];
+            universalFields.forEach(field => {
+              if (!p.fieldLocks?.[field] && (p[field] === null || p[field] === undefined || p[field] === '') && rData[field] !== null && rData[field] !== undefined && rData[field] !== '') {
+                p[field] = rData[field];
+                p.fieldSources = p.fieldSources || {};
+                p.fieldSources[field] = `homologation:${source}`;
+              }
+            });
+            if (!p.fieldLocks?.imageUrl && !p.imageUrl && rData.imageUrl) {
+              p.images = [...new Set([...(p.images || []), rData.imageUrl])];
+              p.imageUrl = rData.imageUrl;
+              p.fieldSources = p.fieldSources || {};
+              p.fieldSources.imageUrl = `homologation:${source}`;
+            }
+            const now = new Date().toISOString();
             p.holdings[_homologateTarget] = {
-               holdingInternalId: `HOM-${p.ean}`,
-               customerId: `HOM-${p.ean}`,
-               localProductName: rData.localProductName || rData.name || p.name || '',
-               name: rData.name || p.name || '',
-               localCategoryName: sourceCategory,
-               category: sourceCategory,
-               isActiveHolding: true,
-               stockStatus: true,
-               imageUrl: rData.imageUrl || p.imageUrl || null,
-               updatedAt: new Date().toISOString()
+               holdingInternalId: '', customerId: '',
+               localProductName: '', name: '',
+               localCategoryName: null, category: null,
+               dmu: [], isActiveHolding: false, stockStatus: false,
+               relationStatus: 'pending', sourceType: 'homologation', sourceHoldingId: source,
+               createdAt: now, updatedAt: now
             };
             updatedProducts.push(p);
          }
@@ -457,7 +491,7 @@ const UIRetailers = (() => {
     
     if (updatedProducts.length > 0) {
       DB.saveProducts(updatedProducts);
-      App.showToast(`Homologación exitosa: ${updatedProducts.length} SKUs añadidos.`, 'success');
+      App.showToast(`Homologación creada: ${updatedProducts.length} relación(es) pendiente(s) de completar.`, 'success');
       App.renderSidebar();
     } else {
       App.showToast('No se detectaron productos nuevos para integrar.', 'info');

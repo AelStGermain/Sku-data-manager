@@ -138,6 +138,11 @@ const API = (() => {
     // Category from tags
     const masterCategory = _detectCategoryFromTags(p.categories_tags || p.categories_hierarchy);
 
+    const images = [
+      p.image_front_url, p.image_url, p.image_front_small_url, p.image_small_url,
+      p.image_front_thumb_url, p.image_thumb_url
+    ].filter((url, index, all) => url && all.indexOf(url) === index);
+
     return {
       name:          p.product_name_es || p.product_name || p.generic_name_es || p.generic_name || null,
       brand:         p.brands ? p.brands.split(',')[0].trim() : null,
@@ -147,42 +152,68 @@ const API = (() => {
       depth_cm,
       weight_g,
       masterCategory,
-      imageUrl:      p.image_front_url || p.image_url || p.image_small_url || p.image_thumb_url || null
+      imageUrl:      images[0] || null,
+      images
     };
   }
 
   // ── Nueva API Personalizada (Solotodo) ────────────────────
   async function fetchFromCustomAPI(ean) {
     try {
-      const response = await fetch(`https://publicapi.solotodo.com/products/?search=${ean}`);
+      const requestedEan = String(ean || '').trim();
+      const response = await _fetchWithTimeout(`https://publicapi.solotodo.com/products/?search=${encodeURIComponent(requestedEan)}`, 10000);
       if (!response.ok) return null;
       const json = await response.json();
       if (!json.results || json.results.length === 0) return null;
-      
-      const item = json.results[0];
-      const specs = item.specs || {};
-      
-      // Verificar coincidencia estricta de EAN si la API devuelve algo parecido
-      if (specs.ean && String(specs.ean) !== String(ean)) return null;
 
-      // Calcular peso/volumen en gramos/ml
+      // SoloTodo's endpoint is a text search. Never trust the first result:
+      // accept only an exact EAN match to avoid enriching the wrong SKU.
+      const item = json.results.find(candidate => String(candidate?.specs?.ean || '').trim() === requestedEan);
+      if (!item) return null;
+      const specs = item.specs || {};
+
+      // Keep the original unit: net content can be volume or weight.
       let weight_g = null;
+      let weight_unit = null;
       if (specs.net_content) {
         const val = parseFloat(specs.net_content);
-        const unit = (specs.net_content_unit_name || '').toLowerCase();
-        if (unit.includes('mili') || unit === 'ml' || unit === 'g' || unit.includes('gramo') || unit === 'cc') {
+        const unit = String(specs.net_content_unit_suffix || specs.net_content_unit_name || '').toLowerCase().replace(/\./g, '').trim();
+        if (unit.includes('mili') || unit === 'ml' || unit === 'cc') {
           weight_g = val;
-        } else if (unit.includes('litro') || unit === 'l' || unit === 'kg' || unit.includes('kilo')) {
+          weight_unit = 'ml';
+        } else if (unit === 'g' || unit.includes('gramo')) {
+          weight_g = val;
+          weight_unit = 'g';
+        } else if (unit.includes('litro') || unit === 'l') {
           weight_g = val * 1000;
+          weight_unit = 'ml';
+        } else if (unit === 'kg' || unit.includes('kilo')) {
+          weight_g = val * 1000;
+          weight_unit = 'g';
         }
+      } else if (Number.isFinite(Number(specs.weight))) {
+        weight_g = Number(specs.weight);
+        weight_unit = 'g';
       }
-      
+
+      // SoloTodo dimensions observed in product specs are millimetres.
+      const mmToCm = value => Number.isFinite(Number(value)) ? Number(value) / 10 : null;
+      const imageUrl = item.picture_url || null;
       return {
         name: item.name || null,
         brand: specs.brand_name || null,
         masterCategory: specs.subcategory_name || null,
-        imageUrl: item.picture_url || null,
-        weight_g: weight_g,
+        imageUrl,
+        images: imageUrl ? [imageUrl] : [],
+        weight_g,
+        weight_unit,
+        numberOfUnits: Number.isFinite(Number(specs.unit_count)) ? Number(specs.unit_count) : null,
+        width_cm: mmToCm(specs.width),
+        height_cm: mmToCm(specs.height),
+        depth_cm: mmToCm(specs.depth),
+        commercialModel: specs.commercial_model || null,
+        sourceProductId: item.id || null,
+        sourceUpdatedAt: item.last_updated || null,
         dataSource: 'solotodo'
       };
     } catch (err) {
@@ -201,9 +232,11 @@ const API = (() => {
     ]);
 
     let mergedData = null;
+    const sources = {};
 
     const combine = (sourceData) => {
       if (!sourceData) return;
+      sources[sourceData.dataSource] = { ...sourceData, fetchedAt: new Date().toISOString() };
       if (!mergedData) {
         mergedData = { ...sourceData };
         return;
@@ -225,6 +258,12 @@ const API = (() => {
     combine(off);
     combine(opf);
 
+    if (mergedData) {
+      mergedData.sources = sources;
+      mergedData.images = Object.values(sources)
+        .flatMap(source => source.images || (source.imageUrl ? [source.imageUrl] : []))
+        .filter((url, index, all) => url && all.indexOf(url) === index);
+    }
     return mergedData; // null si no se encuentra en ninguna
   }
 
@@ -270,6 +309,9 @@ const API = (() => {
   function mergeEnriched(product, apiData) {
     if (!apiData) return product;
     const merged = { ...product };
+    merged.enrichmentSources = { ...(product.enrichmentSources || {}), ...(apiData.sources || {}) };
+    merged.fieldSources = { ...(product.fieldSources || {}) };
+    merged.fieldLocks = { ...(product.fieldLocks || {}) };
     
     const isMissingOrPlaceholder = (val) => {
       if (!val) return true;
@@ -277,23 +319,38 @@ const API = (() => {
       return s === 'sin nombre' || s === 'n/a' || s === 'sin marca';
     };
 
-    const fill = (field) => { 
-      if (isMissingOrPlaceholder(merged[field]) && apiData[field]) {
-        merged[field] = apiData[field]; 
+    const sourceFor = field => {
+      const priority = ['solotodo', 'open_food_facts', 'open_products_facts'];
+      return priority.find(source => apiData.sources?.[source]?.[field] !== null && apiData.sources?.[source]?.[field] !== undefined) || apiData.dataSource;
+    };
+    const fill = (field) => {
+      if (!merged.fieldLocks[field] && isMissingOrPlaceholder(merged[field]) && apiData[field]) {
+        merged[field] = apiData[field];
+        merged.fieldSources[field] = sourceFor(field);
       }
     };
     
-    ['name', 'brand', 'packageType', 'width_cm', 'height_cm', 'depth_cm', 'weight_g', 'imageUrl'].forEach(fill);
+    ['name', 'brand', 'packageType', 'width_cm', 'height_cm', 'depth_cm', 'weight_g', 'weight_unit', 'numberOfUnits', 'commercialModel'].forEach(fill);
 
     // Fill masterCategory only if missing
-    if (apiData.masterCategory && isMissingOrPlaceholder(merged.masterCategory)) merged.masterCategory = apiData.masterCategory;
+    if (!merged.fieldLocks.masterCategory && apiData.masterCategory && isMissingOrPlaceholder(merged.masterCategory)) {
+      merged.masterCategory = apiData.masterCategory;
+      merged.fieldSources.masterCategory = sourceFor('masterCategory');
+    }
 
     // Track name source
     if (apiData.name && isMissingOrPlaceholder(product.name) && merged.nameSource !== 'manual') merged.nameSource = 'off';
     if (apiData.dataSource && merged.dataSource !== 'manual') merged.dataSource = apiData.dataSource;
 
-    // Store OFF image URL separately for the image tabs
-    if (apiData.imageUrl) merged.offImageUrl = apiData.imageUrl;
+    const apiImages = apiData.images || (apiData.imageUrl ? [apiData.imageUrl] : []);
+    merged.images = [...(product.images || []), ...(product.imageUrl ? [product.imageUrl] : []), ...apiImages]
+      .filter((url, index, all) => url && all.indexOf(url) === index);
+    if (!merged.fieldLocks.imageUrl && !merged.imageUrl && apiImages[0]) {
+      merged.imageUrl = apiImages[0];
+      merged.fieldSources.imageUrl = sourceFor('imageUrl');
+    }
+    const offImage = apiData.sources?.open_food_facts?.imageUrl;
+    if (offImage) merged.offImageUrl = offImage;
 
     merged.offAttempted = true;
     merged.enrichFailed = false;

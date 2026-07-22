@@ -13,6 +13,8 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY; // service role key (not 
 const CONCURRENCY  = 5;   // parallel requests
 const TIMEOUT_MS   = 9000; // per-request timeout
 const DELAY_MS     = 120;  // polite delay between chunks (ms)
+const requestedLimit = Number.parseInt(process.env.ENRICH_LIMIT || '200', 10);
+const ENRICH_LIMIT = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 1000) : 200;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('❌ Missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables.');
@@ -165,7 +167,7 @@ async function main() {
     .from('master_catalog')
     .select('ean, product_name, brand, image_url, off_attempted')
     .or('off_attempted.is.null,off_attempted.eq.false')
-    .limit(200); // cap per run to avoid rate limits
+    .limit(ENRICH_LIMIT); // cap per run to avoid rate limits
 
   if (error) {
     console.error('❌ Error fetching products from Supabase:', error.message);

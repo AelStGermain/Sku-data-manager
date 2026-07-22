@@ -30,12 +30,13 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run enrichment script
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ENRICH_LIMIT: ${{ inputs.limit || '200' }}
         run: node scripts/enrich-cron.js
 
       - name: Upload run summary

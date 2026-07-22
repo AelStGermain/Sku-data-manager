@@ -454,14 +454,14 @@ ${conflictLog.length > 0 ? `
     if (status) status.textContent = 'Procesando imágenes de Excel...';
     let imgCount = 0;
     for (const p of products) {
-       if (p._imageBlob) {
+       if (p._imageBlob && DB.validateEAN(p.ean).valid) {
           imgCount++;
           if (detail) detail.textContent = `Procesando imagen ${imgCount}...`;
           try {
              const url = await DB.uploadProductImage(p.ean, p._imageBlob, 'product');
              p.imageUrl = url;
-             if (_retailer && p.retailers[_retailer]) {
-                p.retailers[_retailer].imageUrl = url;
+             if (_retailer && p.holdings?.[_retailer]) {
+                p.holdings[_retailer].imageUrl = url;
              }
           } catch(e) { console.error('Error procesando imagen para', p.ean, e); }
           delete p._imageBlob;
@@ -473,23 +473,28 @@ ${conflictLog.length > 0 ? `
     const noEans = [];
     
     for (const p of products) {
-       if (!p.ean || p.ean.toString().trim().length < 6) {
+       if (!p.ean) {
            noEans.push(p);
        } else {
-           validEans.push(p);
+           const validation = DB.validateEAN(p.ean);
+           if (validation.valid) validEans.push(p);
+           else noEans.push({ ...p, invalidEan: p.ean, ean: '' });
        }
     }
     
     if (status) status.textContent = 'Guardando en la base de datos maestra...';
     
     // Save valid EANs to master catalog
-    _importResults = Importer.importWithMode(validEans, _importMode);
+    _importResults = await Importer.importWithMode(validEans, _importMode);
+    if (!_importResults.persisted) {
+      App.showToast('Importación guardada localmente; el servidor no confirmó los cambios', 'warning');
+    }
     
     // Send only items without EAN to Staging (Por Identificar)
     for (const p of noEans) {
       DB.addStagingNoEan({
         holdingId: _retailer || 'IMPORTACION',
-        dmu: p.retailers?.[_retailer]?.dmu || p.category || '',
+        dmu: p.holdings?.[_retailer]?.dmu || p.category || '',
         category: p.category || '',
         auditor: 'Excel Import',
         source: 'Subida Masiva Excel',

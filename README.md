@@ -11,10 +11,13 @@
 
 El sistema implementa una arquitectura **BigQuery Data Warehouse Multi-Holding** con un **Pipeline de Matching & Enrichment** automatizado para gestionar EANs que no existen en el catálogo maestro, enriquecerlos usando APIs externas (Open Food Facts / Open Products), y prepararlos para envío a Vispera.
 
-## Acceso en Vivo (Producción)
+## Ejecución y despliegue
 
-El proyecto se encuentra desplegado de forma continua en Vercel:
-**[Visitar Smart Shelf — Multi-Holding DW](https://sku-data-manager.vercel.app/)**
+La aplicación requiere el servidor Node/Express incluido en el repositorio. No debe
+publicarse como un sitio estático, porque los flujos de catálogo, holdings, staging y
+sincronización dependen de sus endpoints. El contenedor Docker ejecuta este servidor;
+en producción se debe montar `local_data/` en almacenamiento persistente y proporcionar
+la credencial Firebase fuera de la imagen.
 
 ## Arquitectura Técnica
 
@@ -41,7 +44,7 @@ El sistema implementa la siguiente estructura de datos:
 │  │ Holding SKU Catalog     │  │ Universal    │ │
 │  │ ─ holding_product_id   │  │ Categories   │ │
 │  │ ─ master_product_id(FK)│  │ (Vispera)    │ │
-│  │ ─ ean                  │  │ 17 categorías│ │
+│  │ ─ ean                  │  │ 18 categorías│ │
 │  │ ─ holding_internal_id  │  └──────────────┘ │
 │  │ ─ local_product_name   │                    │
 │  │ ─ local_category_name  │                    │
@@ -50,9 +53,9 @@ El sistema implementa la siguiente estructura de datos:
 └──────────────────────────────────────────────────┘
 ```
 
-### Categorías Universales Vispera (17)
+### Categorías Universales Vispera (18)
 
-`GROCERY STORE` · `SWEET` · `ALCOHOL` · `CLEANING` · `DAIRYS` · `FROZEN` · `BREAKFAST` · `SNACKS` · `BABY` · `PET` · `DESSERT` · `CEREALS` · `CANNED FOOD` · `DETERGENTS` · `DRINKS` · `HEALTHY` · `PAPER ITEMS`
+`GROCERY STORE` · `SWEET` · `ALCOHOL` · `CLEANING` · `DAIRYS` · `FROZEN` · `BREAKFAST` · `SNACKS` · `BABY` · `PET` · `DESSERT` · `CEREALS` · `CANNED FOOD` · `DETERGENTS` · `DRINKS` · `HEALTHY` · `PAPER ITEMS` · `HYGIENE`
 
 ### Pipeline de Matching & Enrichment (4 Pasos)
 
@@ -66,7 +69,7 @@ El sistema implementa la siguiente estructura de datos:
 * **Frontend (Cliente):** Vanilla JavaScript (ES6+), HTML5, CSS3
 * **Backend (BaaS):** Supabase (PostgreSQL) simulando BigQuery Data Warehouse
 * **APIs Externas:** Open Food Facts, Open Products Facts
-* **Deploy:** Vercel (Serverless JAMstack)
+* **Deploy:** Contenedor Node/Express con volumen persistente
 
 ## Estructura de la Base de Datos
 
@@ -76,7 +79,7 @@ El sistema implementa la siguiente estructura de datos:
 |---|---|
 | `master_catalog` | **Universal Products** — fuente única de verdad para todos los SKUs |
 | `retailer_catalog` | **Holding SKU Catalog** — datos específicos de cada holding |
-| `universal_categories` | 17 categorías globales del modelo Vispera |
+| `universal_categories` | 18 categorías globales del modelo Vispera |
 | `product_universal_category_mapping` | Mapeo producto ↔ categoría Vispera |
 | `brands_producers` | Marcas y productores como entidad separada |
 
@@ -98,11 +101,15 @@ El sistema implementa la siguiente estructura de datos:
 | **Holdings** | Gestión de Holdings (antes Retailers), sucursales físicas, planogramas |
 | **Levantamiento** | App de captura de datos de terreno (DMU, EAN, Auditor) |
 | **Pipeline** | Matching & Enrichment — staging, enriquecimiento API, revisión manual |
-| **API / ETL** | Sandbox de webhook y endpoints de datos limpios |
 
 ## Despliegue Local
 
 ```bash
 git clone https://github.com/AelStGermain/Sku-data-manager.git
+cd Sku-data-manager
+npm ci
+npm start
 ```
 
+Luego abre `http://localhost:3000`. Para validar el código sin iniciar sincronizaciones,
+ejecuta `npm test`.

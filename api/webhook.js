@@ -21,9 +21,13 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed. Use POST.' });
 
   try {
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(503).json({ error: 'Webhook no configurado.' });
+    }
     const { holding_id, items, session_id } = req.body;
 
     if (!items || !Array.isArray(items)) return res.status(400).json({ error: 'Falta array "items".' });
+    if (items.length > 50) return res.status(413).json({ error: 'Máximo 50 items por solicitud.' });
     if (!holding_id) return res.status(400).json({ error: 'Falta "holding_id".' });
 
     console.log(`[Webhook] Recibiendo ${items.length} items (Holding: ${holding_id})`);
@@ -32,7 +36,8 @@ export default async function handler(req, res) {
     const itemsToProcess = items.slice(0, 50);
 
     for (const item of itemsToProcess) {
-      if (!item.ean || item.ean.trim() === '') continue;
+      const ean = String(item.ean || '').replace(/\D/g, '');
+      if (!/^\d{8,14}$/.test(ean)) continue;
 
       let enrichedData = {
         name: item.ocr_name || 'Nuevo SKU de Terreno',
@@ -41,9 +46,9 @@ export default async function handler(req, res) {
         imageUrl: item.foto_fleje_url || null
       };
 
-      if (item.ean.length >= 8) {
+      if (ean.length >= 8) {
         try {
-          const offResponse = await fetch(`https://world.openfoodfacts.org/api/v0/product/${item.ean}.json`);
+          const offResponse = await fetch(`https://world.openfoodfacts.org/api/v0/product/${ean}.json`);
           if (offResponse.ok) {
             const offData = await offResponse.json();
             if (offData.status === 1 && offData.product) {
@@ -54,12 +59,12 @@ export default async function handler(req, res) {
               enrichedData.imageUrl = p.image_front_url || enrichedData.imageUrl;
             }
           }
-        } catch (e) { console.warn(`[Webhook] Fallo OFF EAN ${item.ean}`); }
+        } catch (e) { console.warn(`[Webhook] Fallo OFF EAN ${ean}`); }
       }
 
       // 2. Guardar en MASTER_CATALOG (Upsert via REST)
       const masterPayload = {
-        ean: item.ean,
+        ean,
         product_name: enrichedData.name,
         brand: enrichedData.brand,
         category_master: enrichedData.category,
@@ -80,9 +85,9 @@ export default async function handler(req, res) {
       // 3. Crear relación en HOLDING_SKU_CATALOG (retailer_catalog table)
       const retailerPayload = {
         uuid: crypto.randomUUID(),
-        ean: item.ean,
+        ean,
         retailer_id: holding_id.toLowerCase(),
-        internal_sku_id: item.internal_id || item.ean,
+        internal_sku_id: item.internal_id || ean,
         retailer_category: item.pasillo || 'Desconocido',
         local_product_name: item.ocr_name || enrichedData.name,
         local_category_name: item.pasillo || 'Desconocido',
@@ -99,7 +104,7 @@ export default async function handler(req, res) {
       if (!retailerReq.ok) {
         console.error(`[Webhook] Error Retailer:`, await retailerReq.text());
       } else {
-        processedItems.push({ ean: item.ean, status: 'success' });
+        processedItems.push({ ean, status: 'success' });
       }
 
       await new Promise(r => setTimeout(r, 300));

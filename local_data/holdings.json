@@ -23,5 +23,12 @@
     "color": "#ff2e4d",
     "logoUrl": null,
     "categories": []
+  },
+  {
+    "id": "aramco",
+    "name": "Aramco",
+    "color": "#4f6ef7",
+    "logoUrl": null,
+    "categories": []
   }
 ]
