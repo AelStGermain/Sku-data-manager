@@ -1,0 +1,5002 @@
+[
+  {
+    "ean": "8434165466333",
+    "name": "Galletas saladas Krititas 350 g",
+    "category": "GROCERY STORE",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.823Z"
+  },
+  {
+    "ean": "7622202353321",
+    "name": "GALLETAS SALADAS TOSTADAS RITZ 70 GR",
+    "category": "GROCERY STORE",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.808Z"
+  },
+  {
+    "ean": "7841494009727",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.793Z"
+  },
+  {
+    "ean": "7622202361630",
+    "name": "GALLETAS SALADA CREMA S/QUESO RITZ 75GR",
+    "category": "GROCERY STORE",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.778Z"
+  },
+  {
+    "ean": "7622202835940",
+    "name": "Desconocido",
+    "category": "SNACKS",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.764Z"
+  },
+  {
+    "ean": "7841494009703",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.749Z"
+  },
+  {
+    "ean": "7898931273203",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.734Z"
+  },
+  {
+    "ean": "7622202819100",
+    "name": "GALLETA SALADA SABOR QUESO RITZ 180 GR",
+    "category": "GROCERY STORE",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.718Z"
+  },
+  {
+    "ean": "8445291400924",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.705Z"
+  },
+  {
+    "ean": "7622202244483",
+    "name": "Desconocido",
+    "category": "SNACKS",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.691Z"
+  },
+  {
+    "ean": "8445291366398",
+    "name": "ALIM CACHORRO RAZ MED/GRD DOG CHOW 3 KG",
+    "category": "GROCERY STORE",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.674Z"
+  },
+  {
+    "ean": "7802225689007",
+    "name": "Desconocido",
+    "category": "SNACKS",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.659Z"
+  },
+  {
+    "ean": "8445291366855",
+    "name": "ALIM CACHORRO RZA M/G DOG CHOW 8KG",
+    "category": "GROCERY STORE",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.645Z"
+  },
+  {
+    "ean": "7802225683050",
+    "name": "Galletas mini Selz 35 g",
+    "category": "GROCERY STORE",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.627Z"
+  },
+  {
+    "ean": "8445291684416",
+    "name": "ALIM P/AD CARNE POLL RZ M/G DOG CHOW 12K",
+    "category": "GROCERY STORE",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.612Z"
+  },
+  {
+    "ean": "7802225682930",
+    "name": "Galleta Mini sabor Jamón Selz 35 g",
+    "category": "GROCERY STORE",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.598Z"
+  },
+  {
+    "ean": "8445291684744",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.578Z"
+  },
+  {
+    "ean": "7802225683234",
+    "name": "Desconocido",
+    "category": "SNACKS",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.562Z"
+  },
+  {
+    "ean": "8445291684171",
+    "name": "ALIM PERRO DOGCHOW 3 KG, RAZA M-G",
+    "category": "GROCERY STORE",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.548Z"
+  },
+  {
+    "ean": "7802225682183",
+    "name": "Desconocido",
+    "category": "SNACKS",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.532Z"
+  },
+  {
+    "ean": "7798098848637",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.517Z"
+  },
+  {
+    "ean": "7802575534859",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.502Z"
+  },
+  {
+    "ean": "7802575532909",
+    "name": "ALIM PERRO POTE CARNE MASTERDOG 250 GR.",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.488Z"
+  },
+  {
+    "ean": "7804100001867",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.473Z"
+  },
+  {
+    "ean": "7804100003496",
+    "name": "SNACK NUTRALIFE PATO 65G CHAMP DOG BOLSA",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.458Z"
+  },
+  {
+    "ean": "7804100003465",
+    "name": "SNACK NUTRALIF SALM 65G CHAMP DOG BOLS",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.443Z"
+  },
+  {
+    "ean": "7804100003489",
+    "name": "SNACK NUTRALIF POLLO 65G CHAMP DOG BOLSA",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.427Z"
+  },
+  {
+    "ean": "7801930002156",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.413Z"
+  },
+  {
+    "ean": "7801930005096",
+    "name": "SALCHICHA SURENA PF 5 UN",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.397Z"
+  },
+  {
+    "ean": "7801970002109",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.383Z"
+  },
+  {
+    "ean": "7801970002116",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.368Z"
+  },
+  {
+    "ean": "7801970002123",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.353Z"
+  },
+  {
+    "ean": "7801235005197",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.339Z"
+  },
+  {
+    "ean": "7801930021133",
+    "name": "VEGAN BURGER RECETA DEL ABUELO 0.1 KL",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.318Z"
+  },
+  {
+    "ean": "7809611722225",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.302Z"
+  },
+  {
+    "ean": "7809611722249",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.285Z"
+  },
+  {
+    "ean": "7809611722232",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.269Z"
+  },
+  {
+    "ean": "7891515474157",
+    "name": "REBOZADO DE POLLO SADIA 100GRS .",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.254Z"
+  },
+  {
+    "ean": "7809611700261",
+    "name": "CROQUETA POLLO SUPER POLLO 80GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.240Z"
+  },
+  {
+    "ean": "7801928001048",
+    "name": "SALCHICHA SURENA 1 KG.",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.224Z"
+  },
+  {
+    "ean": "7801928000478",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.208Z"
+  },
+  {
+    "ean": "7809569600248",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.193Z"
+  },
+  {
+    "ean": "7804642980507",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.179Z"
+  },
+  {
+    "ean": "7804642980583",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.164Z"
+  },
+  {
+    "ean": "7891515476137",
+    "name": "REBOZADO GOLDEN TRADICIO SADIA 0.3 KG",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.149Z"
+  },
+  {
+    "ean": "7809611721327",
+    "name": "DINO NUGGET 360GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.134Z"
+  },
+  {
+    "ean": "7809569600309",
+    "name": "SALCHICHA SIN PIEL GORDA PACEL 350 GR",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.117Z"
+  },
+  {
+    "ean": "7809569600279",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.103Z"
+  },
+  {
+    "ean": "7809569600293",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.088Z"
+  },
+  {
+    "ean": "7809611722324",
+    "name": "CAPINUGGETS | $6.875PORKG",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.070Z"
+  },
+  {
+    "ean": "7801928001499",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.055Z"
+  },
+  {
+    "ean": "7809611707772",
+    "name": "FILETITO DE POLLO APANADO 400 GR.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.040Z"
+  },
+  {
+    "ean": "7804646760020",
+    "name": "LONGANIZA | $11.225PORKG",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.025Z"
+  },
+  {
+    "ean": "7801930014005",
+    "name": "APANADO PECHUGA POLLO CONG RDA 120 GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:52.011Z"
+  },
+  {
+    "ean": "7809611720337",
+    "name": "HAMBURGUESA TRADICICONAL KING 90GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.995Z"
+  },
+  {
+    "ean": "7804682631537",
+    "name": "MIXPARRILLEROTOTTUS500GR | LONGANIZA",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.980Z"
+  },
+  {
+    "ean": "7801970000426",
+    "name": "HAMBURGUESA PREMIUM 100 GR.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.964Z"
+  },
+  {
+    "ean": "7804682631520",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.949Z"
+  },
+  {
+    "ean": "7801928001161",
+    "name": "LONGANIZA DE CAMPO TOTTUS 320 GRS.",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.935Z"
+  },
+  {
+    "ean": "7804642980941",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.921Z"
+  },
+  {
+    "ean": "7801970002246",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.907Z"
+  },
+  {
+    "ean": "7801916038612",
+    "name": "HAMBURG ANGUS CAJA LA PREFERIDA 10 UND",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.891Z"
+  },
+  {
+    "ean": "7804642980163",
+    "name": "CHORIZO TRADICIONAL DON MRTIAS | REGIONDELOS BIOS",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.876Z"
+  },
+  {
+    "ean": "7801916038575",
+    "name": "HAMBURGUESA ANGUS 100G LA PREFERIDA.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.861Z"
+  },
+  {
+    "ean": "7801916039886",
+    "name": "HAMBURGUESA GRILL TASTE LP 100 GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.846Z"
+  },
+  {
+    "ean": "7801916038995",
+    "name": "HAMBURGUESA GRILL TASTE",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.830Z"
+  },
+  {
+    "ean": "7801907001762",
+    "name": "HAMBURGUESA SAN JORGE 90 G",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.810Z"
+  },
+  {
+    "ean": "7801970002215",
+    "name": "ONGANIZA OPIGEN P/V LLANQUIHU | ANOUIHUE",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.795Z"
+  },
+  {
+    "ean": "7801970026204",
+    "name": "CHORIZO PARRILLEROS 250 GR.",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.781Z"
+  },
+  {
+    "ean": "7801907007160",
+    "name": "HAMBURGUESA",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.766Z"
+  },
+  {
+    "ean": "7801928001277",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.751Z"
+  },
+  {
+    "ean": "7809611722621",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.733Z"
+  },
+  {
+    "ean": "7801926000692",
+    "name": "DIABLITOSPICANTES | CHORIZOCRIOLLO450GRS",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.715Z"
+  },
+  {
+    "ean": "7804642981054",
+    "name": "SCHWENCKE | $15.560PORKG",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.700Z"
+  },
+  {
+    "ean": "7801970002208",
+    "name": "ONGANICILLA DE | LONGANICILLA",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.684Z"
+  },
+  {
+    "ean": "7801970002185",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.670Z"
+  },
+  {
+    "ean": "7809611722065",
+    "name": "AMERICAN Burger",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.655Z"
+  },
+  {
+    "ean": "7808711400651",
+    "name": "CHORIZOAHUMADOMERKENCHILLAN25OG | SATURADAS",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.639Z"
+  },
+  {
+    "ean": "7804676780111",
+    "name": "CHUCK ROLL",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.625Z"
+  },
+  {
+    "ean": "7809611721730",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.609Z"
+  },
+  {
+    "ean": "7809611720467",
+    "name": "HAMBURGUESA VACUNO SUPER BEEF 1KL",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.594Z"
+  },
+  {
+    "ean": "7809611722119",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.581Z"
+  },
+  {
+    "ean": "7798070861234",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.563Z"
+  },
+  {
+    "ean": "7809611719966",
+    "name": "HAMBURGUESA VACUNO XL SUPER BEEF 185GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.548Z"
+  },
+  {
+    "ean": "7809611710628",
+    "name": "HAMBURGUESAS VACUNO KING KONG 185 GR.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.530Z"
+  },
+  {
+    "ean": "7809611722522",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.507Z"
+  },
+  {
+    "ean": "7613035760561",
+    "name": "SAHNE NUSS PALETA MINI SAVORY 5 UN.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.490Z"
+  },
+  {
+    "ean": "7809611708410",
+    "name": "HAMBURGUESA MASTODONTE LA CRIANZA 185 GR..",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.475Z"
+  },
+  {
+    "ean": "7801552008116",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.458Z"
+  },
+  {
+    "ean": "7804672827810",
+    "name": "BOMBONES HELADOS VAINILL TOTTUS POTE180G",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.440Z"
+  },
+  {
+    "ean": "7798147784442",
+    "name": "Franui Free",
+    "category": "Snacks y Galletas",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.424Z"
+  },
+  {
+    "ean": "7809611721136",
+    "name": "ROLLITO SALMON LA CRIANZA 400GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.407Z"
+  },
+  {
+    "ean": "7613035493650",
+    "name": "HELADO COMP SAHNENUSS225MLSAVORY | AZUCARES",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.391Z"
+  },
+  {
+    "ean": "7809611721174",
+    "name": "CROQUETA SALMON LA CRIANZA 80GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.377Z"
+  },
+  {
+    "ean": "7613035490734",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.362Z"
+  },
+  {
+    "ean": "7809611719188",
+    "name": "SALMON 5 TROZOS AQUA 500GR UND",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.346Z"
+  },
+  {
+    "ean": "8445291970922",
+    "name": "ALMENDRAS | PISTACHO BOMLON CHOMP",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.329Z"
+  },
+  {
+    "ean": "7804682632886",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.309Z"
+  },
+  {
+    "ean": "7802710566219",
+    "name": "HELADO CHARLOT VAINILLA 1 LT..",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.291Z"
+  },
+  {
+    "ean": "7801423000300",
+    "name": "FILETE DE REINETA IMPORTADO 500 GR.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.275Z"
+  },
+  {
+    "ean": "7802710566240",
+    "name": "HELADO CHARLOT SAHNE / NUSS 1 LT..",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.258Z"
+  },
+  {
+    "ean": "7801552007331",
+    "name": "HELADO CALUG LEC VARSO TRENDY 450 CC",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.241Z"
+  },
+  {
+    "ean": "7802705618398",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.225Z"
+  },
+  {
+    "ean": "7802705410909",
+    "name": "ELABORADO CON FRUTA NATURAL | PAPAYAS ALACREMA",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.209Z"
+  },
+  {
+    "ean": "7801235001991",
+    "name": "HAMBURGUESAJURELSAN JOSE 100G | SANJOSE",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.193Z"
+  },
+  {
+    "ean": "7802926410856",
+    "name": "postre helado tiramisú",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.177Z"
+  },
+  {
+    "ean": "7801323004194",
+    "name": "DINODORADOS EL GOLFO 440 GR.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.161Z"
+  },
+  {
+    "ean": "7801323004026",
+    "name": "MERLUZA C/PIEL EL GOLFO 500 GR",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.144Z"
+  },
+  {
+    "ean": "7802926411020",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.127Z"
+  },
+  {
+    "ean": "7804647179470",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.111Z"
+  },
+  {
+    "ean": "7804647175809",
+    "name": "CAMARON 51-60 COC PEL DESV IMP TOTT 400G",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.095Z"
+  },
+  {
+    "ean": "7801970001690",
+    "name": "ALBONDIGA VACUNO BOL LLANQUIHUE 0,2 KL",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.078Z"
+  },
+  {
+    "ean": "7802705401488",
+    "name": "POTE DULCE LECHE CARTE DOR 900 ML",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.054Z"
+  },
+  {
+    "ean": "7801970001676",
+    "name": "TIRITAS VACUNO BOL LLANQUIHUE 0,3 KL",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.030Z"
+  },
+  {
+    "ean": "7805000318086",
+    "name": "MAGNUM DULCELECHE POSTRE BRESLER 900 ML",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.016Z"
+  },
+  {
+    "ean": "7801300003578",
+    "name": "VERDURAS FRUTOS DEL MAIPO 40 | FRUTOS",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:51.003Z"
+  },
+  {
+    "ean": "7801300003967",
+    "name": "DUQUESA PASTELERA FRUTOS DEL MAIPO 350GR",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.987Z"
+  },
+  {
+    "ean": "7805000318079",
+    "name": "MAGNUM FRAMBBLANCO POSTRE BRESLER 900 ML",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.972Z"
+  },
+  {
+    "ean": "7802705402348",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.958Z"
+  },
+  {
+    "ean": "7801300001000",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.942Z"
+  },
+  {
+    "ean": "7801300003592",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.929Z"
+  },
+  {
+    "ean": "7804682631506",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.915Z"
+  },
+  {
+    "ean": "7801220002415",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.900Z"
+  },
+  {
+    "ean": "7804652120252",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.885Z"
+  },
+  {
+    "ean": "7804647176103",
+    "name": "POROTOS VERDES TOTTUS 350 GR.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.871Z"
+  },
+  {
+    "ean": "7801552007980",
+    "name": "CASSATA CHOC-PIST-AVELL | HELADO",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.858Z"
+  },
+  {
+    "ean": "7804672821757",
+    "name": "SODIE(MG) | UNAVESSOONG",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.842Z"
+  },
+  {
+    "ean": "7801300000713",
+    "name": "SALTEADO THAI WOK FRUTOS DEL MAIPO 500 G.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.827Z"
+  },
+  {
+    "ean": "7802705401730",
+    "name": "CREMOSO! | CHOCOLATE,FRUTILLA YVAINILLA",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.808Z"
+  },
+  {
+    "ean": "7801220801292",
+    "name": "POROTO GRANADO MINUTO VERDE 500 GR.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.793Z"
+  },
+  {
+    "ean": "7802715001104",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.780Z"
+  },
+  {
+    "ean": "7801552008352",
+    "name": "HELADO CHOC PITCH AVELTRENDY 1.8 | TRENDY",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.766Z"
+  },
+  {
+    "ean": "8445291986169",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.752Z"
+  },
+  {
+    "ean": "7802715001227",
+    "name": "PANDA | PANDA",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.738Z"
+  },
+  {
+    "ean": "7803408000596",
+    "name": "EMPANADAS COCKTAIL | SATURADAS",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.725Z"
+  },
+  {
+    "ean": "7803408000589",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.710Z"
+  },
+  {
+    "ean": "7803408000886",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.696Z"
+  },
+  {
+    "ean": "7803408000862",
+    "name": "EMPANADAS COCKTAIL JESO | $18.500PORKG",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.681Z"
+  },
+  {
+    "ean": "7804604862612",
+    "name": "MINICHAPARRITA CI | MASA BRISSE",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.669Z"
+  },
+  {
+    "ean": "0659525560454",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.654Z"
+  },
+  {
+    "ean": "0659525560430",
+    "name": "$13.038PORKG | DORAROSIT",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.640Z"
+  },
+  {
+    "ean": "7803408000565",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.625Z"
+  },
+  {
+    "ean": "7803408000565",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.612Z"
+  },
+  {
+    "ean": "7803408000572",
+    "name": "PIZZETA PEPPERONI DEGUSTAR 1O UN | $18.719 POR KG",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.598Z"
+  },
+  {
+    "ean": "7804674510116",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.584Z"
+  },
+  {
+    "ean": "7804674510093",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.566Z"
+  },
+  {
+    "ean": "7804675731039\n\n",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.552Z"
+  },
+  {
+    "ean": "7804675730810",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.539Z"
+  },
+  {
+    "ean": "7804675730384",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.525Z"
+  },
+  {
+    "ean": "7801220006208",
+    "name": "PIZZA NAPOLITAN642GR | QUESO",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.511Z"
+  },
+  {
+    "ean": "7801220006185",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.496Z"
+  },
+  {
+    "ean": "7801220006192",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.483Z"
+  },
+  {
+    "ean": "7801220006215",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.468Z"
+  },
+  {
+    "ean": "7804675730285",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.454Z"
+  },
+  {
+    "ean": "7804675731015\n\n",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.440Z"
+  },
+  {
+    "ean": "7801930021232",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.428Z"
+  },
+  {
+    "ean": "7802575115010",
+    "name": "Lasaña Ricotta Espinaca",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.413Z"
+  },
+  {
+    "ean": "7802575115003",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.400Z"
+  },
+  {
+    "ean": "7804676780050",
+    "name": "CARNE MECHADA 400 FUNDO SUR UND",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.386Z"
+  },
+  {
+    "ean": "7804675730322",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.373Z"
+  },
+  {
+    "ean": "6603675730414",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.359Z"
+  },
+  {
+    "ean": "7801995000593",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.345Z"
+  },
+  {
+    "ean": "7292082390510",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.330Z"
+  },
+  {
+    "ean": "7292082390503",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.312Z"
+  },
+  {
+    "ean": "7804604862605",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.299Z"
+  },
+  {
+    "ean": "7809524900772",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.285Z"
+  },
+  {
+    "ean": "7809524900734",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.270Z"
+  },
+  {
+    "ean": "7809524900888",
+    "name": "LACTOSA | CHOCOLATE",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.259Z"
+  },
+  {
+    "ean": "7798070861371",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.245Z"
+  },
+  {
+    "ean": "7798070861401",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.231Z"
+  },
+  {
+    "ean": "7801220005119",
+    "name": "PASTA ESPINACA MINUTO VERDE 1 KL",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.216Z"
+  },
+  {
+    "ean": "7809524900871",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.203Z"
+  },
+  {
+    "ean": "7809524900888",
+    "name": "LACTOSA | CHOCOLATE",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.188Z"
+  },
+  {
+    "ean": "7798070861401",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.174Z"
+  },
+  {
+    "ean": "7804661670045",
+    "name": "Mix de Berries",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.159Z"
+  },
+  {
+    "ean": "7804661670090",
+    "name": "Mango Maracuyá",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.146Z"
+  },
+  {
+    "ean": "7804661670052",
+    "name": "Helado Yogurt & Frutas",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.132Z"
+  },
+  {
+    "ean": "7804661670083",
+    "name": "HELADO VAINILL CHIRIM YOGEN FRUZ 800 ML",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.118Z"
+  },
+  {
+    "ean": "7802926411013",
+    "name": "CHOCOLATECO | SINLACTOSA",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.102Z"
+  },
+  {
+    "ean": "8421542602903",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.089Z"
+  },
+  {
+    "ean": "8421542604662",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.075Z"
+  },
+  {
+    "ean": "8421542601937",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.058Z"
+  },
+  {
+    "ean": "7801552008123",
+    "name": "SABORLIMON-MANZANA, | OAPORTEDECALORIAS",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.043Z"
+  },
+  {
+    "ean": "7801552007966",
+    "name": "HELAOO MULTIPACK SABORES TRENDY 2IUI | SAVORY",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.028Z"
+  },
+  {
+    "ean": "8445291978034",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:50.014Z"
+  },
+  {
+    "ean": "7802705402089",
+    "name": "HELADO MPKAMBROSITOBRESLEH J8X4OGI | POR KG",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.999Z"
+  },
+  {
+    "ean": "7804682630202",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.984Z"
+  },
+  {
+    "ean": "2000431538583",
+    "name": "PORKG",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.970Z"
+  },
+  {
+    "ean": "7801300004100",
+    "name": "BITES FRAMBUESAS",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.958Z"
+  },
+  {
+    "ean": "7801300004261",
+    "name": "Bites Frambuesas Dark",
+    "category": "Snacks y Galletas",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.943Z"
+  },
+  {
+    "ean": "7801300004117",
+    "name": "$29.960PORKG | BITES ARANDANO DOYPACK FDM 250",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.928Z"
+  },
+  {
+    "ean": "7801300004094",
+    "name": "BITES ARÁNDANOS",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.915Z"
+  },
+  {
+    "ean": "7801220006123",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.902Z"
+  },
+  {
+    "ean": "7801220004426",
+    "name": "FRU CONGE GREEN DESINT MINUTVERDE 500 G.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.887Z"
+  },
+  {
+    "ean": "7801220004457",
+    "name": "FRU CONGE YELLOW PASI MINUTVERDE 500 G.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.872Z"
+  },
+  {
+    "ean": "7801930015651",
+    "name": "Pizza Pollo Bbq",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.859Z"
+  },
+  {
+    "ean": "7801300003806",
+    "name": "PRECOSINCREIBLES | PAPA RELLENA QUESO FRUTOS DEL MAIPO",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T21:11:49.847Z"
+  },
+  {
+    "ean": "7804100003496",
+    "name": "SNACK NUTRALIFE PATO 65G CHAMP DOG BOLSA",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:32.031Z"
+  },
+  {
+    "ean": "7804100003489",
+    "name": "SNACK NUTRALIF POLLO 65G CHAMP DOG BOLSA",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:31.797Z"
+  },
+  {
+    "ean": "7802225682183",
+    "name": "Desconocido",
+    "category": "SNACKS",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:29.603Z"
+  },
+  {
+    "ean": "7804100001867",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:29.586Z"
+  },
+  {
+    "ean": "7802575534859",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:29.568Z"
+  },
+  {
+    "ean": "7802225683234",
+    "name": "Desconocido",
+    "category": "SNACKS",
+    "dmu": "332",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:29.549Z"
+  },
+  {
+    "ean": "7798098848637",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:29.531Z"
+  },
+  {
+    "ean": "7802575532909",
+    "name": "ALIM PERRO POTE CARNE MASTERDOG 250 GR.",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:29.517Z"
+  },
+  {
+    "ean": "8445291684171",
+    "name": "ALIM PERRO DOGCHOW 3 KG, RAZA M-G",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:29.199Z"
+  },
+  {
+    "ean": "7804100003465",
+    "name": "SNACK NUTRALIF SALM 65G CHAMP DOG BOLS",
+    "category": "PET",
+    "dmu": "281",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:28.958Z"
+  },
+  {
+    "ean": "7809611722249",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:27.443Z"
+  },
+  {
+    "ean": "7809611722225",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:27.425Z"
+  },
+  {
+    "ean": "7809611722232",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:27.406Z"
+  },
+  {
+    "ean": "7801970002109",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:27.387Z"
+  },
+  {
+    "ean": "7801930005096",
+    "name": "SALCHICHA SURENA PF 5 UN",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:27.371Z"
+  },
+  {
+    "ean": "7801970002116",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:26.292Z"
+  },
+  {
+    "ean": "7801235005197",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:26.271Z"
+  },
+  {
+    "ean": "7801930021133",
+    "name": "VEGAN BURGER RECETA DEL ABUELO 0.1 KL",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:26.249Z"
+  },
+  {
+    "ean": "7801930002156",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:24.687Z"
+  },
+  {
+    "ean": "7801970002123",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:24.669Z"
+  },
+  {
+    "ean": "7809569600248",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:24.651Z"
+  },
+  {
+    "ean": "7809611700261",
+    "name": "CROQUETA POLLO SUPER POLLO 80GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:24.638Z"
+  },
+  {
+    "ean": "7809569600309",
+    "name": "SALCHICHA SIN PIEL GORDA PACEL 350 GR",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:24.404Z"
+  },
+  {
+    "ean": "7801928000478",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:23.620Z"
+  },
+  {
+    "ean": "7804642980507",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:23.600Z"
+  },
+  {
+    "ean": "7891515474157",
+    "name": "REBOZADO DE POLLO SADIA 100GRS .",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:23.586Z"
+  },
+  {
+    "ean": "7804642980583",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:23.150Z"
+  },
+  {
+    "ean": "7801928001048",
+    "name": "SALCHICHA SURENA 1 KG.",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:23.137Z"
+  },
+  {
+    "ean": "7891515476137",
+    "name": "REBOZADO GOLDEN TRADICIO SADIA 0.3 KG",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:22.898Z"
+  },
+  {
+    "ean": "7809611721327",
+    "name": "DINO NUGGET 360GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:22.651Z"
+  },
+  {
+    "ean": "7809569600279",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:57:21.298Z"
+  },
+  {
+    "ean": "7801928001499",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.278Z"
+  },
+  {
+    "ean": "7809569600293",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.264Z"
+  },
+  {
+    "ean": "7809611707772",
+    "name": "FILETITO DE POLLO APANADO 400 GR.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.250Z"
+  },
+  {
+    "ean": "7804682631537",
+    "name": "MIXPARRILLEROTOTTUS500GR | LONGANIZA",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.236Z"
+  },
+  {
+    "ean": "7809611720337",
+    "name": "HAMBURGUESA TRADICICONAL KING 90GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.220Z"
+  },
+  {
+    "ean": "7804646760020",
+    "name": "LONGANIZA | $11.225PORKG",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.206Z"
+  },
+  {
+    "ean": "7809611722324",
+    "name": "CAPINUGGETS | $6.875PORKG",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.191Z"
+  },
+  {
+    "ean": "7801930014005",
+    "name": "APANADO PECHUGA POLLO CONG RDA 120 GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.176Z"
+  },
+  {
+    "ean": "7801970000426",
+    "name": "HAMBURGUESA PREMIUM 100 GR.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.161Z"
+  },
+  {
+    "ean": "7801970002246",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.148Z"
+  },
+  {
+    "ean": "7801916038995",
+    "name": "HAMBURGUESA GRILL TASTE",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.134Z"
+  },
+  {
+    "ean": "7801916039886",
+    "name": "HAMBURGUESA GRILL TASTE LP 100 GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.118Z"
+  },
+  {
+    "ean": "7804682631520",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.103Z"
+  },
+  {
+    "ean": "7801916038612",
+    "name": "HAMBURG ANGUS CAJA LA PREFERIDA 10 UND",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.089Z"
+  },
+  {
+    "ean": "7801928001161",
+    "name": "LONGANIZA DE CAMPO TOTTUS 320 GRS.",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.073Z"
+  },
+  {
+    "ean": "7804642980163",
+    "name": "CHORIZO TRADICIONAL DON MRTIAS | REGIONDELOS BIOS",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.058Z"
+  },
+  {
+    "ean": "7801916038575",
+    "name": "HAMBURGUESA ANGUS 100G LA PREFERIDA.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.042Z"
+  },
+  {
+    "ean": "7804642980941",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.026Z"
+  },
+  {
+    "ean": "7801907001762",
+    "name": "HAMBURGUESA SAN JORGE 90 G",
+    "category": "Carnes y Embutidos",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:21.011Z"
+  },
+  {
+    "ean": "7801970002185",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.994Z"
+  },
+  {
+    "ean": "7804642981054",
+    "name": "SCHWENCKE | $15.560PORKG",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.979Z"
+  },
+  {
+    "ean": "7801970002208",
+    "name": "ONGANICILLA DE | LONGANICILLA",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.964Z"
+  },
+  {
+    "ean": "7801970002215",
+    "name": "ONGANIZA OPIGEN P/V LLANQUIHU | ANOUIHUE",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.949Z"
+  },
+  {
+    "ean": "7809611722621",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.936Z"
+  },
+  {
+    "ean": "7801970026204",
+    "name": "CHORIZO PARRILLEROS 250 GR.",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.921Z"
+  },
+  {
+    "ean": "7801928001277",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.906Z"
+  },
+  {
+    "ean": "7801926000692",
+    "name": "DIABLITOSPICANTES | CHORIZOCRIOLLO450GRS",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.890Z"
+  },
+  {
+    "ean": "7801907007160",
+    "name": "HAMBURGUESA",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.875Z"
+  },
+  {
+    "ean": "7809611722065",
+    "name": "AMERICAN Burger",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.860Z"
+  },
+  {
+    "ean": "7809611719966",
+    "name": "HAMBURGUESA VACUNO XL SUPER BEEF 185GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.844Z"
+  },
+  {
+    "ean": "7809611720467",
+    "name": "HAMBURGUESA VACUNO SUPER BEEF 1KL",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.831Z"
+  },
+  {
+    "ean": "7613035760561",
+    "name": "SAHNE NUSS PALETA MINI SAVORY 5 UN.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.817Z"
+  },
+  {
+    "ean": "7809611722522",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.803Z"
+  },
+  {
+    "ean": "7809611721730",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.787Z"
+  },
+  {
+    "ean": "7804676780111",
+    "name": "CHUCK ROLL",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.772Z"
+  },
+  {
+    "ean": "7798070861234",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.758Z"
+  },
+  {
+    "ean": "7809611710628",
+    "name": "HAMBURGUESAS VACUNO KING KONG 185 GR.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.742Z"
+  },
+  {
+    "ean": "7809611722119",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.727Z"
+  },
+  {
+    "ean": "7808711400651",
+    "name": "CHORIZOAHUMADOMERKENCHILLAN25OG | SATURADAS",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.713Z"
+  },
+  {
+    "ean": "7809611708410",
+    "name": "HAMBURGUESA MASTODONTE LA CRIANZA 185 GR..",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.700Z"
+  },
+  {
+    "ean": "7801552008116",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.685Z"
+  },
+  {
+    "ean": "7809611721136",
+    "name": "ROLLITO SALMON LA CRIANZA 400GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.669Z"
+  },
+  {
+    "ean": "7613035493650",
+    "name": "HELADO COMP SAHNENUSS225MLSAVORY | AZUCARES",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.655Z"
+  },
+  {
+    "ean": "7804672827810",
+    "name": "BOMBONES HELADOS VAINILL TOTTUS POTE180G",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.640Z"
+  },
+  {
+    "ean": "7613035490734",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.626Z"
+  },
+  {
+    "ean": "7809611719188",
+    "name": "SALMON 5 TROZOS AQUA 500GR UND",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.612Z"
+  },
+  {
+    "ean": "7798147784442",
+    "name": "Franui Free",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.597Z"
+  },
+  {
+    "ean": "7809611721174",
+    "name": "CROQUETA SALMON LA CRIANZA 80GR",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.583Z"
+  },
+  {
+    "ean": "8445291970922",
+    "name": "ALMENDRAS | PISTACHO BOMLON CHOMP",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.568Z"
+  },
+  {
+    "ean": "7802710566219",
+    "name": "HELADO CHARLOT VAINILLA 1 LT..",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.553Z"
+  },
+  {
+    "ean": "7802710566240",
+    "name": "HELADO CHARLOT SAHNE / NUSS 1 LT..",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.536Z"
+  },
+  {
+    "ean": "7801235001991",
+    "name": "HAMBURGUESAJURELSAN JOSE 100G | SANJOSE",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.522Z"
+  },
+  {
+    "ean": "7801423000300",
+    "name": "FILETE DE REINETA IMPORTADO 500 GR.",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.507Z"
+  },
+  {
+    "ean": "7802705618398",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.492Z"
+  },
+  {
+    "ean": "7802705410909",
+    "name": "ELABORADO CON FRUTA NATURAL | PAPAYAS ALACREMA",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.477Z"
+  },
+  {
+    "ean": "7802926410856",
+    "name": "postre helado tiramisú",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.462Z"
+  },
+  {
+    "ean": "7804682632886",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.448Z"
+  },
+  {
+    "ean": "7801552007331",
+    "name": "HELADO CALUG LEC VARSO TRENDY 450 CC",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.434Z"
+  },
+  {
+    "ean": "7801323004194",
+    "name": "DINODORADOS EL GOLFO 440 GR.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.420Z"
+  },
+  {
+    "ean": "7804647175809",
+    "name": "CAMARON 51-60 COC PEL DESV IMP TOTT 400G",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.405Z"
+  },
+  {
+    "ean": "7805000318086",
+    "name": "MAGNUM DULCELECHE POSTRE BRESLER 900 ML",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.391Z"
+  },
+  {
+    "ean": "7801300003578",
+    "name": "VERDURAS FRUTOS DEL MAIPO 40 | FRUTOS",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.376Z"
+  },
+  {
+    "ean": "7801323004026",
+    "name": "MERLUZA C/PIEL EL GOLFO 500 GR",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.362Z"
+  },
+  {
+    "ean": "7802926411020",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.348Z"
+  },
+  {
+    "ean": "7801970001690",
+    "name": "ALBONDIGA VACUNO BOL LLANQUIHUE 0,2 KL",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.333Z"
+  },
+  {
+    "ean": "7801970001676",
+    "name": "TIRITAS VACUNO BOL LLANQUIHUE 0,3 KL",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.318Z"
+  },
+  {
+    "ean": "7802705401488",
+    "name": "POTE DULCE LECHE CARTE DOR 900 ML",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.302Z"
+  },
+  {
+    "ean": "7804647179470",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.286Z"
+  },
+  {
+    "ean": "7801300003967",
+    "name": "DUQUESA PASTELERA FRUTOS DEL MAIPO 350GR",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.269Z"
+  },
+  {
+    "ean": "7801220002415",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.254Z"
+  },
+  {
+    "ean": "7802705402348",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.240Z"
+  },
+  {
+    "ean": "7801300003592",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.226Z"
+  },
+  {
+    "ean": "7804672821757",
+    "name": "SODIE(MG) | UNAVESSOONG",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.208Z"
+  },
+  {
+    "ean": "7805000318079",
+    "name": "MAGNUM FRAMBBLANCO POSTRE BRESLER 900 ML",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.194Z"
+  },
+  {
+    "ean": "7804652120252",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.179Z"
+  },
+  {
+    "ean": "7804647176103",
+    "name": "POROTOS VERDES TOTTUS 350 GR.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.164Z"
+  },
+  {
+    "ean": "7801552007980",
+    "name": "CASSATA CHOC-PIST-AVELL | HELADO",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.151Z"
+  },
+  {
+    "ean": "7801300001000",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.138Z"
+  },
+  {
+    "ean": "7804682631506",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.123Z"
+  },
+  {
+    "ean": "7802715001227",
+    "name": "PANDA | PANDA",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.109Z"
+  },
+  {
+    "ean": "7802705401730",
+    "name": "CREMOSO! | CHOCOLATE,FRUTILLA YVAINILLA",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.094Z"
+  },
+  {
+    "ean": "7803408000589",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.081Z"
+  },
+  {
+    "ean": "7801552008352",
+    "name": "HELADO CHOC PITCH AVELTRENDY 1.8 | TRENDY",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.067Z"
+  },
+  {
+    "ean": "7801220801292",
+    "name": "POROTO GRANADO MINUTO VERDE 500 GR.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.053Z"
+  },
+  {
+    "ean": "7801300000713",
+    "name": "SALTEADO THAI WOK FRUTOS DEL MAIPO 500 G.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.038Z"
+  },
+  {
+    "ean": "7803408000596",
+    "name": "EMPANADAS COCKTAIL | SATURADAS",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.024Z"
+  },
+  {
+    "ean": "7803408000886",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:20.011Z"
+  },
+  {
+    "ean": "8445291986169",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.999Z"
+  },
+  {
+    "ean": "7802715001104",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.984Z"
+  },
+  {
+    "ean": "7804675731039\n\n",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.970Z"
+  },
+  {
+    "ean": "7803408000565",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.957Z"
+  },
+  {
+    "ean": "7803408000572",
+    "name": "PIZZETA PEPPERONI DEGUSTAR 1O UN | $18.719 POR KG",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.944Z"
+  },
+  {
+    "ean": "7804674510093",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.932Z"
+  },
+  {
+    "ean": "7804674510116",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.918Z"
+  },
+  {
+    "ean": "7803408000862",
+    "name": "EMPANADAS COCKTAIL JESO | $18.500PORKG",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.903Z"
+  },
+  {
+    "ean": "7804604862612",
+    "name": "MINICHAPARRITA CI | MASA BRISSE",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.887Z"
+  },
+  {
+    "ean": "7803408000565",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.871Z"
+  },
+  {
+    "ean": "0659525560430",
+    "name": "$13.038PORKG | DORAROSIT",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.857Z"
+  },
+  {
+    "ean": "0659525560454",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.843Z"
+  },
+  {
+    "ean": "7804675731015\n\n",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.827Z"
+  },
+  {
+    "ean": "7801220006208",
+    "name": "PIZZA NAPOLITAN642GR | QUESO",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.813Z"
+  },
+  {
+    "ean": "7804675730384",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.798Z"
+  },
+  {
+    "ean": "7801220006215",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.782Z"
+  },
+  {
+    "ean": "7801930021232",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.768Z"
+  },
+  {
+    "ean": "7804675730810",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.753Z"
+  },
+  {
+    "ean": "7801220006192",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.736Z"
+  },
+  {
+    "ean": "7801220006185",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.719Z"
+  },
+  {
+    "ean": "7804675730285",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.705Z"
+  },
+  {
+    "ean": "7802575115010",
+    "name": "Lasaña Ricotta Espinaca",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.688Z"
+  },
+  {
+    "ean": "7292082390503",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.674Z"
+  },
+  {
+    "ean": "7802575115003",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.660Z"
+  },
+  {
+    "ean": "7292082390510",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.645Z"
+  },
+  {
+    "ean": "7809524900772",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.631Z"
+  },
+  {
+    "ean": "7801995000593",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.617Z"
+  },
+  {
+    "ean": "7804676780050",
+    "name": "CARNE MECHADA 400 FUNDO SUR UND",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.602Z"
+  },
+  {
+    "ean": "7804604862605",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.588Z"
+  },
+  {
+    "ean": "7809524900734",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.574Z"
+  },
+  {
+    "ean": "6603675730414",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.560Z"
+  },
+  {
+    "ean": "7804675730322",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.544Z"
+  },
+  {
+    "ean": "7809524900888",
+    "name": "LACTOSA | CHOCOLATE",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.530Z"
+  },
+  {
+    "ean": "7798070861401",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.515Z"
+  },
+  {
+    "ean": "7804661670045",
+    "name": "Mix de Berries",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.501Z"
+  },
+  {
+    "ean": "7809524900888",
+    "name": "LACTOSA | CHOCOLATE",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.485Z"
+  },
+  {
+    "ean": "7798070861401",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.470Z"
+  },
+  {
+    "ean": "7809524900871",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.456Z"
+  },
+  {
+    "ean": "7801220005119",
+    "name": "PASTA ESPINACA MINUTO VERDE 1 KL",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.442Z"
+  },
+  {
+    "ean": "7804661670052",
+    "name": "Helado Yogurt & Frutas",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.428Z"
+  },
+  {
+    "ean": "7798070861371",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.415Z"
+  },
+  {
+    "ean": "7804661670090",
+    "name": "Mango Maracuyá",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.401Z"
+  },
+  {
+    "ean": "7802705402089",
+    "name": "HELADO MPKAMBROSITOBRESLEH J8X4OGI | POR KG",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.386Z"
+  },
+  {
+    "ean": "7804661670083",
+    "name": "HELADO VAINILL CHIRIM YOGEN FRUZ 800 ML",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.371Z"
+  },
+  {
+    "ean": "7802926411013",
+    "name": "CHOCOLATECO | SINLACTOSA",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.357Z"
+  },
+  {
+    "ean": "7801552007966",
+    "name": "HELAOO MULTIPACK SABORES TRENDY 2IUI | SAVORY",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.343Z"
+  },
+  {
+    "ean": "8421542604662",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.328Z"
+  },
+  {
+    "ean": "8421542602903",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.315Z"
+  },
+  {
+    "ean": "7801552008123",
+    "name": "SABORLIMON-MANZANA, | OAPORTEDECALORIAS",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.301Z"
+  },
+  {
+    "ean": "8421542601937",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.286Z"
+  },
+  {
+    "ean": "8445291978034",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.273Z"
+  },
+  {
+    "ean": "7804682630202",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.259Z"
+  },
+  {
+    "ean": "7801300003806",
+    "name": "PRECOSINCREIBLES | PAPA RELLENA QUESO FRUTOS DEL MAIPO",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.245Z"
+  },
+  {
+    "ean": "7801300004117",
+    "name": "$29.960PORKG | BITES ARANDANO DOYPACK FDM 250",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.229Z"
+  },
+  {
+    "ean": "2000431538583",
+    "name": "PORKG",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.213Z"
+  },
+  {
+    "ean": "7801220006123",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.201Z"
+  },
+  {
+    "ean": "7801300004261",
+    "name": "Bites Frambuesas Dark",
+    "category": "Snacks y Galletas",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.187Z"
+  },
+  {
+    "ean": "7801930015651",
+    "name": "Pizza Pollo Bbq",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.173Z"
+  },
+  {
+    "ean": "7801220004457",
+    "name": "FRU CONGE YELLOW PASI MINUTVERDE 500 G.",
+    "category": "Bebidas y Jugos",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.159Z"
+  },
+  {
+    "ean": "7801220004426",
+    "name": "FRU CONGE GREEN DESINT MINUTVERDE 500 G.",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.146Z"
+  },
+  {
+    "ean": "7801300004094",
+    "name": "BITES ARÁNDANOS",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.131Z"
+  },
+  {
+    "ean": "7801300004100",
+    "name": "BITES FRAMBUESAS",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "XIOMARA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:57:19.118Z"
+  },
+  {
+    "ean": "7804643820529",
+    "name": "ISOTONICA FRUTOS TROPICAL ISOPRO 500 ML",
+    "category": "DRINKS",
+    "dmu": "123",
+    "auditor": "KAT",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:52:02.868Z"
+  },
+  {
+    "ean": "7801620011116",
+    "name": "BEBIDA ISOT GATORLIT 620M, FRUTILLA/KIWI",
+    "category": "DRINKS",
+    "dmu": "123",
+    "auditor": "KAT",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:52:02.644Z"
+  },
+  {
+    "ean": "7501055388578",
+    "name": "JUGO DEL VALLE PERA LATA 340 CC",
+    "category": "DRINKS",
+    "dmu": "123",
+    "auditor": "KAT",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:52:02.419Z"
+  },
+  {
+    "ean": "7805000324964",
+    "name": "PACK DET LIQ P/DIL ALOE VERA OMO 2X500ML",
+    "category": "DETERGENTS",
+    "dmu": "294",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:52:02.187Z"
+  },
+  {
+    "ean": "7801620002961",
+    "name": "BEBIDA GATORADE PET 500CC, COOL BLUE",
+    "category": "DRINKS",
+    "dmu": "123",
+    "auditor": "KAT",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:52:01.959Z"
+  },
+  {
+    "ean": "7802820651157",
+    "name": "POWERADE FROZEN BLAST 600 CC.",
+    "category": "DRINKS",
+    "dmu": "123",
+    "auditor": "KAT",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:52:01.736Z"
+  },
+  {
+    "ean": "7801620011840",
+    "name": "JUGO GATORADE FRUTAS TROPICALES 500 CC",
+    "category": "DRINKS",
+    "dmu": "123",
+    "auditor": "KAT",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:52:01.507Z"
+  },
+  {
+    "ean": "7805000324919",
+    "name": "Desconocido",
+    "category": "DETERGENTS",
+    "dmu": "294",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:52:00.498Z"
+  },
+  {
+    "ean": "7791200701035",
+    "name": "Desconocido",
+    "category": "DETERGENTS",
+    "dmu": "294",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:52:00.474Z"
+  },
+  {
+    "ean": "7804683130008",
+    "name": "Desconocido",
+    "category": "DETERGENTS",
+    "dmu": "294",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:52:00.453Z"
+  },
+  {
+    "ean": "7804673690185",
+    "name": "Desconocido",
+    "category": "DETERGENTS",
+    "dmu": "294",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:52:00.432Z"
+  },
+  {
+    "ean": "7891150067707",
+    "name": "DET LIQUIDO PARA DILUIR OMO 500 ML",
+    "category": "Limpieza del Hogar",
+    "dmu": "294",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:52:00.417Z"
+  },
+  {
+    "ean": "7796777006576",
+    "name": "HUESO 5-6 PETS&FRIENDS BOLSA",
+    "category": "PET",
+    "dmu": "283",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:52:00.186Z"
+  },
+  {
+    "ean": "7796777006576",
+    "name": "HUESO 5-6 PETS&FRIENDS BOLSA",
+    "category": "PET",
+    "dmu": "283",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:52:00.173Z"
+  },
+  {
+    "ean": "7805000325008",
+    "name": "Desconocido",
+    "category": "DETERGENTS",
+    "dmu": "294",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:59.749Z"
+  },
+  {
+    "ean": "7805292097348",
+    "name": "HUESO DE ENTRETENCION EXTRA#109515 BOLSA",
+    "category": "PET",
+    "dmu": "283",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:59.733Z"
+  },
+  {
+    "ean": "7804457002036",
+    "name": "SNACK TRIPS LAMB GRUPOMOR 100 GR BOLSA",
+    "category": "PET",
+    "dmu": "283",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:59.509Z"
+  },
+  {
+    "ean": "7805292095160",
+    "name": "SNACK TRIPLE SABOR L BOLSA",
+    "category": "PET",
+    "dmu": "283",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:59.282Z"
+  },
+  {
+    "ean": "7805045000090",
+    "name": "Detergente Líquido Popeye Eco Friendly Doypack 3 L",
+    "category": "DETERGENTS",
+    "dmu": "294",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:59.061Z"
+  },
+  {
+    "ean": "7791290791466",
+    "name": "DETERGENTE DILUIBLE OMO 0.5 LT",
+    "category": "DETERGENTS",
+    "dmu": "294",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:58.804Z"
+  },
+  {
+    "ean": "7805045001554",
+    "name": "Detergente Líquido Popeye Hipoalergénico Matic 3 L",
+    "category": "DETERGENTS",
+    "dmu": "294",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:58.576Z"
+  },
+  {
+    "ean": "7891000419151",
+    "name": "Desconocido",
+    "category": "PET",
+    "dmu": "283",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:58.149Z"
+  },
+  {
+    "ean": "7801315000128",
+    "name": "TOMATES ENTEROS PELADOS ESMERALDA 400 GR",
+    "category": "CANNED FOOD",
+    "dmu": "315",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:58.134Z"
+  },
+  {
+    "ean": "7801315000388",
+    "name": "PIMIENTO MORRON ENTERO ESMERALDA 400 GR",
+    "category": "CANNED FOOD",
+    "dmu": "315",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:57.904Z"
+  },
+  {
+    "ean": "7804682631506",
+    "name": "Producto Nuevo",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:57.306Z"
+  },
+  {
+    "ean": "7801300004117",
+    "name": "$29.960PORKG | BITES ARANDANO DOYPACK FDM 250",
+    "category": "FROZEN",
+    "dmu": "313",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:57.285Z"
+  },
+  {
+    "ean": "7802910009318",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:57.270Z"
+  },
+  {
+    "ean": "7804652120320",
+    "name": "Desconocido",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:57.250Z"
+  },
+  {
+    "ean": "7804672829715",
+    "name": "SNACK PERRO TRONCO VAC 3UN TOTTUS BOLSA",
+    "category": "PET",
+    "dmu": "283",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:57.236Z"
+  },
+  {
+    "ean": "7801534001234",
+    "name": "Pimiento morrón netero 185 g",
+    "category": "CANNED FOOD",
+    "dmu": "315",
+    "auditor": "VICENTE LIZAMA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:57.011Z"
+  },
+  {
+    "ean": "7804652120269",
+    "name": "HELADO CHOCOLATE SUIZO TOTTUS 1 L .",
+    "category": "FROZEN",
+    "dmu": "312",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:56.774Z"
+  },
+  {
+    "ean": "7804642980149",
+    "name": "CHORIZO PARRILLERO SCHWENCKE 1 KG.",
+    "category": "FROZEN",
+    "dmu": "284",
+    "auditor": "JOAQUÍN",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:56.550Z"
+  },
+  {
+    "ean": "7802930005871",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:56.123Z"
+  },
+  {
+    "ean": "7802930003822",
+    "name": "QUESO CHANCO LAM QUILLAYES 250 GRS.",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:56.109Z"
+  },
+  {
+    "ean": "7804619570175",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:55.682Z"
+  },
+  {
+    "ean": "7804647570673",
+    "name": "QUESO CHANCO LAMINADO HUILCO 400GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:55.669Z"
+  },
+  {
+    "ean": "7804133000684",
+    "name": "QUESO MANTECOSO CINTAZUL 250 GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:55.449Z"
+  },
+  {
+    "ean": "7802953000990",
+    "name": "MANTECOSO TROZO MERKEN PAHUILMO 200 GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:55.222Z"
+  },
+  {
+    "ean": "7802953000983",
+    "name": "MANTECOSO TROZO NATURAL PAHUILMO 200 GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:54.999Z"
+  },
+  {
+    "ean": "7804648260979",
+    "name": "QUESO CHANCO LAMINADO FUTALEUFU 400 GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:54.776Z"
+  },
+  {
+    "ean": "7804648260016",
+    "name": "QUESO CHANCO LAMINADO 250 G FUTALEUFU.",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:54.545Z"
+  },
+  {
+    "ean": "7804619570151",
+    "name": "QUESO CHANCO 434GR LASPARCELASDEVALDIVIA",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:54.137Z"
+  },
+  {
+    "ean": "7804647920010",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:54.118Z"
+  },
+  {
+    "ean": "7802901000607",
+    "name": "QUESO MANTECOSO MATTHEI LAMINADO 250 GR.",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:54.104Z"
+  },
+  {
+    "ean": "7802946000655",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:53.675Z"
+  },
+  {
+    "ean": "7804672190136",
+    "name": "QUESO MANT LAMINADO DOÃ‘A PAULA 500 GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:53.661Z"
+  },
+  {
+    "ean": "7804647920034",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:52.638Z"
+  },
+  {
+    "ean": "7802903000223",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:52.628Z"
+  },
+  {
+    "ean": "7802903000216",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:52.616Z"
+  },
+  {
+    "ean": "7804608122217",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:52.605Z"
+  },
+  {
+    "ean": "7802901000591",
+    "name": "QUESO LAMINADO MANTECOSO MATTHEI 500 GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:52.597Z"
+  },
+  {
+    "ean": "7804619570045",
+    "name": "QUESO MANTECOSO LAMINADO 350 GR. LAS PARCELAS .",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:52.374Z"
+  },
+  {
+    "ean": "7804619570045",
+    "name": "QUESO MANTECOSO LAMINADO 350 GR. LAS PARCELAS .",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:52.369Z"
+  },
+  {
+    "ean": "7803201000113",
+    "name": "QUESO CHANCO DON RICARDO LAM 250GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:52.142Z"
+  },
+  {
+    "ean": "7802920011202",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:51.719Z"
+  },
+  {
+    "ean": "7802920006741",
+    "name": "QUESO MANTECOSO LAMINADO 500G.",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:51.712Z"
+  },
+  {
+    "ean": "7804632980562",
+    "name": "QUESO MANTECOSO ARTISAN 250 GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:51.487Z"
+  },
+  {
+    "ean": "7804619570151",
+    "name": "QUESO CHANCO 434GR LASPARCELASDEVALDIVIA",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:51.272Z"
+  },
+  {
+    "ean": "7804613390540",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:50.835Z"
+  },
+  {
+    "ean": "7802920006352",
+    "name": "QUESO MANT LAM 250G.",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:50.826Z"
+  },
+  {
+    "ean": "7802920009995",
+    "name": "QUESO MANT LAM GRUESA RIO BUENO 420 GRS",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:50.616Z"
+  },
+  {
+    "ean": "7804613393510",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:50.202Z"
+  },
+  {
+    "ean": "7802900001193",
+    "name": "QUESO MANTECOSO LAMINADO 500 GR RESELLABLE.",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:50.193Z"
+  },
+  {
+    "ean": "7804672829951",
+    "name": "QUESO MANTECOSO LAMINADO TOTTUS 400 GRS",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:49.975Z"
+  },
+  {
+    "ean": "7802901000386",
+    "name": "QUESO TROZO MANTECOSO MATTHEI 500 GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:49.753Z"
+  },
+  {
+    "ean": "7802930003853",
+    "name": "QUESO MANTECOSO LAMINADO QUILLAYES 500 GRS..",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:49.530Z"
+  },
+  {
+    "ean": "7802930004164",
+    "name": "QUESO MANTECOSO QUILLAYES LAMINAS 250G .",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:49.272Z"
+  },
+  {
+    "ean": "7804619570038",
+    "name": "QUESO MANTECOSO LAS PARCELAS TROZO 350 GR.",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:48.970Z"
+  },
+  {
+    "ean": "7802920011189",
+    "name": "QUESO MANTEC TROZO RIO BUENO 400 GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:48.724Z"
+  },
+  {
+    "ean": "7804647571212",
+    "name": "QUESO MANTECOSO ARTESANAL HUILCO 400 GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:48.485Z"
+  },
+  {
+    "ean": "7802901000942",
+    "name": "Desconocido",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:48.011Z"
+  },
+  {
+    "ean": "7802900004170",
+    "name": "QUESO MANTECOSO LAM XL 500 SOPROLE UND",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:48.003Z"
+  },
+  {
+    "ean": "5014271300429",
+    "name": "MERMELADA DAMASCO ST.DALFOUR 284GR",
+    "category": "HEALTHY",
+    "dmu": "282",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:47.793Z"
+  },
+  {
+    "ean": "7804647960559",
+    "name": "Aceite de Coco orgánico refinado 500 ml",
+    "category": "HEALTHY",
+    "dmu": "282",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:47.578Z"
+  },
+  {
+    "ean": "7804651860661",
+    "name": "ACETO BALSAMICO ORGANICO MANARE 500 ML",
+    "category": "HEALTHY",
+    "dmu": "282",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:47.358Z"
+  },
+  {
+    "ean": "7804630011329",
+    "name": "CHOCO NUTS PROTEIN TIKA 90GR",
+    "category": "HEALTHY",
+    "dmu": "282",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:47.105Z"
+  },
+  {
+    "ean": "7804646450617",
+    "name": "CEREAL CHOCOLATE GF MIZOS 280 GR",
+    "category": "HEALTHY",
+    "dmu": "282",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:46.884Z"
+  },
+  {
+    "ean": "7804611120934",
+    "name": "CABRITAS LISTAS CHOCOLATE TOTTUS 250 GR",
+    "category": "HEALTHY",
+    "dmu": "282",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:46.662Z"
+  },
+  {
+    "ean": "7506339394719",
+    "name": "TOALLAS FEMENINAS NOCHE NATURELLA 8 UN.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:46.442Z"
+  },
+  {
+    "ean": "7759185010542",
+    "name": "TF NOCTURNA MAXI PRO X10 LADYSOFT UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:46.228Z"
+  },
+  {
+    "ean": "7500435118811",
+    "name": "TOALLA HIGIENICA NOCT NATURELLA UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:45.998Z"
+  },
+  {
+    "ean": "7804647570666",
+    "name": "QUESO MANTECOSO LAMIN HUILCO 400GR",
+    "category": "DAIRYS",
+    "dmu": "310",
+    "auditor": "CAMILA H",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:45.737Z"
+  },
+  {
+    "ean": "7702026145026",
+    "name": "TOALLA HIG NOCT BN U/INV NOSOTRAS 8 UN",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:45.514Z"
+  },
+  {
+    "ean": "7806500962595",
+    "name": "TOALLA ULTRAD NOC MALLA X20 LADYSOFT UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:45.275Z"
+  },
+  {
+    "ean": "7500435137911",
+    "name": "TOALLAS INFINITY C/A NOCT ALWAYS 16 UN .",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:45.062Z"
+  },
+  {
+    "ean": "7702026151546",
+    "name": "TOALLA NOCT ULTRADELG SUA NOSOTRAS 14 UN",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:44.845Z"
+  },
+  {
+    "ean": "7806500962823",
+    "name": "TFLADYSOFTNOCTURNATELASUAVEX7/24",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:44.628Z"
+  },
+  {
+    "ean": "7702026185091",
+    "name": "CALZON NOCTURNO L/XL NOSOTRAS 3 UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:44.323Z"
+  },
+  {
+    "ean": "7702026184070",
+    "name": "CALZON NOCTURNO S NOSOTRAS 3 UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:44.096Z"
+  },
+  {
+    "ean": "7806500962809",
+    "name": "ULTRADELGADA SECA NOCTURNA LADYSOFT 7",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:43.875Z"
+  },
+  {
+    "ean": "7702027498473",
+    "name": "TOALLA BUENAS NOCHES ULT NOSOTRAS 16 UN",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:43.661Z"
+  },
+  {
+    "ean": "7702026180287",
+    "name": "TOA. BUENAS NOCHES X 8 UNI NOSOTRAS.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:43.439Z"
+  },
+  {
+    "ean": "7806500962847",
+    "name": "P. DIARIO LARGO COTIDIAN LADY 26 UN.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:43.100Z"
+  },
+  {
+    "ean": "7751493009867",
+    "name": "TOALLA NOC ULTRAFINA KOTEX 12 UN",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:43.093Z"
+  },
+  {
+    "ean": "2504500771616",
+    "name": "Desconocido",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:42.668Z"
+  },
+  {
+    "ean": "7806500775072",
+    "name": "PANAL PLUS ADULTO COTIDIAN P/M X 20 UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:42.662Z"
+  },
+  {
+    "ean": "7806500962847",
+    "name": "P. DIARIO LARGO COTIDIAN LADY 26 UN.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:42.441Z"
+  },
+  {
+    "ean": "7806500775867",
+    "name": "PANAL ADULTO COTIDIAN P/M X 20 UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:42.226Z"
+  },
+  {
+    "ean": "7501019051104",
+    "name": "TOALLA LADY NOCTURNA TENA 8 TENA UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:42.006Z"
+  },
+  {
+    "ean": "7702026157623",
+    "name": "PANTS MAXIPROTECT TENA 30 L TENA UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:41.614Z"
+  },
+  {
+    "ean": "7806500752516",
+    "name": "Desconocido",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:40.995Z"
+  },
+  {
+    "ean": "7702026156633",
+    "name": "Desconocido",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "NUEVO_SKU",
+    "matchDate": "2026-07-15T20:51:40.986Z"
+  },
+  {
+    "ean": "7702026157616",
+    "name": "PANTS MAXIPROTECT TENA 30 G TENA UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:40.979Z"
+  },
+  {
+    "ean": "7730219040513",
+    "name": "APOSITO COTIDIAN 20 UNID",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:40.759Z"
+  },
+  {
+    "ean": "7790010616751",
+    "name": "PROTEC. TODOS LOS DIAS CAREFREE 100 UN.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:40.542Z"
+  },
+  {
+    "ean": "2000412914818",
+    "name": "APOSITO ADULTO TOTTUS 20 UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:40.283Z"
+  },
+  {
+    "ean": "7702026158330",
+    "name": "PROTECTOR DIARIO NOSOTRAS 100 UN",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:40.064Z"
+  },
+  {
+    "ean": "7806500963301",
+    "name": "PROTECTOR DIARIO CLASICO X100.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:39.846Z"
+  },
+  {
+    "ean": "7501019053269",
+    "name": "INCONTINENCIA PANTS L NOCTURNO TENA 8",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:39.624Z"
+  },
+  {
+    "ean": "7702026180027",
+    "name": "PD MULTI SENS X 60 UNI NOSOTRAS.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:39.397Z"
+  },
+  {
+    "ean": "7500435148757",
+    "name": "PROTECTOR NATURELLA 90 UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:39.178Z"
+  },
+  {
+    "ean": "7702027440946",
+    "name": "PD LARGO X 50 UNI NOSOTRAS.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:38.960Z"
+  },
+  {
+    "ean": "7702026180959",
+    "name": "TOA. NORMAL SIN ALAS X 10 UNI NOSOTRAS.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:38.737Z"
+  },
+  {
+    "ean": "7790250096078",
+    "name": "TOALLA HIG. ULTRADELGADA SUAVE C/A X 8 U.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:38.523Z"
+  },
+  {
+    "ean": "7702026147006",
+    "name": "TOA.ULTRA INV MALLA X 16 UNI NOSOTRAS.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:38.306Z"
+  },
+  {
+    "ean": "7702026180263",
+    "name": "TOA . BUENAS NOCHES X 20 UNI NOSOTRAS.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "DANIEL",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:38.086Z"
+  },
+  {
+    "ean": "7702026180331",
+    "name": "TOA. ULTRA INV SUAVE X 16 UNI NOSOTRAS.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:37.628Z"
+  },
+  {
+    "ean": "7806500962793",
+    "name": "TOALLA ULTRAD NOCT SUAV X14 LADYSOFT UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "DANIEL",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:37.415Z"
+  },
+  {
+    "ean": "7790250096061",
+    "name": "TOALLA HIG. ULTRADELGADA 8 UND LADYSOFT.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "BENJAMIN SAAVEDRA",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:37.197Z"
+  },
+  {
+    "ean": "7806500961086",
+    "name": "TOALLA FEMENINA LADYSOFT X16 UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "DANIEL",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:36.984Z"
+  },
+  {
+    "ean": "7702026153625",
+    "name": "TOALLA DELGADA LARGA NOSOTRAS 24 UND",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "DANIEL",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:36.508Z"
+  },
+  {
+    "ean": "7702026179670",
+    "name": "TOA. ULTRA INV SENS X 8 UNI NOSOTRAS.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "DANIEL",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:51:36.260Z"
+  },
+  {
+    "ean": "7590002037355",
+    "name": "TOALLA NOCT ULTRAFINA 16 UN ALWAYS.",
+    "category": "HYGIENE",
+    "dmu": "316",
+    "auditor": "DANIEL",
+    "holdingId": "TOTTUS",
+    "type": "MATCH_EXISTENTE",
+    "matchDate": "2026-07-15T20:50:53.205Z"
+  }
+]

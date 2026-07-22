@@ -9,7 +9,7 @@ window.UNIVERSAL_CATEGORIES = [
   'DAIRYS', 'FROZEN', 'BREAKFAST', 'SNACKS',
   'BABY', 'PET', 'DESSERT', 'CEREALS',
   'CANNED FOOD', 'DETERGENTS', 'DRINKS',
-  'HEALTHY', 'PAPER ITEMS'
+  'HEALTHY', 'PAPER ITEMS', 'HYGIENE'
 ];
 
 // Legacy alias for backward compat
@@ -182,9 +182,24 @@ const DB = (() => {
          const res = await fetch(`/api/staging/${key}`);
          if (res.ok) {
            const data = await res.json();
-           if (Array.isArray(data) && data.length > 0) return data;
+           if (Array.isArray(data)) {
+             const localData = JSON.parse(localStorage.getItem(key) || '[]');
+             // Migración/Sincronización inicial: si el servidor está vacío pero hay datos locales
+             if (data.length === 0 && localData.length > 0) {
+               fetch(`/api/staging/${key}`, {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify(localData)
+               }).catch(console.warn);
+               return localData;
+             }
+             // El servidor es la fuente de verdad, sincronizamos el local storage
+             localStorage.setItem(key, JSON.stringify(data));
+             return data;
+           }
          }
        } catch (e) {}
+       // Solo si falla la conexión al servidor usamos local storage
        return JSON.parse(localStorage.getItem(key) || '[]');
      };
 
@@ -681,7 +696,7 @@ const DB = (() => {
   }
 
   function removeStagingUnmatched(id) {
-    _stagingUnmatched = _stagingUnmatched.filter(e => e.id !== id);
+    _stagingUnmatched = _stagingUnmatched.filter(e => e.id !== id && e.ean !== id);
     _safeSetItem(STAGING_UNMATCHED_KEY, JSON.stringify(_stagingUnmatched));
   }
 

@@ -225,6 +225,31 @@ app.post('/api/stores', (req, res) => {
   res.json({ success: true, count: stores.length });
 });
 
+// ── API: Staging (Permanencia de estado de colas) ─────────────────────────
+app.get('/api/staging/:key', (req, res) => {
+  const { key } = req.params;
+  // Solo permitir caracteres seguros para el nombre del archivo
+  if (!/^[a-zA-Z0-9_-]+$/.test(key)) {
+    return res.status(400).json({ error: 'Llave inválida' });
+  }
+  const filePath = path.join(dataDir, `${key}.json`);
+  if (fs.existsSync(filePath)) {
+    res.json(JSON.parse(fs.readFileSync(filePath, 'utf8')));
+  } else {
+    res.json([]);
+  }
+});
+
+app.post('/api/staging/:key', (req, res) => {
+  const { key } = req.params;
+  if (!/^[a-zA-Z0-9_-]+$/.test(key)) {
+    return res.status(400).json({ error: 'Llave inválida' });
+  }
+  const filePath = path.join(dataDir, `${key}.json`);
+  fs.writeFileSync(filePath, JSON.stringify(req.body, null, 2));
+  res.json({ success: true });
+});
+
 // ── Helper: Open Food Facts Enrichment ────────────────────────────────────
 async function fetchEnrichment(ean) {
   try {

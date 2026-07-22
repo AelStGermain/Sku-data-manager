@@ -2286,3 +2286,15 @@ html[data-theme="dark"] {
   margin-right: 3px;
 }
 
+/* ── Highlight Text for Revision ─────────── */
+.highlight-text {
+  background-color: var(--accent-light, #e8f0fe);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border-left: 4px solid var(--accent, #1a73e8);
+  font-weight: 500;
+  color: var(--text-main);
+  margin-top: 10px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+}

@@ -1,0 +1,72 @@
+[
+  {
+    "ean": "999999000001",
+    "name": "[MOCK] Producto Prueba 1",
+    "category": [
+      "DETERGENTS"
+    ],
+    "dmuCategory": [
+      "DETERGENTS"
+    ],
+    "reason": "NEW_SKU_NO_VISPERA_ID",
+    "createdAt": "2026-07-21T17:22:04.652Z",
+    "batchId": "2b4cf520-e906-469a-885b-411afabf1a45",
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "ean": "999999000005",
+    "name": "[MOCK] Producto Prueba 5",
+    "category": [
+      "CEREALS"
+    ],
+    "dmuCategory": [
+      "CEREALS"
+    ],
+    "reason": "NEW_SKU_NO_VISPERA_ID",
+    "createdAt": "2026-07-21T17:26:08.937Z",
+    "batchId": "9d52075d-e077-434a-8f29-91af2a96838d",
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "ean": "999999000004",
+    "name": "[MOCK] Producto Prueba 4",
+    "category": [
+      "HEALTHY"
+    ],
+    "dmuCategory": [
+      "HEALTHY"
+    ],
+    "reason": "NEW_SKU_NO_VISPERA_ID",
+    "createdAt": "2026-07-21T17:28:45.887Z",
+    "batchId": "389710ba-2074-49c8-8bfa-f09e96bbb066",
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "ean": "999999000003",
+    "name": "[MOCK] Producto Prueba 3",
+    "category": [
+      "DRINKS"
+    ],
+    "dmuCategory": [
+      "DRINKS"
+    ],
+    "reason": "NEW_SKU_NO_VISPERA_ID",
+    "createdAt": "2026-07-21T17:28:51.574Z",
+    "batchId": "274cf01b-0f58-4897-ad94-2639e7d1a180",
+    "status": "PENDING_REVIEW"
+  },
+  {
+    "ean": "999999000002",
+    "name": "[MOCK] Producto Prueba 2",
+    "category": [
+      "DRINKS"
+    ],
+    "dmuCategory": [
+      "DRINKS"
+    ],
+    "reason": "NEW_SKU_NO_VISPERA_ID",
+    "createdAt": "2026-07-21T17:54:36.308Z",
+    "batchId": "52aa2d73-802d-4cd3-a4f3-cc54e2fb876c",
+    "status": "PENDING_REVIEW"
+  }
+]

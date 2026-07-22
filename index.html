@@ -105,14 +105,21 @@
         <span>Levantamiento</span>
       </button>
 
-      <button class="nav-item" data-view="auditoria" id="nav-auditoria">
+      <button class="nav-item" data-view="avistamientos" id="nav-avistamientos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span>Avistamientos</span>
+      </button>
+
+      <button class="nav-item" data-view="revision" id="nav-revision">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
         </svg>
         <span>Revisión</span>
       </button>
-
-
 
     </nav>
 
@@ -189,9 +196,14 @@
     <section id="view-levantamiento" class="view">
       <!-- Rendered by UILevantamiento.render() -->
     </section>
+    
+    <!-- AVISTAMIENTOS VIEW -->
+    <section id="view-avistamientos" class="view">
+      <!-- Rendered by UIAvistamientos.render() -->
+    </section>
 
-    <!-- AUDITORIA VIEW -->
-    <section id="view-auditoria" class="view">
+    <!-- REVISION VIEW -->
+    <section id="view-revision" class="view">
       <!-- Rendered by UIStaging.render() -->
     </section>
 
@@ -234,6 +246,7 @@
 <script src="js/ui-bulk.js?v=7"></script>
 <script src="js/ui-retailers.js?v=7"></script>
 <script src="js/ui-levantamiento.js?v=7"></script>
+<script src="js/ui-avistamientos.js?v=7"></script>
 <script src="js/ui-staging.js?v=7"></script>
 
 <script src="js/app.js?v=7"></script>

@@ -32,7 +32,7 @@ const UIStaging = (() => {
   }
 
   function render() {
-    const el = document.getElementById('view-auditoria');
+    const el = document.getElementById('view-revision');
     if (!el) return;
 
     const matches = DB.getRecentMatches ? DB.getRecentMatches() : [];
@@ -104,14 +104,6 @@ const UIStaging = (() => {
       Falta Customer ID
       <span class="staging-tab-count">${orphans.length}</span>
     </button>
-  </div>
-  
-  <div style="padding-bottom:12px; display:flex; align-items:center; gap:8px;">
-    <span style="font-size:13px; color:var(--text-sec); font-weight:500;">Auditor:</span>
-    <select class="form-input" style="padding:4px 8px; font-size:13px; width:auto; background:#fff;" onchange="UIStaging.setAuditorFilter(this.value)">
-      <option value="all" ${_auditorFilter === 'all' ? 'selected' : ''}>Todos los Auditores</option>
-      ${allAuditors.map(a => `<option value="${esc(a)}" ${_auditorFilter === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
-    </select>
   </div>
 </div>
 </div>
@@ -254,6 +246,8 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ?
     const start = (_reviewPage - 1) * _itemsPerPage;
     const paginated = filtered.slice(start, start + _itemsPerPage);
 
+    const allAuditors = [...new Set(DB.getProductsArray().map(p => p.levantamientoMeta?.auditor).filter(Boolean))].sort();
+
     let searchBar = `
       <div class="staging-info-bar" style="display:flex; justify-content:space-between; align-items:center;">
         <div class="staging-info-left" style="display:flex; align-items:center; gap:16px;">
@@ -262,12 +256,19 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ?
             ${_enriching ? '<div class="spinning-loader" style="width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div> Cruzando...' : '🔍 Cruzar datos / Sugerir'}
           </button>
         </div>
-        <div>
-          <input type="text" class="form-input" placeholder="Buscar EAN, Nombre, Auditor, Fecha..." value="${esc(_reviewSearch)}" oninput="UIStaging.handleSearchInput(this.value)" style="width: 300px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="display:flex; align-items:center; gap:6px; background:var(--accent-dim); padding:4px 10px; border-radius:6px; border:1px solid rgba(65,88,232,0.2);">
+            <span style="font-size:12px; color:var(--accent); font-weight:600;">Filtrar Auditor:</span>
+            <select class="form-input" style="padding:2px 6px; font-size:12px; width:auto; background:#fff; border:none;" onchange="UIStaging.setAuditorFilter(this.value)">
+              <option value="all" ${_auditorFilter === 'all' ? 'selected' : ''}>Todos</option>
+              ${allAuditors.map(a => `<option value="${esc(a)}" ${_auditorFilter === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
+            </select>
+          </div>
+          <input type="text" class="form-input" placeholder="Buscar EAN, Nombre..." value="${esc(_reviewSearch)}" oninput="UIStaging.handleSearchInput(this.value)" style="width: 220px;">
         </div>
       </div>
-      <p style="font-size: 13px; color: var(--text-sec); margin-top: -8px; margin-bottom: 16px;">
-        <em>SKUs nuevos detectados en terreno que aún no tienen un Vispera ID. Asegúrate de que sus datos estén correctos antes de enviarlos a Tickets Vispera.</em>
+      <p class="highlight-text">
+        <em>SKUs nuevos detectados en terreno que aún no tienen un Vispera ID. Abre la ficha del SKU para completar sus datos. <strong>Una vez que los datos requeridos estén completos, el SKU se moverá automáticamente a Tickets Vispera.</strong></em>
       </p>
     `;
 
@@ -325,7 +326,7 @@ ${_activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ?
         <td style="font-size:12px;">${esc(item.levantamientoMeta?.auditor || '—')}</td>
         <td style="font-size:12px; color:var(--text-sec)">${new Date(item.levantamientoMeta?.timestamp || item.createdAt || item.updatedAt || Date.now()).toLocaleDateString('es-CL')}</td>
         <td style="display:flex; gap:6px;">
-          <button class="btn-primary btn-mini" style="background:#FF9800; color:white;" onclick="UIStaging.enviarATicket('${esc(item.ean)}')">Enviar a Ticket ➡️</button>
+          <span style="font-size:11px; font-weight:600; color:var(--danger); padding:4px 8px; border-radius:4px; background:var(--danger-dim);">Faltan Datos</span>
         </td>
       </tr>`}).join('')}
     </tbody>
@@ -351,8 +352,8 @@ ${paginationControls}`;
   </div>
   <button class="btn-primary" onclick="UIStaging.exportToExcel('tickets')">Exportar a Excel</button>
 </div>
-<p style="font-size: 13px; color: var(--text-sec); margin-top: -8px; margin-bottom: 16px;">
-  <em>Lista de espera para exportar a Excel y enviar al equipo de Vispera. Marca como "Listo" los SKUs que tengan toda su información completa antes de exportar.</em>
+<p class="highlight-text">
+  <em>Lista de espera para exportar a Excel y enviar al equipo de Vispera. Aquí <strong>nada es editable</strong>. Si notas un error, haz clic en "Volver a Revisión" para corregir los datos.</em>
 </p>
 
 <div class="preview-table-wrap" style="max-height:60vh;">
@@ -373,7 +374,7 @@ ${paginationControls}`;
       <tr>
         <td class="mono">${esc(item.ean)}</td>
         <td style="font-weight:500;">
-          <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(item.name || 'Sin nombre')}</a>
+          ${esc(item.name || 'Sin nombre')}
         </td>
         <td>${esc(item.dmuCategory || item.category || '—')}</td>
         <td style="font-size:12px;">
@@ -381,17 +382,6 @@ ${paginationControls}`;
           <span style="color:var(--text-sec)">${new Date(item.createdAt).toLocaleDateString('es-CL')}</span>
         </td>
         <td style="display:flex; gap:6px;">
-          ${(()=>{
-            const isComplete = p.name && p.brand && p.universalCategory && p.imageUrl;
-            if (!isComplete) {
-              return `<button class="btn-outline btn-mini" title="Faltan datos (Nombre, Marca, Categoría o Imagen)" onclick="App.showToast('Debes completar Nombre, Marca, Categoría e Imagen antes de marcar como listo.', 'error')" style="opacity:0.5;">Listo</button>`;
-            }
-            if (item.isListo) {
-              return `<button class="btn-primary btn-mini" style="background:#4CAF50" onclick="UIStaging.toggleListo('${esc(item.batchId)}')">Listo ✓</button>`;
-            } else {
-              return `<button class="btn-outline btn-mini" onclick="UIStaging.toggleListo('${esc(item.batchId)}')">Marcar Listo</button>`;
-            }
-          })()}
           <button class="btn-mini" style="color:var(--danger)" onclick="UIStaging.rejectBatch('${esc(item.batchId)}')">Volver a Revisión</button>
         </td>
       </tr>`}).join('')}
@@ -442,7 +432,7 @@ ${paginationControls}`;
     <span class="staging-info-label">SKUs sin Customer ID: <strong>${items.length}</strong></span>
   </div>
 </div>
-<p style="font-size: 13px; color: var(--text-sec); margin-top: -8px; margin-bottom: 16px;">
+<p class="highlight-text">
   <em>SKUs que carecen del código interno del holding (Customer ID). Este código es crucial para que Vispera envíe reportes correctos a la cadena.</em>
 </p>
 
@@ -503,7 +493,7 @@ ${paginationControls}`;
   </div>
   <button class="btn-primary" onclick="UIStaging.exportToExcel('history')">Exportar a Excel</button>
 </div>
-<p style="font-size: 13px; color: var(--text-sec); margin-top: -8px; margin-bottom: 16px;">
+<p class="highlight-text">
   <em>Historial de SKUs que ya fueron exportados. Aquí puedes ingresar su nuevo Vispera ID una vez que el equipo de Vispera te lo asigne.</em>
 </p>
 

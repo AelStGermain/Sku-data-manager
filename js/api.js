@@ -182,7 +182,8 @@ const API = (() => {
         brand: specs.brand_name || null,
         masterCategory: specs.subcategory_name || null,
         imageUrl: item.picture_url || null,
-        weight_g: weight_g
+        weight_g: weight_g,
+        dataSource: 'solotodo'
       };
     } catch (err) {
       console.error("Error en Solotodo API:", err);
@@ -192,10 +193,39 @@ const API = (() => {
 
   // ── Enrich single product ──────────────────────
   async function enrichProduct(ean) {
-    let data = await fetchFromCustomAPI(ean); // PRIORIDAD 1: Tu nueva API
-    if (!data) data = await fetchFromOFF(ean); // PRIORIDAD 2: Open Food Facts
-    if (!data) data = await fetchFromOPF(ean); // PRIORIDAD 3: Open Products Facts
-    return data; // null si no se encuentra en ninguna
+    // Consultar todas las APIs en paralelo para máxima velocidad
+    const [solotodo, off, opf] = await Promise.all([
+      fetchFromCustomAPI(ean).catch(() => null),
+      fetchFromOFF(ean).catch(() => null),
+      fetchFromOPF(ean).catch(() => null)
+    ]);
+
+    let mergedData = null;
+
+    const combine = (sourceData) => {
+      if (!sourceData) return;
+      if (!mergedData) {
+        mergedData = { ...sourceData };
+        return;
+      }
+      // Rellenar campos faltantes con esta fuente secundaria
+      Object.keys(sourceData).forEach(key => {
+        if (!mergedData[key] && sourceData[key]) {
+          mergedData[key] = sourceData[key];
+        }
+      });
+      // Mantener la fuente original que proveyó el primer set de datos
+      if (!mergedData.dataSource && sourceData.dataSource) {
+        mergedData.dataSource = sourceData.dataSource;
+      }
+    };
+
+    // Fusión híbrida respetando prioridad: Solotodo > OFF > OPF
+    combine(solotodo);
+    combine(off);
+    combine(opf);
+
+    return mergedData; // null si no se encuentra en ninguna
   }
 
   // Enrich and save single product from DB
@@ -236,18 +266,30 @@ const API = (() => {
   }
 
   // ── Merge API data into existing product ───────
-  // Only fills in null/missing fields; never overwrites existing data
+  // Only fills in null/missing/placeholder fields; never overwrites existing valid data
   function mergeEnriched(product, apiData) {
     if (!apiData) return product;
     const merged = { ...product };
-    const fill = (field) => { if (!merged[field] && apiData[field]) merged[field] = apiData[field]; };
+    
+    const isMissingOrPlaceholder = (val) => {
+      if (!val) return true;
+      const s = String(val).trim().toLowerCase();
+      return s === 'sin nombre' || s === 'n/a' || s === 'sin marca';
+    };
+
+    const fill = (field) => { 
+      if (isMissingOrPlaceholder(merged[field]) && apiData[field]) {
+        merged[field] = apiData[field]; 
+      }
+    };
+    
     ['name', 'brand', 'packageType', 'width_cm', 'height_cm', 'depth_cm', 'weight_g', 'imageUrl'].forEach(fill);
 
     // Fill masterCategory only if missing
-    if (apiData.masterCategory && !merged.masterCategory) merged.masterCategory = apiData.masterCategory;
+    if (apiData.masterCategory && isMissingOrPlaceholder(merged.masterCategory)) merged.masterCategory = apiData.masterCategory;
 
     // Track name source
-    if (apiData.name && !product.name && merged.nameSource !== 'manual') merged.nameSource = 'off';
+    if (apiData.name && isMissingOrPlaceholder(product.name) && merged.nameSource !== 'manual') merged.nameSource = 'off';
     if (apiData.dataSource && merged.dataSource !== 'manual') merged.dataSource = apiData.dataSource;
 
     // Store OFF image URL separately for the image tabs

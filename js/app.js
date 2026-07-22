@@ -35,8 +35,8 @@ const App = {
   navigateTo(view) {
     // Map legacy 'retailers' to 'holdings'
     if (view === 'retailers') view = 'holdings';
-    // Map legacy 'staging' and 'pipeline' to 'auditoria'
-    if (view === 'staging' || view === 'pipeline') view = 'auditoria';
+    // Map legacy 'staging', 'pipeline' and 'auditoria' to 'revision'
+    if (view === 'staging' || view === 'pipeline' || view === 'auditoria') view = 'revision';
 
     if (window.location.hash !== `#${view}`) {
       window.location.hash = view; 
@@ -57,7 +57,8 @@ const App = {
     if (view === 'import')         UIImport.render();
     if (view === 'holdings')       { if (typeof UIHoldings !== 'undefined') UIHoldings.render(); else if (typeof UIRetailers !== 'undefined') UIRetailers.render(); }
     if (view === 'levantamiento')  UILevantamiento.render();
-    if (view === 'auditoria')      UIStaging.render();
+    if (view === 'revision')       UIStaging.render();
+    if (view === 'avistamientos')  UIAvistamientos.render();
     if (view === 'dashboard')      UIDashboard.render();
   },
 
@@ -402,7 +403,7 @@ const App = {
     });
 
     // Hash tracking for F5 refreshes
-    const validViews = ['dashboard', 'catalog', 'import', 'holdings', 'bulk', 'levantamiento', 'auditoria', 'staging'];
+    const validViews = ['dashboard', 'catalog', 'import', 'holdings', 'bulk', 'levantamiento', 'revision', 'auditoria', 'staging', 'avistamientos'];
     window.addEventListener('hashchange', () => {
       let hash = window.location.hash.replace('#', '');
       if (hash === 'retailers') hash = 'holdings'; // legacy redirect

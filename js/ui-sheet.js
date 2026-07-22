@@ -49,7 +49,7 @@ const UISheet = (() => {
     _showModal();
   }
 
-  function openCreate(stagingId = null) {
+  function openCreate(mode = 'master', stagingId = null) {
     _ean = null;
     _stagingId = stagingId;
     _isCreate = true;
@@ -63,7 +63,7 @@ const UISheet = (() => {
     };
     _original = JSON.parse(JSON.stringify(_data));
     _dirty = true;
-    _createMode = 'master';
+    _createMode = mode;
     _fdImageB64 = null;
     _fdImageFile = null;
     _fdSelectedCats = [];
@@ -71,6 +71,52 @@ const UISheet = (() => {
     _holding = holdings.length > 0 ? holdings[0].id : null;
     _render();
     _showModal();
+  }
+
+  function openCreateWithPrefill(item) {
+    _ean = null;
+    _stagingId = item.ean; // Temporary ID (TERRENO-...)
+    _isCreate = true;
+    _data = {
+      ean: '', name: item.description || item.apiRawName || '', brand: '', packageType: 'other', 
+      status: 'active', nameSource: 'manual', 
+      masterCategory: Array.isArray(item.dmuCategory) ? item.dmuCategory[0] : (item.dmuCategory || null), 
+      universalCategory: Array.isArray(item.dmuCategory) ? item.dmuCategory[0] : (item.dmuCategory || null),
+      offAttempted: false, width_cm: null, height_cm: null, depth_cm: null,
+      weight_g: null, weight_unit: 'g', producer: '', 
+      imageUrl: item.imageUrl || null, images: item.imageUrl ? [item.imageUrl] : [], 
+      dataSource: 'levantamiento', history: [], 
+      planogram: {}, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      holdings: {}
+    };
+
+    if (item.holdingId) {
+      _data.holdings[item.holdingId] = {
+        holdingProductId: `mock_${Date.now()}`,
+        masterProductId: '',
+        holdingInternalId: '', customerId: item.customerId || '',
+        localProductName: _data.name, name: _data.name, 
+        localCategoryName: item.dmuCategory || null, category: item.dmuCategory || null,
+        stockStatus: true, isActiveHolding: true, imageUrl: item.imageUrl || null,
+        dmu: item.dmu ? [item.dmu] : [],
+        aisle: item.aisle || null,
+        updatedAt: new Date().toISOString()
+      };
+      _holding = item.holdingId;
+    } else {
+      const holdings = DB.getHoldings();
+      _holding = holdings.length > 0 ? holdings[0].id : null;
+    }
+
+    _original = JSON.parse(JSON.stringify(_data));
+    _dirty = true;
+    _createMode = 'master'; // Force master mode to enter EAN
+    _fdImageB64 = null;
+    _fdImageFile = null;
+    _fdSelectedCats = [];
+    _render();
+    _showModal();
+    App.showToast('Ingresa el EAN real del producto. Al guardar, se buscarán datos en internet automáticamente.', 'info');
   }
 
   function close() {
@@ -83,8 +129,115 @@ const UISheet = (() => {
 
   function _showModal() {
     const ov = document.getElementById('sheet-overlay');
+    const modal = document.getElementById('sheet-modal');
+    if (modal) {
+       if (_isCreate && _createMode === 'field') {
+          modal.style.maxWidth = '600px';
+       } else {
+          modal.style.maxWidth = '880px';
+       }
+    }
     ov.classList.remove('hidden');
     requestAnimationFrame(() => ov.classList.add('visible'));
+  }
+
+  function openEditField(item) {
+    _ean = null;
+    _stagingId = item.ean;
+    _isCreate = true;
+    _createMode = 'field';
+    _data = { ...item };
+    _original = JSON.parse(JSON.stringify(_data));
+    _dirty = false;
+    _fdImageB64 = item.imageUrl || null;
+    _fdImageFile = null;
+    _holding = item.holdingId || null;
+    
+    _render();
+    _showModal();
+
+    // Fill form manually since it's un-bound in field mode
+    setTimeout(() => {
+      if (document.getElementById('fd-desc')) document.getElementById('fd-desc').value = item.description || item.apiRawName || '';
+      if (document.getElementById('fd-brand')) document.getElementById('fd-brand').value = item.brand || '';
+      if (document.getElementById('fd-dmu')) document.getElementById('fd-dmu').value = item.dmu || '';
+      if (document.getElementById('fd-aisle')) document.getElementById('fd-aisle').value = item.aisle || item.dmuName || '';
+      if (document.getElementById('fd-holding')) document.getElementById('fd-holding').value = item.holdingId || '';
+    }, 50);
+  }
+
+  async function resolveAvistamiento(item, realEan) {
+    _stagingId = item.ean; // "TERRENO-XYZ"
+    _ean = realEan;
+    _isCreate = false;
+    _createMode = 'master';
+    
+    // Check if realEan already exists
+    const existing = DB.getProduct(realEan);
+    if (existing) {
+      _data = { ...existing };
+      // Merge only missing data
+      if (!_data.imageUrl && item.imageUrl) _data.imageUrl = item.imageUrl;
+      if (!_data.images) _data.images = [];
+      if (item.imageUrl && !_data.images.includes(item.imageUrl)) _data.images.unshift(item.imageUrl);
+      
+      // Ensure holding is added if it didn't exist
+      if (item.holdingId && !_data.holdings?.[item.holdingId]) {
+        _data.holdings = _data.holdings || {};
+        _data.holdings[item.holdingId] = {
+          holdingInternalId: item.customerId || '',
+          localProductName: existing.name || item.description || '',
+          dmu: item.dmu ? [item.dmu] : [],
+          stockStatus: true,
+          isActiveHolding: true
+        };
+      }
+    } else {
+      _isCreate = true;
+      _data = {
+        ean: realEan, name: item.description || item.apiRawName || '', brand: item.brand || '', packageType: 'other', 
+        status: 'review', nameSource: 'manual', 
+        masterCategory: item.dmuCategory || 'GROCERY STORE', 
+        universalCategory: item.dmuCategory || 'GROCERY STORE',
+        offAttempted: false, width_cm: null, height_cm: null, depth_cm: null,
+        weight_g: null, weight_unit: 'g', producer: '', 
+        imageUrl: item.imageUrl || null, images: item.imageUrl ? [item.imageUrl] : [], 
+        dataSource: 'levantamiento', history: [], 
+        planogram: {}, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        holdings: {}
+      };
+      if (item.holdingId) {
+        _data.holdings[item.holdingId] = {
+          holdingInternalId: item.customerId || '',
+          localProductName: _data.name,
+          dmu: item.dmu ? [item.dmu] : [],
+          stockStatus: true,
+          isActiveHolding: true
+        };
+      }
+    }
+
+    _original = JSON.parse(JSON.stringify(_data));
+    _dirty = true;
+    _holding = item.holdingId || (DB.getHoldings()[0]?.id || null);
+    
+    _render();
+    _showModal();
+
+    // Trigger API enrichment if it's a new or incomplete EAN
+    if (!_data.visperaId || !_data.name || !_data.imageUrl) {
+       App.showToast('Buscando datos en la red...', 'info');
+       try {
+         const apiData = await API.enrichProduct(realEan);
+         if (apiData) {
+            _data = API.mergeEnriched(_data, apiData);
+            _render();
+            App.showToast('Datos adicionales encontrados', 'success');
+         }
+       } catch (e) {
+         console.warn(e);
+       }
+    }
   }
 
   function _hideModal() {
@@ -186,7 +339,7 @@ const UISheet = (() => {
   }
 
   // ── save & discard ─────────────────────────
-  function save() {
+  async function save() {
     if (!_data || !_data.ean) { App.showToast('El EAN es requerido', 'error'); return; }
     if (_isCreate && DB.getProduct(_data.ean)) { App.showToast('Ya existe un producto con el EAN ' + _data.ean, 'error'); return; }
     
@@ -196,6 +349,24 @@ const UISheet = (() => {
       if (!v.valid) App.showToast(`⚠️ EAN posiblemente inválido: ${v.reason}`, 'warning');
     }
     
+    // Auto-enrichment for resolved Avistamientos
+    let autoEnriched = false;
+    if (_isCreate && _stagingId && _stagingId.startsWith('TERRENO-')) {
+      App.showToast('Consultando APIs externas con el nuevo EAN...', 'info');
+      try {
+        const apiData = await API.enrichProduct(_data.ean);
+        if (apiData) {
+          _data = API.mergeEnriched(_data, apiData);
+          autoEnriched = true;
+        } else {
+          _data.offAttempted = true;
+          _data.enrichFailed = true;
+        }
+      } catch(e) {
+        console.error("Error auto-enriching", e);
+      }
+    }
+
     DB.saveProduct(_data);
     _original = JSON.parse(JSON.stringify(_data));
     _dirty = false;
@@ -206,9 +377,40 @@ const UISheet = (() => {
     if (_stagingId) {
       DB.removeStagingUnmatched(_stagingId);
       _stagingId = null;
+      if (typeof UIAvistamientos !== 'undefined' && document.getElementById('view-avistamientos')?.classList.contains('active')) {
+        UIAvistamientos.render();
+      }
     }
     
-    App.showToast('Cambios guardados correctamente', 'success');
+    // Auto-forward to tickets if complete and missing Vispera ID
+    const isComplete = _data.name && _data.brand && _data.universalCategory && _data.imageUrl;
+    let autoForwarded = false;
+    
+    if (isComplete && !_data.visperaId) {
+      const visperaBatch = DB.getVisperaBatch() || [];
+      const inBatch = visperaBatch.some(b => b.ean === _data.ean);
+      if (!inBatch) {
+        DB.addVisperaBatchItem({
+          ean: _data.ean,
+          name: _data.name,
+          category: _data.universalCategory,
+          dmuCategory: _data.universalCategory,
+          reason: 'NEW_SKU_NO_VISPERA_ID',
+          createdAt: new Date().toISOString()
+        });
+        autoForwarded = true;
+      }
+    }
+    
+    if (autoForwarded) {
+      App.showToast(autoEnriched ? 'Datos enriquecidos. Producto completo movido a Tickets Vispera.' : 'Cambios guardados. Datos completos: el SKU se movió automáticamente a Tickets Vispera.', 'success');
+      if (typeof UIStaging !== 'undefined' && document.getElementById('view-revision')?.classList.contains('active')) {
+        UIStaging.render();
+      }
+    } else {
+      App.showToast(autoEnriched ? '✓ Producto guardado y enriquecido con APIs.' : 'Cambios guardados correctamente', 'success');
+    }
+    
     _render();
     // Refresh catalog in background
     if (document.getElementById('view-catalog')?.classList.contains('active')) UICatalog.render();
@@ -497,15 +699,16 @@ const UISheet = (() => {
     // -- Create Mode Tabs --
     let tabsHtml = '';
     if (_isCreate) {
+      let tabTitle = _createMode === 'field' ? 'Producto avistado' : 'Nuevo SKU Máster';
+      let tabIcon = _createMode === 'field' 
+        ? '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'
+        : '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
+        
       tabsHtml = `
       <div class="sheet-create-tabs" style="display:flex; border-bottom:1px solid var(--border); background:var(--surface-el);">
-        <button class="sheet-c-tab ${_createMode === 'master' ? 'active' : ''}" onclick="UISheet.setCreateMode('master')" style="flex:1; padding:16px; border:none; background:transparent; font-weight:600; cursor:pointer; color:${_createMode === 'master' ? 'var(--accent)' : 'var(--text-sec)'}; border-bottom:${_createMode === 'master' ? '2px solid var(--accent)' : 'none'}">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nuevo SKU Máster
-        </button>
-        <button class="sheet-c-tab ${_createMode === 'field' ? 'active' : ''}" onclick="UISheet.setCreateMode('field')" style="flex:1; padding:16px; border:none; background:transparent; font-weight:600; cursor:pointer; color:${_createMode === 'field' ? '#FFC107' : 'var(--text-sec)'}; border-bottom:${_createMode === 'field' ? '2px solid #FFC107' : 'none'}">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          Reporte de Terreno
+        <button class="sheet-c-tab active" style="flex:1; padding:16px; border:none; background:transparent; font-weight:600; cursor:default; color:#FFC107; border-bottom:2px solid #FFC107">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px">${tabIcon}</svg>
+          ${tabTitle}
         </button>
         <button class="btn-close-sheet" onclick="UISheet.close()" style="position:absolute; right:12px; top:12px; padding:8px;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -514,12 +717,9 @@ const UISheet = (() => {
     }
 
     if (_isCreate && _createMode === 'field') {
-      const holdingOpts = holdings.map(h => `<option value="${h.id}">${h.name}</option>`).join('');
-      const uniCatOpts = (window.UNIVERSAL_CATEGORIES || []).map(c => `<option value="${c}">${c}</option>`).join('');
-
       container.innerHTML = `
       ${tabsHtml}
-      <div class="fd-modal-body" style="height:calc(100% - 110px); overflow-y:auto; padding:24px;">
+      <div class="fd-modal-body" style="height:calc(100% - 54px); overflow-y:auto; padding:24px; padding-bottom:100px;">
         <div class="fd-two-cols">
           <div class="fd-col-photo">
             <p class="fd-section-lbl">Foto del Producto</p>
@@ -534,50 +734,32 @@ const UISheet = (() => {
           </div>
 
           <div class="fd-col-meta">
-            <p class="fd-section-lbl">Datos del Producto (Sin EAN confirmado)</p>
+            <p class="fd-section-lbl">Datos del Producto</p>
             <div class="form-group">
               <label>Descripción breve <span style="color:var(--danger)">*</span></label>
-              <input type="text" id="fd-desc" class="form-input" placeholder="Ej: Leche descremada, 1L" maxlength="120">
+              <input type="text" id="fd-desc" class="form-input" placeholder="Ej: Crema Nivea" maxlength="120">
             </div>
-            <div class="fd-two-mini">
-              <div class="form-group">
-                <label>EAN tentativo <span id="fd-ean-badge" style="font-size:11px; margin-left:8px;"></span></label>
-                <input type="text" id="fd-ean" class="form-input" placeholder="EAN si lo tienes" maxlength="13" oninput="UISheet._fdValidateEAN(this.value)">
-              </div>
-              <div class="form-group">
-                <label>Customer ID (Opcional)</label>
-                <input type="text" id="fd-customer-id" class="form-input" placeholder="ID interno del holding">
-              </div>
+            <div class="form-group">
+              <label>Posible Marca</label>
+              <input type="text" id="fd-brand" class="form-input" placeholder="Ej: Nivea">
             </div>
             <div class="fd-two-mini">
               <div class="form-group">
                 <label>DMU</label>
-                <input type="text" id="fd-dmu" class="form-input">
+                <input type="text" id="fd-dmu" class="form-input" placeholder="Ej: 335">
               </div>
               <div class="form-group">
-                <label>Pasillo / Góndola</label>
-                <input type="text" id="fd-aisle" class="form-input">
+                <label>Pasillo</label>
+                <input type="text" id="fd-aisle" class="form-input" placeholder="Ej: Perfumería">
               </div>
-            </div>
-            <div class="fd-two-mini">
               <div class="form-group">
                 <label>Holding</label>
-                <select id="fd-holding" class="form-select"><option value="">-- Seleccionar --</option>${holdingOpts}</select>
-              </div>
-              <div class="form-group">
-                <label>Categoría Vispera (puede seleccionar varias)</label>
-                <div id="fd-cat-container">
-                  <select class="form-select" id="fd-cat-add-select" onchange="UISheet._fdAddCat(this.value); this.value=''">
-                    <option value="">+ Agregar categoría...</option>
-                    ${(window.UNIVERSAL_CATEGORIES || []).map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
-                  </select>
-                  <div id="fd-cat-tags" style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;"></div>
-                </div>
+                <select id="fd-holding" class="form-select"><option value="">-- Seleccionar --</option>${holdings.map(h => `<option value="${h.id}" ${_holding===h.id?'selected':''}>${h.name}</option>`).join('')}</select>
               </div>
             </div>
-            <div class="fd-alert-notice" style="margin-top:16px;">
+            <div class="fd-alert-notice" style="margin-top:24px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              Este SKU quedará en la lista de EANs sin Identificar (Staging).
+              Este SKU quedará registrado como Avistamiento para asignarle un EAN más tarde.
             </div>
           </div>
         </div>
@@ -894,46 +1076,55 @@ ${tabsHtml}
     const desc = document.getElementById('fd-desc')?.value.trim();
     if (!desc) { App.showToast('La descripción es obligatoria', 'error'); return; }
 
-    const tentativeEAN = document.getElementById('fd-ean')?.value.trim();
-    const customerId = document.getElementById('fd-customer-id')?.value.trim();
-    const dmu     = document.getElementById('fd-dmu')?.value.trim();
-    const aisle   = document.getElementById('fd-aisle')?.value.trim();
-    const holding = document.getElementById('fd-holding')?.value;
-    // Multi-categoría: usar el array seleccionado
-    const catUni  = _fdSelectedCats.length > 0 ? _fdSelectedCats : null;
+    const brand = document.getElementById('fd-brand')?.value.trim() || null;
+    const aisle = document.getElementById('fd-aisle')?.value.trim() || null;
+    const holding = document.getElementById('fd-holding')?.value || null;
+    const dmu     = document.getElementById('fd-dmu')?.value.trim() || null;
 
     const btn = document.getElementById('fd-submit-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
 
-    const tempId = `TERRENO-${Date.now().toString(36).toUpperCase()}`;
-    const ean    = tentativeEAN || tempId;
-    const isTentative = !tentativeEAN;
+    const tempId = _stagingId || `TERRENO-${Date.now().toString(36).toUpperCase()}`;
+    const ean    = tempId;
 
-    let imageUrl = null;
+    let imageUrl = _fdImageB64; // Keep existing image if no new file is uploaded
     if (_fdImageFile) {
       try {
         imageUrl = await DB.uploadProductImage(ean, _fdImageFile, 'field');
       } catch { imageUrl = _fdImageB64; }
     }
 
-    DB.addStagingUnmatched({
+    const payload = {
       ean,
-      isTentativeEAN: isTentative,
+      isTentativeEAN: true,
       type: 'field_discovery',
       status: 'FIELD_DISCOVERY',
       description: desc,
+      brand: brand,
+      aisle: aisle,
+      dmuName: aisle, // for backward compatibility if needed
       dmu,
-      aisle,
-      holdingId: holding || null,
-      customerId: customerId || null,
-      dmuCategory: catUni || null,
+      holdingId: holding,
       imageUrl,
       apiRawName: desc,
-      timestamp: new Date().toISOString(),
-    });
+      timestamp: _data?.timestamp || new Date().toISOString(),
+    };
 
-    App.showToast(isTentative ? `SKU de terreno registrado: ${ean}` : `SKU registrado con EAN tentativo: ${ean}`, 'success');
+    if (_stagingId) {
+      payload.id = _data.id; // preserve internal ID
+      DB.updateStagingUnmatched(_data.id, payload);
+      App.showToast('Avistamiento actualizado', 'success');
+    } else {
+      DB.addStagingUnmatched(payload);
+      App.showToast(`Avistamiento registrado. ID temporal: ${ean}`, 'success');
+    }
+
+    _dirty = false;
     close();
+    
+    if (typeof UIAvistamientos !== 'undefined' && document.getElementById('view-avistamientos')?.classList.contains('active')) {
+      UIAvistamientos.render();
+    }
   }
 
   function sendToReview() {
@@ -958,6 +1149,7 @@ ${tabsHtml}
     validateEANInput,
     updateRetailerField, addToRetailer, removeFromRetailer, setRetailer,
     setCreateMode, _fdHandleImage, _fdSetFile, _fdValidateEAN, submitFieldDiscovery,
+    openEditField, resolveAvistamiento,
     _fdAddCat, _fdRemoveCat, _fdRenderCatTags,
     toggleArrayField, sendToReview
   };
