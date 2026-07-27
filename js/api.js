@@ -1,11 +1,14 @@
 'use strict';
 
 const API = (() => {
-  const OFF_BASE = 'https://world.openfoodfacts.org/api/v2/product';
-  const OPF_BASE = 'https://world.openproductsfacts.org/api/v2/product';
+  const runtimeConfig = globalThis.SMART_SHELF_CONFIG || {};
+  const OFF_BASE = runtimeConfig.openFoodApiUrl || 'https://world.openfoodfacts.org/api/v2/product';
+  const OPF_BASE = runtimeConfig.openProductsApiUrl || 'https://world.openproductsfacts.org/api/v2/product';
+  const SOLOTODO_BASE = runtimeConfig.solotodoApiUrl || 'https://publicapi.solotodo.com/products/';
+  const API_TIMEOUT_MS = Number(runtimeConfig.externalApiTimeoutMs) || 8000;
 
   // ── Request timeout helper ────────────────────
-  function _fetchWithTimeout(url, ms = 8000) {
+  function _fetchWithTimeout(url, ms = API_TIMEOUT_MS) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), ms);
     return fetch(url, { signal: controller.signal })
@@ -161,7 +164,8 @@ const API = (() => {
   async function fetchFromCustomAPI(ean) {
     try {
       const requestedEan = String(ean || '').trim();
-      const response = await _fetchWithTimeout(`https://publicapi.solotodo.com/products/?search=${encodeURIComponent(requestedEan)}`, 10000);
+      const separator = SOLOTODO_BASE.includes('?') ? '&' : '?';
+      const response = await _fetchWithTimeout(`${SOLOTODO_BASE}${separator}search=${encodeURIComponent(requestedEan)}`, API_TIMEOUT_MS);
       if (!response.ok) return null;
       const json = await response.json();
       if (!json.results || json.results.length === 0) return null;

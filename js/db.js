@@ -99,6 +99,14 @@ const DB = (() => {
   
   const PRODUCTS_CACHE_KEY = 'ss_products_cache';
 
+  // Accept the production API envelope while retaining compatibility with
+  // older/offline mocks that return the payload directly.
+  function _apiData(payload) {
+    return payload && payload.success === true && Object.prototype.hasOwnProperty.call(payload, 'data')
+      ? payload.data
+      : payload;
+  }
+
   function _safeSetItem(key, value) {
     try {
       localStorage.setItem(key, value);
@@ -181,7 +189,7 @@ const DB = (() => {
      try {
        const res = await fetch('/api/holdings');
        if (res.ok) {
-         const serverHoldings = await res.json();
+         const serverHoldings = _apiData(await res.json());
          if (Array.isArray(serverHoldings) && serverHoldings.length > 0) {
            _safeSetItem(HOLDINGS_KEY, JSON.stringify(serverHoldings));
            console.log(`⚡ Holdings cargados desde servidor: ${serverHoldings.length}`);
@@ -202,7 +210,7 @@ const DB = (() => {
      try {
        const res = await fetch('/api/stores');
        if (res.ok) {
-         const serverStores = await res.json();
+         const serverStores = _apiData(await res.json());
          if (Array.isArray(serverStores) && serverStores.length > 0) {
            _safeSetItem(STORES_KEY, JSON.stringify(serverStores));
            console.log(`⚡ Stores cargados desde servidor: ${serverStores.length}`);
@@ -223,7 +231,7 @@ const DB = (() => {
        try {
          const res = await fetch(`/api/staging/${key}`);
          if (res.ok) {
-           const data = await res.json();
+           const data = _apiData(await res.json());
            if (Array.isArray(data)) {
              const localData = JSON.parse(localStorage.getItem(key) || '[]');
              // Migración/Sincronización inicial: si el servidor está vacío pero hay datos locales
@@ -315,7 +323,7 @@ const DB = (() => {
       try {
         const res = await fetch('/api/products');
         if (res.ok) {
-          const data = await res.json();
+          const data = _apiData(await res.json());
           masterData = data.master_catalog || [];
           holdingData = data.retailer_catalog || [];
         } else {
@@ -957,7 +965,7 @@ const DB = (() => {
     try {
       const res = await fetch('/api/category-hierarchy');
       if (res.ok) {
-        const data = await res.json();
+        const data = _apiData(await res.json());
         if (data && typeof data === 'object' && Object.keys(data).length > 0) {
           _categoryHierarchy = data;
           _safeSetItem(CATEGORY_HIERARCHY_KEY, JSON.stringify(data));

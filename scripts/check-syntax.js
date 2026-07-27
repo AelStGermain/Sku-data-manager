@@ -2,16 +2,23 @@ import { readdirSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-const roots = ['js', 'api', 'scripts'];
+const roots = ['src', 'js', 'api', 'scripts'];
 const files = ['server.js', 'test_fb.mjs'];
 
-for (const root of roots) {
+function collect(root) {
   for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const fullPath = join(root, entry.name);
+    if (entry.isDirectory()) {
+      collect(fullPath);
+      continue;
+    }
     if (entry.isFile() && ['.js', '.mjs', '.cjs'].includes(extname(entry.name))) {
-      files.push(join(root, entry.name));
+      files.push(fullPath);
     }
   }
 }
+
+roots.forEach(collect);
 
 let failed = false;
 for (const file of files) {

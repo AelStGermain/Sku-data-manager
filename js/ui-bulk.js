@@ -5,6 +5,7 @@ const UIBulk = (() => {
 
   let _allProducts = [];
   let _filteredProducts = [];
+  let _exportProducts = null;
   let _selectedEans = new Set();
   let _selectAllFiltered = false;
   
@@ -1303,16 +1304,19 @@ const UIBulk = (() => {
       });
     },
 
-    exportExcel() {
-      const isSelectionMode = _selectedEans.size > 0;
+    exportExcel(products = null) {
+      const hasExplicitProducts = Array.isArray(products);
+      const productPool = hasExplicitProducts ? products : _filteredProducts;
+      const isSelectionMode = !hasExplicitProducts && _selectedEans.size > 0;
       const baseProducts = isSelectionMode
-        ? _filteredProducts.filter(p => _selectedEans.has(p.ean))
-        : _filteredProducts;
+        ? productPool.filter(p => _selectedEans.has(p.ean))
+        : productPool;
 
       if (!baseProducts || baseProducts.length === 0) {
         if (App) App.showToast('No hay productos para exportar', 'warning');
         return;
       }
+      _exportProducts = baseProducts;
 
       const holdings = DB.getHoldings();
       const categories = window.UNIVERSAL_CATEGORIES || [];
@@ -1369,10 +1373,7 @@ const UIBulk = (() => {
     },
 
     _doExportExcel() {
-      const isSelectionMode = _selectedEans.size > 0;
-      let targetProducts = isSelectionMode
-        ? _filteredProducts.filter(p => _selectedEans.has(p.ean))
-        : _filteredProducts;
+      let targetProducts = _exportProducts || [];
 
       const holdingFilter = document.getElementById('export-filter-holding')?.value || 'all';
       const categoryFilter = document.getElementById('export-filter-category')?.value || 'all';
@@ -1399,6 +1400,7 @@ const UIBulk = (() => {
 
       const modal = document.getElementById('export-modal-backdrop');
       if (modal) modal.remove();
+      _exportProducts = null;
 
       if (!targetProducts || targetProducts.length === 0) {
         if (App) App.showToast('No hay productos que coincidan con los filtros seleccionados', 'warning');

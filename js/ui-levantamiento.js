@@ -471,7 +471,8 @@ const UILevantamiento = (() => {
     try {
       const res = await fetch('/api/last-sync');
       if (res.ok) {
-        const data = await res.json();
+        const payload = await res.json();
+        const data = payload?.success === true && payload.data ? payload.data : payload;
         if (data.lastSync > 0) {
           const dt = new Date(data.lastSync);
           _lastSyncStr = 'Última act: ' + dt.toLocaleString('es-CL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
@@ -508,7 +509,8 @@ const UILevantamiento = (() => {
         body: JSON.stringify({ force: force })
       });
       
-      const result = await res.json();
+      const payload = await res.json();
+      const result = payload?.success === true && payload.data ? payload.data : payload;
       
       if (!result.success) {
         throw new Error(result.error || 'Error desconocido del servidor');

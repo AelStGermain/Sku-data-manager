@@ -1,8 +1,12 @@
 import fs from 'fs';
 import xlsx from 'xlsx';
 
-// URL del backend local (asegúrate de que server.js esté corriendo)
-const LOCAL_API_URL = 'http://localhost:3000/api/products/bulk';
+// Configurable para despliegues locales, Docker o remotos.
+const LOCAL_API_URL = process.env.LOCAL_API_URL || 'http://localhost:3000/api/products/bulk';
+const requestedChunkSize = Number.parseInt(process.env.IMPORT_CHUNK_SIZE || '5000', 10);
+const CHUNK_SIZE = Number.isFinite(requestedChunkSize)
+  ? Math.min(Math.max(requestedChunkSize, 1), 100000)
+  : 5000;
 
 async function importExcel(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -77,7 +81,6 @@ async function importExcel(filePath) {
   console.log(` - Relaciones de Holding: ${holdingRelations.length}`);
 
   // Dividir en lotes (chunks) para no saturar la API
-  const CHUNK_SIZE = 5000;
   for (let i = 0; i < products.length; i += CHUNK_SIZE) {
     const pChunk = products.slice(i, i + CHUNK_SIZE);
     const rChunk = holdingRelations.filter(r => pChunk.find(p => p.ean === r.ean));

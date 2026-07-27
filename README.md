@@ -1,115 +1,196 @@
-# Smart Shelf — Multi-Holding Data Warehouse
+# Smart Shelf — SKU Data Manager
 
-![Smart Shelf Logo](https://img.shields.io/badge/Smart_Shelf-Multi--Holding_DW-005BAC?style=for-the-badge&logo=supabase)
+Aplicación web para administrar un catálogo maestro de SKU, relaciones por holding,
+staging, importaciones y sincronización opcional con Firebase. Node.js/Express sirve
+la SPA y mantiene los archivos JSON de `local_data/` como fuente oficial de verdad.
+Los Excel se procesan y descartan: nunca se almacenan en el backend.
 
-**Autor:** Sofía Gómez (Estudiante de Técnico en Informática)  
-**Proyecto de Integración:** Taller de Integración Profesional
+## Requisitos e instalación
 
-## Descripción del Proyecto
-
-**Smart Shelf — Multi-Holding Data Warehouse** es una plataforma centralizada (Single Page Application) orientada a resolver un dolor crítico en la logística del retail omnicanal: **la fragmentación e inconsistencia de los datos maestros (SKUs)** entre múltiples holdings (Tottus, Jumbo, Unimarc).
-
-El sistema implementa una arquitectura **BigQuery Data Warehouse Multi-Holding** con un **Pipeline de Matching & Enrichment** automatizado para gestionar EANs que no existen en el catálogo maestro, enriquecerlos usando APIs externas (Open Food Facts / Open Products), y prepararlos para envío a Vispera.
-
-## Ejecución y despliegue
-
-La aplicación requiere el servidor Node/Express incluido en el repositorio. No debe
-publicarse como un sitio estático, porque los flujos de catálogo, holdings, staging y
-sincronización dependen de sus endpoints. El contenedor Docker ejecuta este servidor;
-en producción se debe montar `local_data/` en almacenamiento persistente y proporcionar
-la credencial Firebase fuera de la imagen.
-
-## Arquitectura Técnica
-
-### BigQuery Data Warehouse (Modelo Conceptual)
-
-El sistema implementa la siguiente estructura de datos:
-
-```
-┌──────────────────────────────────────────────────┐
-│           BigQuery Data Warehouse                │
-│                                                  │
-│  ┌─────────────────────────────────────────┐    │
-│  │  Universal Products (Master SKU)        │    │
-│  │  ─ master_product_id (PK)              │    │
-│  │  ─ ean (BK)                            │    │
-│  │  ─ vispera_id (ALT BK)                │    │
-│  │  ─ brand_id (FK)                       │    │
-│  │  ─ producer_id (FK)                    │    │
-│  │  ─ packaging_type, weight_gram         │    │
-│  │  ─ product_image_url                   │    │
-│  └─────────────┬───────────────────────────┘    │
-│                │                                 │
-│  ┌─────────────┴───────────┐  ┌──────────────┐ │
-│  │ Holding SKU Catalog     │  │ Universal    │ │
-│  │ ─ holding_product_id   │  │ Categories   │ │
-│  │ ─ master_product_id(FK)│  │ (Vispera)    │ │
-│  │ ─ ean                  │  │ 18 categorías│ │
-│  │ ─ holding_internal_id  │  └──────────────┘ │
-│  │ ─ local_product_name   │                    │
-│  │ ─ local_category_name  │                    │
-│  │ ─ is_active_holding    │                    │
-│  └─────────────────────────┘                    │
-└──────────────────────────────────────────────────┘
-```
-
-### Categorías Universales Vispera (18)
-
-`GROCERY STORE` · `SWEET` · `ALCOHOL` · `CLEANING` · `DAIRYS` · `FROZEN` · `BREAKFAST` · `SNACKS` · `BABY` · `PET` · `DESSERT` · `CEREALS` · `CANNED FOOD` · `DETERGENTS` · `DRINKS` · `HEALTHY` · `PAPER ITEMS` · `HYGIENE`
-
-### Pipeline de Matching & Enrichment (4 Pasos)
-
-1. **Comparar Staging EANs** contra el Master SKU EAN Index
-2. **EANs no matcheados** → `staging_unmatched_eans`
-3. **Enriquecer con APIs** (Open Food Facts / Open Products) → nombre, marca, peso, categoría
-4. **Portal de Revisión Manual** (GUI) → aprobar e insertar en Universal Products
-
-### Stack
-
-* **Frontend (Cliente):** Vanilla JavaScript (ES6+), HTML5, CSS3
-* **Backend (BaaS):** Supabase (PostgreSQL) simulando BigQuery Data Warehouse
-* **APIs Externas:** Open Food Facts, Open Products Facts
-* **Deploy:** Contenedor Node/Express con volumen persistente
-
-## Estructura de la Base de Datos
-
-### Tablas Principales
-
-| Tabla | Descripción |
-|---|---|
-| `master_catalog` | **Universal Products** — fuente única de verdad para todos los SKUs |
-| `retailer_catalog` | **Holding SKU Catalog** — datos específicos de cada holding |
-| `universal_categories` | 18 categorías globales del modelo Vispera |
-| `product_universal_category_mapping` | Mapeo producto ↔ categoría Vispera |
-| `brands_producers` | Marcas y productores como entidad separada |
-
-### Tablas de Staging
-
-| Tabla | Descripción |
-|---|---|
-| `staging_levantamiento` | Datos crudos de la App de Levantamiento (DMU, EAN) |
-| `staging_unmatched_eans` | EANs que no existen en el maestro, pendientes de enriquecimiento |
-| `vispera_submission_batch` | Lotes agrupados listos para enviar a Vispera |
-
-## Vistas de la Aplicación
-
-| Vista | Descripción |
-|---|---|
-| **Catálogo** | Explorador de Universal Products con filtros por Holding y categoría |
-| **Importar** | Ingesta masiva de SKUs desde CSV/Excel con auto-mapping |
-| **Modo Edición** | Edición masiva con Buscar y Reemplazar (Regex) |
-| **Holdings** | Gestión de Holdings (antes Retailers), sucursales físicas, planogramas |
-| **Levantamiento** | App de captura de datos de terreno (DMU, EAN, Auditor) |
-| **Pipeline** | Matching & Enrichment — staging, enriquecimiento API, revisión manual |
-
-## Despliegue Local
+- Node.js 22 LTS (Node 20 o superior también es compatible).
+- npm.
+- Un directorio persistente con permisos de escritura para los JSON.
 
 ```bash
-git clone https://github.com/AelStGermain/Sku-data-manager.git
-cd Sku-data-manager
+cp .env.example .env
 npm ci
+npm test
 npm start
 ```
 
-Luego abre `http://localhost:3000`. Para validar el código sin iniciar sincronizaciones,
-ejecuta `npm test`.
+La aplicación queda disponible en `http://localhost:3000` y el healthcheck en
+`http://localhost:3000/health`.
+
+## Arquitectura
+
+```text
+src/
+  config/       configuración y valores iniciales
+  controllers/  adaptación HTTP
+  docs/         contrato OpenAPI
+  errors/       errores de aplicación
+  middleware/   seguridad, validación, logging y errores
+  routes/       definición de endpoints
+  services/     negocio, Firebase, auditoría y APIs externas
+  storage/      única capa con conocimiento de archivos físicos
+  utils/        utilidades puras
+```
+
+`src/server.js` gestiona el ciclo de vida; `src/app.js` construye Express sin abrir
+puertos; y `StorageService` concentra lectura, caché, escritura atómica y rutas. Los
+catálogos existentes no cambian de nombre ni de formato.
+
+## Variables de entorno
+
+Use `.env.example` como referencia. Las opciones principales son:
+
+| Variable                |                        Predeterminado | Uso                                           |
+| ----------------------- | ------------------------------------: | --------------------------------------------- |
+| `PORT` / `HOST`         |                    `3000` / `0.0.0.0` | Escucha HTTP                                  |
+| `DATA_DIR`              |                          `local_data` | Única raíz de persistencia                    |
+| `LOG_LEVEL`             | `debug` desarrollo, `info` producción | Nivel Pino                                    |
+| `CORS_ORIGINS`          |                                   `*` | Orígenes separados por coma                   |
+| `TRUST_PROXY`           |                                   `1` | Saltos de proxy confiables                    |
+| `JSON_BODY_LIMIT`       |                                `50mb` | Límite de requests JSON                       |
+| `RATE_LIMIT_MAX`        |                                 `600` | Requests por ventana/IP                       |
+| `MAX_IMPORT_RECORDS`    |                              `100000` | Registros máximos por lote                    |
+| `STORAGE_CACHE_TTL_MS`  |                                `5000` | TTL de caché JSON                             |
+| `FIREBASE_ENABLED`      |                                `true` | Activa Firebase si existe credencial          |
+| `DISABLE_FIREBASE_SYNC` |                                   `0` | Switch heredado; `1` desactiva                |
+| `FIREBASE_PROJECT_ID`   |                       Credencial JSON | Proyecto esperado; detecta claves incorrectas |
+| `FIREBASE_DATABASE_ID`  |                           `(default)` | Base Firestore que se debe consultar          |
+| `EXTERNAL_API_URL`      |                       Open Food Facts | Servicio de enriquecimiento                   |
+| `OPEN_PRODUCTS_API_URL` |                   Open Products Facts | Enriquecimiento alternativo                   |
+| `SOLOTODO_API_URL`      |                  API pública SoloTodo | Búsqueda exacta de EAN                        |
+
+No guarde secretos en `.env.example`. La credencial Firebase debe existir, por
+defecto, en `DATA_DIR/firebase-key.json`, con permisos solo para el usuario del
+servicio. Si Firebase se desactiva o la credencial no existe, la aplicación continúa
+sin errores ni intentos de sincronización.
+
+Para comprobar la configuración del servidor antes del corte DNS:
+
+```bash
+curl -s http://127.0.0.1:3000/api/last-sync
+```
+
+Cuando Firebase está activo, la respuesta incluye `projectId` y `databaseId`. Un error
+Firestore `NOT_FOUND` suele indicar que el proceso desplegado apunta a otro proyecto o
+base. Confirme que `FIREBASE_PROJECT_ID` coincide con `project_id` dentro de la
+credencial, que `FIREBASE_DATABASE_ID` identifica una base existente y reinicie el
+contenedor/servicio después de modificar `.env`.
+
+## API
+
+Las respuestas normales usan `{ "success": true, "data": ... }`; los errores usan
+`{ "success": false, "error": "..." }`. Nunca se expone un stack trace. El contrato
+completo está en `GET /api/openapi.json`.
+
+Endpoints principales:
+
+- `GET|POST|DELETE /api/products`
+- `POST /api/products/bulk`
+- `GET|POST /api/holdings`
+- `DELETE /api/holdings/:id`
+- `GET|POST /api/stores`
+- `GET|POST /api/category-hierarchy`
+- `GET|POST /api/staging/:key`
+- `POST /api/sync-firebase` y `GET /api/last-sync`
+- `GET /api/import-history`
+
+El historial de importaciones almacena solo fecha, cantidad de registros, usuario
+opcional, duración y resultado. Está limitado a las últimas
+`IMPORT_HISTORY_LIMIT` entradas.
+
+## Docker
+
+```bash
+docker build -t sku-data-manager:latest .
+docker run -d --name sku-data-manager \
+  --env-file .env \
+  -p 127.0.0.1:3000:3000 \
+  -v /srv/sku-data/local_data:/app/local_data \
+  --restart unless-stopped \
+  sku-data-manager:latest
+```
+
+La imagen es multi-stage, ejecuta como usuario no root, excluye datos y credenciales,
+y contiene healthcheck. Prepare el volumen:
+
+```bash
+sudo install -d -o 1000 -g 1000 -m 750 /srv/sku-data/local_data
+```
+
+## Ubuntu con systemd
+
+Instale Node.js LTS, clone en `/opt/sku-data-manager`, ejecute `npm ci --omit=dev`,
+copie `.env.example` a `.env` y configure un servicio:
+
+```ini
+[Unit]
+Description=Smart Shelf SKU Data Manager
+After=network-online.target
+
+[Service]
+Type=simple
+User=sku-data
+Group=sku-data
+WorkingDirectory=/opt/sku-data-manager
+EnvironmentFile=/opt/sku-data-manager/.env
+ExecStart=/usr/bin/node /opt/sku-data-manager/server.js
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Después: `sudo systemctl daemon-reload && sudo systemctl enable --now sku-data-manager`.
+
+## Nginx
+
+No requiere cambios en la aplicación. Mantenga `TRUST_PROXY=1` para un único Nginx:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 60s;
+    client_max_body_size 50m;
+}
+```
+
+Termine TLS en Nginx y limite el puerto 3000 a localhost/firewall.
+
+## Backups y restauración
+
+Detenga escrituras o el servicio durante el snapshot y copie todo `DATA_DIR`; no
+seleccione archivos individuales porque catálogo y relaciones forman una unidad:
+
+```bash
+sudo systemctl stop sku-data-manager
+sudo tar -C /srv/sku-data -czf "/srv/backups/sku-data-$(date +%F-%H%M).tgz" local_data
+sudo systemctl start sku-data-manager
+```
+
+Para restaurar, detenga el servicio, conserve una copia del estado actual, extraiga
+el backup sobre `DATA_DIR`, verifique propietario/permisos y arranque. Pruebe backups
+periódicamente. Nunca incluya Excel en el volumen.
+
+## Calidad y operación
+
+```bash
+npm test          # sintaxis, ESLint y pruebas
+npm run format    # Prettier
+npm run dev       # reinicio automático local
+```
+
+La aplicación registra JSON estructurado por stdout. En producción use el recolector
+de Docker/journald y no archivos internos de log. `SIGTERM` y `SIGINT` detienen nuevas
+conexiones, esperan escrituras pendientes y liberan timers.

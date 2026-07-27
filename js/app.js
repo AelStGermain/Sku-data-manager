@@ -32,7 +32,7 @@ const App = {
   // ── export helpers ─────────────────────────
   exportCSV() {
     if (typeof UIBulk !== 'undefined' && UIBulk.exportExcel) {
-      UIBulk.exportExcel();
+      UIBulk.exportExcel(DB.getProductsArray());
     } else {
       this.showToast('Módulo de exportación no disponible', 'error');
     }
@@ -40,7 +40,7 @@ const App = {
 
   exportRetailerCSV(holdingId) {
     if (typeof UIBulk !== 'undefined' && UIBulk.exportExcel) {
-      UIBulk.exportExcel();
+      UIBulk.exportExcel(DB.getProductsArray());
       setTimeout(() => {
         const sel = document.getElementById('export-filter-holding');
         if (sel) sel.value = holdingId;

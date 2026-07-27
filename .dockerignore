@@ -3,5 +3,9 @@
 node_modules
 .env
 local_data/firebase-key.json
+local_data/
 *.xlsx
 npm-debug.log*
+.env*
+tests
+DEPLOYMENT_*.md

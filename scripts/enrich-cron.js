@@ -10,9 +10,11 @@ import { createClient } from '@supabase/supabase-js';
 // ── Config ────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY; // service role key (not anon)
-const CONCURRENCY  = 5;   // parallel requests
-const TIMEOUT_MS   = 9000; // per-request timeout
-const DELAY_MS     = 120;  // polite delay between chunks (ms)
+const CONCURRENCY = Number.parseInt(process.env.ENRICH_CONCURRENCY || '5', 10);
+const TIMEOUT_MS = Number.parseInt(process.env.ENRICH_TIMEOUT_MS || '9000', 10);
+const DELAY_MS = Number.parseInt(process.env.ENRICH_DELAY_MS || '120', 10);
+const OFF_URL = process.env.EXTERNAL_API_URL || 'https://world.openfoodfacts.org/api/v2/product';
+const OPF_URL = process.env.OPEN_PRODUCTS_API_URL || 'https://world.openproductsfacts.org/api/v2/product';
 const requestedLimit = Number.parseInt(process.env.ENRICH_LIMIT || '200', 10);
 const ENRICH_LIMIT = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 1000) : 200;
 
@@ -125,13 +127,10 @@ function parseProduct(p, source) {
 
 // ── Enrich a single EAN ──────────────────────────────────
 async function enrichEAN(ean) {
-  const OFF = 'https://world.openfoodfacts.org/api/v2/product';
-  const OPF = 'https://world.openproductsfacts.org/api/v2/product';
-
-  let p = await queryBase(OFF, ean);
+  let p = await queryBase(OFF_URL, ean);
   if (p) return parseProduct(p, 'open_food_facts');
 
-  p = await queryBase(OPF, ean);
+  p = await queryBase(OPF_URL, ean);
   if (p) return parseProduct(p, 'open_products_facts');
 
   return null; // not found in either

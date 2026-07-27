@@ -1,0 +1,6 @@
+node_modules
+local_data
+js
+css
+package-lock.json
+DEPLOYMENT_*.md
