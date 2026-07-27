@@ -7,9 +7,10 @@ const UIDashboard = (() => {
   let _selectedHoldings = new Set(); // Empty means all
 
   function toggleHolding(hid) {
-    if (_selectedHoldings.has(hid)) {
-      _selectedHoldings.delete(hid);
+    if (_selectedHoldings.has(hid) && _selectedHoldings.size === 1) {
+      _selectedHoldings.clear();
     } else {
+      _selectedHoldings.clear();
       _selectedHoldings.add(hid);
     }
     render();
@@ -194,12 +195,32 @@ const UIDashboard = (() => {
       });
     }
 
+    // Helper matching UIStaging category validation
+    const getCategoryList = p => {
+      const list = [];
+      if (Array.isArray(p.universalCategory)) list.push(...p.universalCategory);
+      else if (p.universalCategory) list.push(p.universalCategory);
+      if (Array.isArray(p.category)) list.push(...p.category);
+      else if (p.category) list.push(p.category);
+      return list.map(c => String(c).trim()).filter(c => c && c !== 'General' && c !== 'Seleccionar...' && c !== 'Sin categoría' && c !== 'N/A' && c !== 'INDEFINIDO');
+    };
+    const isNoUniversalCategory = p => {
+      if (!p) return true;
+      const cats = getCategoryList(p);
+      if (cats.length === 0) return true;
+      return !cats.some(c => {
+        if (DB.normalizeUniversalCategory && DB.normalizeUniversalCategory(c)) return true;
+        const u = String(c).trim().toUpperCase();
+        return (window.UNIVERSAL_CATEGORIES || []).includes(u) || (window.CATEGORY_ALIASES && window.CATEGORY_ALIASES[u]);
+      });
+    };
+
     const total = products.length;
     const enriched = products.filter(p => p.dataSource && p.dataSource !== 'manual').length;
     const withImage = products.filter(p => p.imageUrl).length;
     const noBrand = products.filter(p => !p.brand || p.brand === 'N/A').length;
     const noWeight = products.filter(p => !p.weight_g).length;
-    const noCat = products.filter(p => (!p.universalCategory || p.universalCategory.length === 0) && (!p.category || p.category.length === 0)).length;
+    const noCat = products.filter(p => isNoUniversalCategory(p)).length;
     const noImage = products.filter(p => !p.imageUrl).length;
     
     const noCustomerId = products.filter(p => {
@@ -208,7 +229,7 @@ const UIDashboard = (() => {
       if (hKeys.length === 0) return false;
       return hKeys.some(k => {
         const h = hData[k];
-        const hasData = h && (h.name || h.localProductName || h.dmu || h.category);
+        const hasData = h && (h.name || h.localProductName || h.dmu || h.category || h.relationStatus === 'pending');
         return hasData && !h.customerId && !h.holdingInternalId;
       });
     }).length;
@@ -219,9 +240,14 @@ const UIDashboard = (() => {
 
     const catCount = {};
     products.forEach(p => {
-      const catArray = Array.isArray(p.universalCategory) ? p.universalCategory : (p.universalCategory ? [p.universalCategory] : (Array.isArray(p.category) ? p.category : (p.category ? [p.category] : ['Sin categoría'])));
-      catArray.forEach(c => {
-        catCount[c] = (catCount[c] || 0) + 1;
+      const rawCats = Array.isArray(p.universalCategory) ? p.universalCategory : (p.universalCategory ? [p.universalCategory] : (Array.isArray(p.category) ? p.category : []));
+      rawCats.forEach(c => {
+        const clean = String(c || '').trim();
+        if (!clean || clean === 'General' || clean === 'Sin categoría' || clean === 'Seleccionar...' || clean === 'INDEFINIDO') return;
+        const normalized = (DB.normalizeUniversalCategory && DB.normalizeUniversalCategory(clean)) || clean.toUpperCase();
+        if ((window.UNIVERSAL_CATEGORIES || []).includes(normalized)) {
+          catCount[normalized] = (catCount[normalized] || 0) + 1;
+        }
       });
     });
     const topCats = Object.entries(catCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -238,7 +264,7 @@ const UIDashboard = (() => {
     const statusCounts = { withVispera: 0, withoutVispera: 0 };
     products.forEach(p => {
       if (p.status === 'discontinued') return;
-      if (p.visperaId || p.is_ready_for_vispera) statusCounts.withVispera++;
+      if (p.visperaId) statusCounts.withVispera++;
       else statusCounts.withoutVispera++;
     });
 
@@ -278,6 +304,7 @@ const UIDashboard = (() => {
 </div>
 
 <div class="dash-kpi-grid">
+  <!-- Card 1: SKUs en Catálogo -->
   <div class="dash-kpi-card" style="cursor:pointer" onclick="App.navigateTo('catalog')" title="Ver todo el catálogo">
     <div class="dash-kpi-icon" style="background:rgba(79,110,247,0.12);color:#4F6EF7">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
@@ -287,17 +314,33 @@ const UIDashboard = (() => {
       <span class="dash-kpi-label">SKUs en Catálogo</span>
     </div>
   </div>
-  <div class="dash-kpi-card" style="cursor:pointer" onclick="UIBulk.setErrorFilter('incomplete'); App.navigateTo('bulk');" title="Filtrar SKUs incompletos en Modo Edición">
-    <div class="dash-kpi-icon" style="background:rgba(74,201,155,0.12);color:#4ac99b">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+
+  <!-- Card 2: SKUs sin Imagen -->
+  <div class="dash-kpi-card" style="cursor:pointer" onclick="UIBulk.setErrorFilter('no-img'); App.navigateTo('bulk');" title="Filtrar SKUs sin imagen en Modo Edición">
+    <div class="dash-kpi-icon" style="background:rgba(156,39,176,0.12);color:#9C27B0">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
     </div>
     <div class="dash-kpi-body">
-      <span class="dash-kpi-val">${avgCompleteness}%</span>
-      <span class="dash-kpi-label">Completitud Promedio</span>
-      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${avgCompleteness}%;background:#4ac99b"></div></div>
+      <span class="dash-kpi-val">${noImage.toLocaleString('es-CL')}</span>
+      <span class="dash-kpi-label">SKUs sin Imagen</span>
+      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${total ? Math.round(noImage/total*100) : 0}%;background:#9C27B0"></div></div>
     </div>
   </div>
-  <div class="dash-kpi-card" style="cursor:pointer" onclick="App.navigateTo('revision');" title="Ir a Tickets / Vispera ID">
+
+  <!-- Card 3: Falta Customer ID -->
+  <div class="dash-kpi-card" style="cursor:pointer" onclick="UIStaging.setTab('review'); App.navigateTo('revision');" title="Ir a Revisión: Falta Customer ID">
+    <div class="dash-kpi-icon" style="background:rgba(229,57,53,0.12);color:var(--danger)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="dash-kpi-body">
+      <span class="dash-kpi-val">${noCustomerId.toLocaleString('es-CL')}</span>
+      <span class="dash-kpi-label">Falta Customer ID</span>
+      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${total ? Math.round(noCustomerId/total*100) : 0}%;background:var(--danger)"></div></div>
+    </div>
+  </div>
+
+  <!-- Card 4: Falta Vispera ID -->
+  <div class="dash-kpi-card" style="cursor:pointer" onclick="UIStaging.setTab('tickets'); App.navigateTo('revision');" title="Ir a Revisión: Tickets / Falta Vispera ID">
     <div class="dash-kpi-icon" style="background:rgba(255,193,7,0.12);color:#FFC107">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     </div>
@@ -307,24 +350,16 @@ const UIDashboard = (() => {
       <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${total ? Math.round(statusCounts.withoutVispera/total*100) : 0}%;background:#FFC107"></div></div>
     </div>
   </div>
-  <div class="dash-kpi-card" style="cursor:pointer" onclick="App.navigateTo('holdings');" title="Gestionar Customer ID por Holding">
-    <div class="dash-kpi-icon" style="background:rgba(229,57,53,0.1);color:var(--danger)">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+
+  <!-- Card 5: Sin Categoría Universal -->
+  <div class="dash-kpi-card" style="cursor:pointer" onclick="UIStaging.setTab('no-cat'); App.navigateTo('revision');" title="Ir a Revisión: SKUs Sin Categoría Universal">
+    <div class="dash-kpi-icon" style="background:rgba(0,188,212,0.12);color:#00BCD4">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
     </div>
     <div class="dash-kpi-body">
-      <span class="dash-kpi-val">${noCustomerId.toLocaleString('es-CL')}</span>
-      <span class="dash-kpi-label">Falta Customer ID</span>
-      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${total ? Math.round(noCustomerId/total*100) : 0}%;background:var(--danger)"></div></div>
-    </div>
-  </div>
-  <div class="dash-kpi-card" style="cursor:pointer" onclick="UIBulk.setErrorFilter('no-img'); App.navigateTo('bulk');" title="Filtrar SKUs sin imagen en Modo Edición">
-    <div class="dash-kpi-icon" style="background:rgba(156,39,176,0.1);color:#9C27B0">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-    </div>
-    <div class="dash-kpi-body">
-      <span class="dash-kpi-val">${noImage.toLocaleString('es-CL')}</span>
-      <span class="dash-kpi-label">Falta Imagen</span>
-      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${total ? Math.round(noImage/total*100) : 0}%;background:#9C27B0"></div></div>
+      <span class="dash-kpi-val">${noCat.toLocaleString('es-CL')}</span>
+      <span class="dash-kpi-label">Sin Categoría Universal</span>
+      <div class="dash-kpi-bar-track"><div class="dash-kpi-bar-fill" style="width:${total ? Math.round(noCat/total*100) : 0}%;background:#00BCD4"></div></div>
     </div>
   </div>
 </div>

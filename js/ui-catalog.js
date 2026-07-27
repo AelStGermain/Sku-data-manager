@@ -11,8 +11,8 @@ const UICatalog = (() => {
   let _source        = 'all';
   let _statusFilter  = 'all';
   let _showIncomplete= false;
-  let _sortBy        = 'name';   // name | brand | completeness | updatedAt
-  let _sortDir       = 'asc';
+  let _sortBy        = 'completeness';   // Default to completeness so full products with photos load first
+  let _sortDir       = 'desc';
   let _imagePref     = localStorage.getItem('ss_imagePref') || 'main';
   let _enriching     = false;
   let _viewMode      = localStorage.getItem('ss_viewMode') || 'grid';
@@ -59,7 +59,7 @@ const UICatalog = (() => {
     return `<span class="status-pill" style="background:${st.color}20;color:${st.color};border-color:${st.color}40">${st.label}</span>`;
   }
   function normalizeStr(s) {
-    return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   }
   function sortProducts(arr) {
     const dir = _sortDir === 'asc' ? 1 : -1;
@@ -198,15 +198,12 @@ const UICatalog = (() => {
       : `<div class="empty-state"><div class="empty-icon">📦</div><h3>Sin productos aún</h3><p>Importa tu primer archivo de SKUs para comenzar.</p><button class="btn-primary" onclick="App.navigateTo('import')">Importar SKUs</button></div>`;
   }
 
-
-
   // ── pagination bar ────────────────────────────
   function renderPagination(total) {
     if (total <= PAGE_SIZE) return '';
     const totalPages = Math.ceil(total / PAGE_SIZE);
     const cur = _page;
 
-    // Build page number window: always show first, last, current ±2, with … gaps
     const pages = new Set([0, totalPages-1, cur, cur-1, cur+1, cur-2, cur+2]);
     const sorted = [...pages].filter(p => p >= 0 && p < totalPages).sort((a,b) => a-b);
     let nums = '';
@@ -247,7 +244,6 @@ const UICatalog = (() => {
       if (normalizeStr(p.name).includes(q))  return true;
       if (normalizeStr(p.brand).includes(q)) return true;
       if (p.ean.includes(_search))           return true;
-      // search in retailer customerId
       if (Object.values(p.retailers||{}).some(r => normalizeStr(r.customerId).includes(q))) return true;
       return false;
     });
@@ -266,7 +262,7 @@ const UICatalog = (() => {
         });
       });
     }
-    if (_source   !== 'all')  filtered = filtered.filter(p => p.dataSource === _source);
+    if (_source !== 'all') filtered = filtered.filter(p => p.dataSource === _source);
     if (_statusFilter === 'new') {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       filtered = filtered.filter(p => {
@@ -282,14 +278,11 @@ const UICatalog = (() => {
     } else if (_statusFilter !== 'all') {
       filtered = filtered.filter(p => (p.status||'active') === _statusFilter);
     }
-    if (_showIncomplete)      filtered = filtered.filter(p => DB.computeCompleteness(p) < 50);
+    if (_showIncomplete) filtered = filtered.filter(p => DB.computeCompleteness(p) < 50);
 
     filtered = sortProducts(filtered);
     const page = filtered.slice(_page * PAGE_SIZE, (_page + 1) * PAGE_SIZE);
 
-    const enriched = all.filter(p => p.dataSource !== 'manual').length;
-    const noData   = all.filter(p => DB.computeCompleteness(p) < 40).length;
-    
     let productsForCats = all;
     if (_retailer !== 'all') productsForCats = all.filter(p => { const h = p.holdings || p.retailers || {}; return h[_retailer]; });
     const holdingCats = [...new Set(productsForCats.flatMap(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).flatMap(r => Array.isArray(r.localCategoryName) ? r.localCategoryName : (Array.isArray(r.category) ? r.category : [r.localCategoryName || r.category])).filter(Boolean); }))].sort();
@@ -300,7 +293,7 @@ const UICatalog = (() => {
 <header class="view-header">
   <div>
     <h1 class="view-title">Catálogo de Productos</h1>
-    <p class="view-sub">${all.length} SKU${all.length !== 1 ? 's' : ''} en el sistema</p>
+    <p class="view-sub">${filtered.length.toLocaleString('es-CL')} SKU${filtered.length !== 1 ? 's' : ''} ${_retailer !== 'all' ? `en ${esc(retailers.find(r=>r.id===_retailer)?.name || _retailer)}` : 'en el catálogo'}</p>
   </div>
   <div class="view-actions">
     <div class="view-toggle-btns">
@@ -347,11 +340,13 @@ const UICatalog = (() => {
 </header>
 
 <div class="stats-bar">
-  <div class="stat-card"><span class="stat-v">${all.length}</span><span class="stat-l">SKUs totales</span></div>
+  <div class="stat-card">
+    <span class="stat-v" style="font-size:24px; font-weight:700; color:var(--accent);">${filtered.length.toLocaleString('es-CL')}</span>
+    <span class="stat-l">${_retailer !== 'all' ? `SKUs en ${esc(retailers.find(r=>r.id===_retailer)?.name || _retailer)}` : 'SKUs mostrados'}</span>
+  </div>
   <div class="stat-card"><span class="stat-v">${retailers.length}</span><span class="stat-l">Holdings activos</span></div>
 </div>
 
-<!-- Sort bar + Status quick filters -->
 <div class="sort-filter-bar">
   <div class="sort-btns">
     <span class="sort-label">Ordenar:</span>
@@ -362,7 +357,7 @@ const UICatalog = (() => {
   </div>
   <div class="status-filter-pills">
     <button class="spill ${_statusFilter==='all'?'active':''}" onclick="UICatalog.setStatusFilter('all')">Todos</button>
-    ${(SKU_STATUSES||[]).map(s=>`
+    ${((window.SKU_STATUSES) || []).map(s=>`
     <button class="spill" style="${_statusFilter===s.value?`background:${s.color}20;color:${s.color};border-color:${s.color}40`:''}"
       onclick="UICatalog.setStatusFilter('${s.value}')">${s.label}</button>`).join('')}
     <button class="spill ${_showIncomplete?'active':''}" onclick="UICatalog.toggleIncomplete()" style="${_showIncomplete?'background:var(--warning-dim);color:var(--warning);border-color:var(--warning)40':''}">⚠ Incompletos</button>
@@ -401,8 +396,6 @@ const UICatalog = (() => {
 
 <p class="result-count">${filtered.length} resultado${filtered.length!==1?'s':''}${filtered.length>PAGE_SIZE?` &nbsp;·&nbsp; Página ${_page+1} de ${Math.ceil(filtered.length/PAGE_SIZE)}`:''}</p>
 
-
-
 ${filtered.length === 0
   ? renderEmpty(all.length > 0)
   : _viewMode === 'list'
@@ -415,12 +408,10 @@ ${filtered.length === 0
 ${renderPagination(filtered.length)}`;
   }
 
-
-
   // ── filter / sort / quick-filter setters ────
   let _searchTimer = null;
   function setSearch(v) {
-    _search = v; // Update state immediately
+    _search = v;
     clearTimeout(_searchTimer);
     _searchTimer = setTimeout(() => {
       _page = 0;
@@ -456,7 +447,6 @@ ${renderPagination(filtered.length)}`;
     render();
   }
 
-  // ── single-product delete (from list row) ───
   function deleteOne(ean) {
     const p = DB.getProduct(ean);
     if (!p) return;
@@ -467,9 +457,6 @@ ${renderPagination(filtered.length)}`;
     App.checkUndo();
   }
 
-
-
-  // ── enrich all ───────────────────────────────
   async function enrichAll(silent = false) {
     if (_enriching) return;
     const products = DB.getProductsArray();
@@ -477,15 +464,13 @@ ${renderPagination(filtered.length)}`;
     if (toEnrich.length === 0) { if (!silent) App.showToast('Todos los productos ya tienen imagen', 'info'); return; }
 
     _enriching = true;
-    render(); // Refleja estado disabled del botón de inmediato
+    render();
     if (!silent) App.showToast(`Enriqueciendo en segundo plano ${toEnrich.length} productos…`, 'info');
 
-    // Desacoplar la ejecución para que sobreviva la navegación de vistas
     (async () => {
       let done = 0, found = 0;
       let batchToSave = [];
       
-      // Procesar en chunks de 10 concurrentes
       const chunkSize = 10;
       for (let i = 0; i < toEnrich.length; i += chunkSize) {
         const chunk = toEnrich.slice(i, i + chunkSize);
@@ -502,28 +487,23 @@ ${renderPagination(filtered.length)}`;
           done++;
         }));
         
-        // Save batch if it reaches threshold (e.g., 20)
         if (batchToSave.length >= 20) {
           await DB.saveProducts([...batchToSave]);
           batchToSave = [];
         }
         
-        // Actualizar botón si existe en el DOM
         const btn = document.getElementById('enrich-all-btn');
         if (btn) btn.innerHTML = `<span class="spin-ico">↻</span> Enriqueciendo (${done}/${toEnrich.length})…`;
         
-        // Espera de 1 segundo entre chunks para no saturar la API (aprox 10 req/s)
         await new Promise(r => setTimeout(r, 1000));
       }
       
-      // Save remaining
       if (batchToSave.length > 0) {
         await DB.saveProducts(batchToSave);
       }
       _enriching = false;
       if (found > 0) App.showToast(`${found} productos actualizados usando API`, 'success');
       
-      // Rearmar la vista si el usuario está en el catálogo actual
       if (document.getElementById('view-catalog')) {
         render();
       }

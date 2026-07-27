@@ -739,7 +739,7 @@ const UISheet = (() => {
     </button>` : '';
 
     const NO_IMG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Crect fill='transparent' width='280' height='280'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239CA3AF' font-size='22' font-family='sans-serif'%3ESin imagen%3C/text%3E%3C/svg%3E`;
-    const pkgOpts = PACKAGE_TYPES.map(pt =>
+    const pkgOpts = (window.PACKAGE_TYPES || []).map(pt =>
       `<option value="${pt.value}" ${_data.packageType===pt.value?'selected':''}>${esc(pt.label)}</option>`
     ).join('');
 
@@ -764,9 +764,9 @@ const UISheet = (() => {
     const candidateListAttr = field => apiCandidates(field).length ? `list="api-${field}-options"` : '';
     const packageSuggestions = apiCandidates('packageType');
     const packageSuggestionOptions = packageSuggestions.length ? `<optgroup label="Sugerencias de APIs">
-      ${packageSuggestions.map(option => `<option value="${esc(option.value)}">${esc(PACKAGE_TYPES.find(type => type.value === option.value)?.label || option.value)} — ${esc(apiSourceNames[option.source] || option.source)}</option>`).join('')}
+      ${packageSuggestions.map(option => `<option value="${esc(option.value)}">${esc((window.PACKAGE_TYPES || []).find(type => type.value === option.value)?.label || option.value)} — ${esc(apiSourceNames[option.source] || option.source)}</option>`).join('')}
     </optgroup>` : '';
-    
+
     function _buildMultiSelect(opts, selectedArray, fieldName, isHolding) {
       const availableOpts = opts.filter(o => !selectedArray.includes(o));
       const optsHtml = availableOpts.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
@@ -791,9 +791,9 @@ const UISheet = (() => {
 
     // Universal categories for Master SKU
     const uCat = Array.isArray(_data.universalCategory) ? _data.universalCategory : (_data.universalCategory ? [_data.universalCategory] : []);
-    const masterCatOpts = _buildMultiSelect(UNIVERSAL_CATEGORIES, uCat, 'universalCategory', false);
+    const masterCatOpts = _buildMultiSelect(window.UNIVERSAL_CATEGORIES || [], uCat, 'universalCategory', false);
     
-    const rCategories = (rInfo?.categories?.length ? rInfo.categories : UNIVERSAL_CATEGORIES);
+    const rCategories = (rInfo?.categories?.length ? rInfo.categories : (window.UNIVERSAL_CATEGORIES || []));
     const rCat = rData ? (Array.isArray(rData.localCategoryName) ? rData.localCategoryName : (rData.localCategoryName ? [rData.localCategoryName] : [])) : [];
     const catOpts = _buildMultiSelect(rCategories, rCat, 'localCategoryName', true);
 
@@ -1029,81 +1029,75 @@ ${tabsHtml}
           ${candidateDatalist('depth_cm', value => `${value} cm`)}
         </div>
       </div>
-    </div>
 
-    <!-- Meta -->
-    <div class="sheet-meta-row">
-      ${enrichBadge}
-      <span class="meta-chip">Completitud: <strong>${DB.computeCompleteness(_data)}%</strong></span>
+      <!-- Meta -->
+      <div class="sheet-meta-row">
+        ${enrichBadge}
+        <span class="meta-chip">Completitud: <strong>${DB.computeCompleteness(_data)}%</strong></span>
+      </div>
     </div>
-  </div>
+  </div><!-- /sheet-left -->
 
   <!-- ═══ RIGHT: HOLDING SKU CATALOG ═══ -->
   <div class="sheet-right">
-    <p class="section-lbl">HOLDING SKU CATALOG</p>
+      <p class="section-lbl">HOLDING SKU CATALOG</p>
 
-    <div class="retailer-tabs">
-      ${holdings.map(r => `
-        <button class="r-tab ${r.id===_holding?'active':''}"
-          onclick="UISheet.setHolding('${esc(r.id)}')"
-          style="${r.id===_holding ? `border-bottom-color:${r.color};color:${r.color}` : ''}">
-          ${esc(r.name)}
-          ${_data.holdings?.[r.id] ? '' : '<span class="r-tab-dot">+</span>'}
-        </button>`).join('')}
-    </div><!-- holding-tabs -->
+      <div class="retailer-tabs">
+        ${holdings.map(r => `
+          <button class="r-tab ${r.id===_holding?'active':''}"
+            onclick="UISheet.setHolding('${esc(r.id)}')"
+            style="${r.id===_holding ? `border-bottom-color:${r.color};color:${r.color}` : ''}">
+            ${esc(r.name)}
+            ${_data.holdings?.[r.id] ? '' : '<span class="r-tab-dot">+</span>'}
+          </button>`).join('')}
+      </div><!-- holding-tabs -->
 
-    ${rData ? `
-    <!-- Holding form -->
-    <div class="retailer-form-area">
-      ${rData.isDiscontinued ? `<div style="background:rgba(211,47,47,0.1); color:#d32f2f; padding:8px 12px; border-radius:6px; margin-bottom:16px; font-size:12px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
-        <span>Descontinuado el ${new Date(rData.discontinuedAt || rData.updatedAt).toLocaleDateString()}</span>
-        <button class="btn-primary" style="padding:4px 8px; font-size:11px;" onclick="UISheet.addToHolding('${esc(_holding)}')">Reactivar</button>
-      </div>` : ''}
-      <div class="form-group">
-        <label>ID del Holding (Customer ID / Internal ID)</label>
-        <input type="text" class="form-input" value="${esc(rData.holdingInternalId || rData.customerId || '')}"
-          placeholder="ej. TOT-44921-X (Dejar en blanco si no tiene)"
-          oninput="UISheet.updateHoldingField('holdingInternalId', this.value); UISheet.updateHoldingField('customerId', this.value);">
-      </div>
-      <div class="form-group">
-        <label>Nombre Local (local_product_name)</label>
-        <input type="text" class="form-input" value="${esc(rData.localProductName || rData.name || '')}"
-          placeholder="Nombre en este holding"
-          oninput="UISheet.updateHoldingField('localProductName', this.value); UISheet.updateHoldingField('name', this.value);">
-      </div>
-      <div class="form-group">
-        <label>Categoría Local</label>
-        ${catOpts}
-      </div>
-      <div class="form-group">
-        <label>DMU / Góndolas</label>
-        <input type="text" class="form-input" value="${esc(Array.isArray(rData.dmu) ? rData.dmu.join(', ') : (rData.dmu || ''))}"
-          placeholder="Separar con comas (Ej: Pasillo 3, Caja)"
-          onchange="UISheet.updateHoldingField('dmu', this.value.split(',').map(s=>s.trim()).filter(Boolean))">
-      </div>
-      <div class="form-group">
-        <label>Estado / Stock (is_active_holding)</label>
-        <div class="toggle-row">
-          <div class="toggle-switch ${inStock?'on':''}" id="stock-toggle" onclick="UISheet.toggleStock()">
-            <div class="toggle-knob"></div>
-          </div>
-          <span id="stock-label">${inStock ? 'Disponible en tienda' : 'Sin stock / Inactivo'}</span>
+      ${rData ? `
+      <!-- Holding form -->
+      <div class="retailer-form-area">
+        ${rData.isDiscontinued ? `<div style="background:rgba(211,47,47,0.1); color:#d32f2f; padding:8px 12px; border-radius:6px; margin-bottom:16px; font-size:12px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+          <span>Descontinuado el ${new Date(rData.discontinuedAt || rData.updatedAt).toLocaleDateString()}</span>
+          <button class="btn-primary" style="padding:4px 8px; font-size:11px;" onclick="UISheet.addToHolding('${esc(_holding)}')">Reactivar</button>
+        </div>` : ''}
+        <div class="form-group">
+          <label>ID del Holding (Customer ID / Internal ID)</label>
+          <input type="text" class="form-input" value="${esc(rData.holdingInternalId || rData.customerId || '')}"
+            placeholder="ej. TOT-44921-X (Dejar en blanco si no tiene)"
+            oninput="UISheet.updateHoldingField('holdingInternalId', this.value); UISheet.updateHoldingField('customerId', this.value);">
         </div>
-      </div>
-      ${!rData.isDiscontinued ? `<button class="btn-danger-sm" onclick="UISheet.removeFromHolding('${esc(_holding)}')">
-        Descontinuar de ${esc(rInfo?.name || _holding)} ×
-      </button>` : ''}
-    </div>` : `
-    <!-- Add to holding -->
-    <div class="retailer-empty-area">
-      <div class="retailer-empty-icon" style="color:${rInfo?.color||'var(--accent)'}">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      </div>
-      <p>Este SKU no está activo en el Holding <strong>${esc(rInfo?.name || _holding)}</strong>.</p>
-      <button class="btn-primary" onclick="UISheet.addToHolding('${esc(_holding)}')">
-        + Activar en ${esc(rInfo?.name || _holding)}
-      </button>
-    </div>`}
+        <div class="form-group">
+          <label>Nombre Local (local_product_name)</label>
+          <input type="text" class="form-input" value="${esc(rData.localProductName || rData.name || '')}"
+            placeholder="Nombre en este holding"
+            oninput="UISheet.updateHoldingField('localProductName', this.value); UISheet.updateHoldingField('name', this.value);">
+        </div>
+        <div class="form-group">
+          <label>Categoría Local</label>
+          ${catOpts}
+        </div>
+        <div class="form-group">
+          <label>Estado / Stock (is_active_holding)</label>
+          <div class="toggle-row">
+            <div class="toggle-switch ${inStock?'on':''}" id="stock-toggle" onclick="UISheet.toggleStock()">
+              <div class="toggle-knob"></div>
+            </div>
+            <span id="stock-label">${inStock ? 'Disponible en tienda' : 'Sin stock / Inactivo'}</span>
+          </div>
+        </div>
+        ${!rData.isDiscontinued ? `<button class="btn-danger-sm" onclick="UISheet.removeFromHolding('${esc(_holding)}')">
+          Descontinuar de ${esc(rInfo?.name || _holding)} ×
+        </button>` : ''}
+      </div>` : `
+      <!-- Add to holding -->
+      <div class="retailer-empty-area">
+        <div class="retailer-empty-icon" style="color:${rInfo?.color||'var(--accent)'}">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <p>Este SKU no está activo en el Holding <strong>${esc(rInfo?.name || _holding)}</strong>.</p>
+        <button class="btn-primary" onclick="UISheet.addToHolding('${esc(_holding)}')">
+          + Activar en ${esc(rInfo?.name || _holding)}
+        </button>
+      </div>`}
 
     <!-- Footer buttons -->
     <div class="sheet-footer">

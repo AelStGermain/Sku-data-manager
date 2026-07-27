@@ -2,15 +2,21 @@
 
 // ──────────────────────────────────────────────
 //  SHARED CONSTANTS (global scope)
-//  Categorías Universales Vispera (17 categorías globales)
+//  Categorías Universales Vispera (gestionables dinámicamente)
 // ──────────────────────────────────────────────
-window.UNIVERSAL_CATEGORIES = [
-  'GROCERY STORE', 'SWEET', 'ALCOHOL', 'CLEANING',
-  'DAIRYS', 'FROZEN', 'BREAKFAST', 'SNACKS',
-  'BABY', 'PET', 'DESSERT', 'CEREALS',
-  'CANNED FOOD', 'DETERGENTS', 'DRINKS',
-  'HEALTHY', 'PAPER ITEMS', 'HYGIENE'
-];
+window.UNIVERSAL_CATEGORIES = (() => {
+  try {
+    const saved = localStorage.getItem('ss_universal_categories');
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return [
+    'GROCERY STORE', 'SWEET', 'ALCOHOL', 'CLEANING',
+    'DAIRYS', 'FROZEN', 'BREAKFAST', 'SNACKS',
+    'BABY', 'PET', 'DESSERT', 'CEREALS',
+    'CANNED FOOD', 'DETERGENTS', 'DRINKS',
+    'HEALTHY', 'PAPER ITEMS', 'HYGIENE'
+  ];
+})();
 
 // Legacy alias for backward compat
 window.CATEGORIES = window.UNIVERSAL_CATEGORIES;
@@ -263,8 +269,46 @@ const DB = (() => {
     return defaultVal ? [defaultVal] : [];
   }
 
+  function _normalizeEanKey(value) {
+    const raw = String(value ?? '').trim();
+    return /^[\d\s]+$/.test(raw) ? raw.replace(/\s/g, '') : raw;
+  }
+
+  function _hasMeaningfulValue(value) {
+    return value !== undefined && value !== null && value !== '' &&
+      (!Array.isArray(value) || value.length > 0);
+  }
+
+  function _mergeDuplicateRows(current, incoming, normalizedEan) {
+    const merged = { ...current };
+    const conflicts = [...(current.duplicateConflicts || [])];
+    const ignored = new Set(['ean', 'updated_at', 'created_at', 'duplicateConflicts']);
+
+    for (const [key, value] of Object.entries(incoming)) {
+      if (!_hasMeaningfulValue(merged[key])) {
+        merged[key] = value;
+      } else if (_hasMeaningfulValue(value) && !ignored.has(key) &&
+                 JSON.stringify(merged[key]) !== JSON.stringify(value)) {
+        conflicts.push({ field: key, values: [merged[key], value] });
+        // Firebase/levantamiento records contain the operational metadata that
+        // must survive placeholder rows created during initial ingestion.
+        if (incoming.fromFirebase || incoming.fromLevantamiento || incoming.levantamientoMeta) {
+          merged[key] = value;
+        }
+      }
+    }
+
+    merged.ean = normalizedEan;
+    if (conflicts.length > 0) {
+      merged.duplicateConflicts = conflicts;
+      merged.status = 'review';
+    }
+    return merged;
+  }
+
   async function fetchProducts() {
     try {
+      await loadCategoryHierarchy();
       let masterData = [];
       let holdingData = [];
 
@@ -287,7 +331,17 @@ const DB = (() => {
       _memoryProducts = {};
 
       // 1. Map from remote database (Supabase is source of truth → Universal Products)
-      masterData.forEach(p => {
+      const _normalizedMasterRows = {};
+      masterData.forEach(rawProduct => {
+        const normalizedEan = _normalizeEanKey(rawProduct.ean);
+        const previousRaw = _normalizedMasterRows[normalizedEan];
+        const p = previousRaw
+          ? _mergeDuplicateRows(previousRaw, rawProduct, normalizedEan)
+          : { ...rawProduct, ean: normalizedEan };
+        _normalizedMasterRows[normalizedEan] = p;
+      });
+
+      Object.values(_normalizedMasterRows).forEach(p => {
         const local = localCache[p.ean] || {};
         // Determinar status: priorizar el guardado en servidor, luego caché local, como último recurso inferir
         const serverStatus = p.status || null;
@@ -314,6 +368,7 @@ const DB = (() => {
           // Servidor puede guardar 'name' (Firebase sync) o 'product_name' (Supabase conv.)
           name: p.product_name || p.name || local.name || '',
           brand: p.brand || local.brand || 'N/A',
+          producer: p.producer || local.producer || '',
           brandId: p.brand_id || local.brandId || null,
           producerId: p.producer_id || local.producerId || null,
           // Servidor puede guardar 'universalCategory' (camelCase) o 'category_master' (snake)
@@ -343,16 +398,23 @@ const DB = (() => {
           levantamientoMeta: p.levantamientoMeta || local.levantamientoMeta || null,
           fromLevantamiento: p.fromLevantamiento || local.fromLevantamiento || (resolvedDataSource === 'levantamiento') || false,
           fromFirebase: p.fromFirebase || local.fromFirebase || (resolvedDataSource === 'firebase') || false,
+          duplicateConflicts: p.duplicateConflicts || local.duplicateConflicts || [],
           
           // Holdings (formerly retailers) - Holding-Specific SKU Data
-          holdings: local.holdings || local.retailers || {}
+          holdings: Object.entries(local.holdings || local.retailers || {}).reduce((acc, [id, relation]) => {
+            const canonicalId = String(id).toLowerCase();
+            acc[canonicalId] = { ...(acc[canonicalId] || {}), ...relation };
+            return acc;
+          }, {})
         };
       });
 
       // 2. Map holding relations from Supabase holding_sku_catalog (retailer_catalog)
-      holdingData.forEach(r => {
+      holdingData.forEach(rawRelation => {
+        const r = { ...rawRelation, ean: _normalizeEanKey(rawRelation.ean) };
+        r.retailer_id = String(r.retailer_id || '').toLowerCase();
         const p = _memoryProducts[r.ean];
-        if (p) {
+        if (p && r.retailer_id) {
           p.holdings = p.holdings || {};
           p.holdings[r.retailer_id] = p.holdings[r.retailer_id] || {};
           
@@ -373,7 +435,10 @@ const DB = (() => {
             createdAt: r.created_at || p.holdings[r.retailer_id].createdAt || p.createdAt,
             isDiscontinued: r.is_discontinued !== undefined ? r.is_discontinued : (p.holdings[r.retailer_id].isDiscontinued || false),
             discontinuedAt: r.discontinued_at || p.holdings[r.retailer_id].discontinuedAt || null,
-            updatedAt: r.updated_at || p.updatedAt
+            updatedAt: r.updated_at || p.updatedAt,
+            relationStatus: r.relation_status || p.holdings[r.retailer_id].relationStatus,
+            sourceType: r.source_type || p.holdings[r.retailer_id].sourceType,
+            sourceHoldingId: r.source_holding_id || p.holdings[r.retailer_id].sourceHoldingId
           };
         }
       });
@@ -389,6 +454,7 @@ const DB = (() => {
 
   async function saveProduct(product, skipUndo = false) {
     if (!product.ean) return;
+    product.ean = _normalizeEanKey(product.ean);
     
     // Undo stack push
     if (!skipUndo) {
@@ -414,6 +480,7 @@ const DB = (() => {
       ean: product.ean,
       product_name: product.name || 'Sin Nombre',
       brand: product.brand || 'N/A',
+      producer: product.producer || '',
       category_master: Array.isArray(product.universalCategory) ? product.universalCategory.join(', ') : (Array.isArray(product.category) ? product.category.join(', ') : 'GROCERY STORE'),
       image_url: product.imageUrl || null,
       // ── Campos siempre incluidos para persistencia correcta ──
@@ -454,17 +521,21 @@ const DB = (() => {
             is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false,
             created_at: hData.createdAt || new Date().toISOString(),
             is_discontinued: hData.isDiscontinued || false,
-            discontinued_at: hData.discontinuedAt || null
+            discontinued_at: hData.discontinuedAt || null,
+            relation_status: hData.relationStatus,
+            source_type: hData.sourceType,
+            source_holding_id: hData.sourceHoldingId
           });
         }
       }
 
       try {
-        await fetch('/api/products', {
+        const response = await fetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ product: payload, holdingRelations })
         });
+        if (!response.ok) throw new Error(`Servidor respondió HTTP ${response.status}`);
       } catch (err) {
         console.warn('Servidor local apagado. Cambios guardados solo en LocalStorage.');
       }
@@ -546,20 +617,29 @@ const DB = (() => {
 
   // ── EAN-13 checksum validation ─────────────
   function validateEAN(ean) {
-    const s = String(ean || '').trim().replace(/\D/g, '');
-    if (s.length !== 13 && s.length !== 8) return { valid: false, reason: 'El EAN debe tener 8 o 13 dígitos' };
-    // EAN-8 or EAN-13 checksum
+    const raw = String(ean || '').trim();
+    if (!/^\d+$/.test(raw)) return { valid: false, reason: 'El GTIN debe contener solo dígitos' };
+    let s = raw;
+    let legacy = false;
+    if (s.length === 11) {
+      s = `0${s}`;
+      legacy = true;
+    }
+    if (![8, 12, 13, 14].includes(s.length)) {
+      return { valid: false, reason: 'El GTIN debe tener 8, 12, 13 o 14 dígitos' };
+    }
     const digits = s.split('').map(Number);
     const len = digits.length;
     let sum = 0;
     for (let i = 0; i < len - 1; i++) {
-      sum += digits[i] * (len === 13 ? (i % 2 === 0 ? 1 : 3) : (i % 2 === 0 ? 3 : 1));
+      const distanceFromRight = len - 1 - i;
+      sum += digits[i] * (distanceFromRight % 2 === 1 ? 3 : 1);
     }
     const checkDigit = (10 - (sum % 10)) % 10;
     if (checkDigit !== digits[len - 1]) {
       return { valid: false, reason: `Dígito de control incorrecto (esperado ${checkDigit})` };
     }
-    return { valid: true, reason: null };
+    return { valid: true, reason: null, normalized: s, legacy };
   }
 
   async function deleteProduct(ean, skipUndo = false) {
@@ -621,6 +701,7 @@ const DB = (() => {
 
   async function saveProducts(productsArray) {
     if (!productsArray || !productsArray.length) return;
+    productsArray.forEach(product => { product.ean = _normalizeEanKey(product.ean); });
     
     // 1. Update in-memory and local storage cache
     const localCache = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || '{}');
@@ -628,6 +709,28 @@ const DB = (() => {
       // Normalize: ensure holdings exists
       if (!p.holdings && p.retailers) p.holdings = p.retailers;
       if (!p.holdings) p.holdings = {};
+
+      // Auto-homologar subcategorías por holding si no tienen una asignada
+      const uCats = Array.isArray(p.universalCategory) ? p.universalCategory : (p.universalCategory ? [p.universalCategory] : (Array.isArray(p.category) ? p.category : []));
+      const firstUCat = uCats[0];
+      if (firstUCat) {
+        const holdingsList = getHoldings();
+        holdingsList.forEach(h => {
+          const hData = p.holdings[h.id] || {};
+          const currentLocalCat = Array.isArray(hData.localCategoryName) ? hData.localCategoryName[0] : (Array.isArray(hData.category) ? hData.category[0] : (hData.localCategoryName || hData.category || ''));
+          if (!currentLocalCat || currentLocalCat === 'General' || currentLocalCat === 'Sin categoría') {
+            const suggested = autoMapCategory(firstUCat, h.id);
+            if (suggested) {
+              p.holdings[h.id] = {
+                ...hData,
+                localCategoryName: [suggested],
+                category: [suggested]
+              };
+            }
+          }
+        });
+      }
+
       _memoryProducts[p.ean] = p;
       localCache[p.ean] = p;
     });
@@ -639,6 +742,7 @@ const DB = (() => {
         ean: p.ean,
         product_name: p.name || 'Sin Nombre',
         brand: p.brand || 'N/A',
+        producer: p.producer || '',
         category_master: p.universalCategory || p.category || 'GROCERY STORE',
         image_url: p.imageUrl || null
       };
@@ -668,17 +772,21 @@ const DB = (() => {
               local_product_name: hData.localProductName || hData.name || p.name,
               retailer_category: hData.localCategoryName || hData.category || 'General',
               is_trained: hData.isActiveHolding !== false && hData.stockStatus !== false,
-              updated_at: hData.updatedAt || new Date().toISOString()
+              updated_at: hData.updatedAt || new Date().toISOString(),
+              relation_status: hData.relationStatus,
+              source_type: hData.sourceType,
+              source_holding_id: hData.sourceHoldingId
             });
           }
         }
       }
 
-      await fetch('/api/products/bulk', {
+      const response = await fetch('/api/products/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: payload, holdingRelations })
       });
+      if (!response.ok) throw new Error(`Servidor respondió HTTP ${response.status}`);
     } catch (err) {
       console.warn('Servidor local apagado. Upsert masivo guardado solo en LocalStorage.');
     }
@@ -822,7 +930,118 @@ const DB = (() => {
     return entry;
   }
 
-  // ── Category Mapping ──────────────────────────
+  // ── Category Mapping & Taxonomical Hierarchy ──────────────────
+  const CATEGORY_HIERARCHY_KEY = 'ss_category_hierarchy';
+  let _categoryHierarchy = {
+    'GROCERY STORE': { color: '#4CAF50', description: 'Despensa y Abarrotes', holdings: { tottus: ['DESPENSA', 'ABARROTES', 'CONSERVAS'], jumbo: ['ABARROTES', 'ACEITES Y ADEREZOS'], unimarc: ['DESPENSA'], pronto: ['ABARROTES'] } },
+    'SWEET':         { color: '#E91E63', description: 'Confites, Dulces y Chocolates', holdings: { tottus: ['CONFITES', 'CHOCOLATES', 'GALLETAS'], jumbo: ['DULCES Y CHOCOLATES', 'GALLETAS'], unimarc: ['CONFITES Y SNACKS'], pronto: ['DULCES'] } },
+    'ALCOHOL':       { color: '#9C27B0', description: 'Vinos, Cervezas y Licores', holdings: { tottus: ['LICORES', 'VINOS'], jumbo: ['VINOS Y CERVEZAS'], unimarc: ['LICORES'], pronto: ['CERVEZAS'] } },
+    'CLEANING':      { color: '#00BCD4', description: 'Limpieza del Hogar', holdings: { tottus: ['LIMPIEZA'], jumbo: ['LIMPIEZA DEL HOGAR'], unimarc: ['LIMPIEZA'], pronto: ['ASEO'] } },
+    'DAIRYS':        { color: '#FFC107', description: 'Lácteos y Derivados', holdings: { tottus: ['LÁCTEOS', 'QUESOS'], jumbo: ['LÁCTEOS Y HUEVOS'], unimarc: ['LÁCTEOS'], pronto: ['LÁCTEOS'] } },
+    'FROZEN':        { color: '#2196F3', description: 'Alimentos Congelados', holdings: { tottus: ['CONGELADOS'], jumbo: ['PRODUCTOS CONGELADOS'], unimarc: ['CONGELADOS'], pronto: ['CONGELADOS'] } },
+    'BREAKFAST':     { color: '#FF9800', description: 'Desayuno y Cafés', holdings: { tottus: ['DESAYUNO', 'CAFÉ'], jumbo: ['CAFÉ Y TÉ'], unimarc: ['DESAYUNO'], pronto: ['DESAYUNO'] } },
+    'SNACKS':        { color: '#F44336', description: 'Snacks, Papas y Piqueos', holdings: { tottus: ['SNACKS', 'PIQUEOS'], jumbo: ['SNACKS Y PAPAS'], unimarc: ['SNACKS'], pronto: ['SNACKS'] } },
+    'BABY':          { color: '#EC407A', description: 'Cuidado del Bebé', holdings: { tottus: ['BEBÉ', 'PAÑALES'], jumbo: ['MUNDO BEBÉ'], unimarc: ['BEBÉ'], pronto: ['BEBÉ'] } },
+    'PET':           { color: '#8D6E63', description: 'Mascotas', holdings: { tottus: ['MASCOTAS'], jumbo: ['ALIMENTO MASCOTAS'], unimarc: ['MASCOTAS'], pronto: ['MASCOTAS'] } },
+    'DESSERT':       { color: '#AD1457', description: 'Postres y Repostería', holdings: { tottus: ['POSTRES'], jumbo: ['REPOSTERÍA Y POSTRES'], unimarc: ['POSTRES'], pronto: ['POSTRES'] } },
+    'CEREALS':       { color: '#FF7043', description: 'Cereales y Granola', holdings: { tottus: ['CEREALES'], jumbo: ['CEREALES Y BARRAS'], unimarc: ['CEREALES'], pronto: ['CEREALES'] } },
+    'CANNED FOOD':   { color: '#607D8B', description: 'Conservas y Enlatados', holdings: { tottus: ['CONSERVAS'], jumbo: ['ENLATADOS Y CONSERVAS'], unimarc: ['CONSERVAS'], pronto: ['CONSERVAS'] } },
+    'DETERGENTS':    { color: '#26A69A', description: 'Detergentes y Cuidado de Ropa', holdings: { tottus: ['DETERGENTES'], jumbo: ['DETERGENTE Y SUAVIZANTE'], unimarc: ['DETERGENTES'], pronto: ['DETERGENTES'] } },
+    'DRINKS':        { color: '#42A5F5', description: 'Bebidas, Aguas y Jugos', holdings: { tottus: ['BEBIDAS', 'AGUAS', 'JUGOS'], jumbo: ['BEBIDAS Y AGUAS', 'NÉCTARES'], unimarc: ['BEBIDAS'], pronto: ['BEBIDAS'] } },
+    'HEALTHY':       { color: '#66BB6A', description: 'Alimentos Saludables y Orgánicos', holdings: { tottus: ['SALUDABLE'], jumbo: ['MUNDO SALUDABLE'], unimarc: ['SALUDABLE'], pronto: ['SALUDABLE'] } },
+    'PAPER ITEMS':   { color: '#BDBDBD', description: 'Papeles e Higiénicos', holdings: { tottus: ['PAPEL HIGIÉNICO', 'SERVILLETAS'], jumbo: ['PAPELES'], unimarc: ['PAPELES'], pronto: ['PAPELES'] } },
+    'HYGIENE':       { color: '#8E24AA', description: 'Higiene y Cuidado Personal', holdings: { tottus: ['PERFUMERY', 'HAIRCARE', 'SKINCARE'], jumbo: ['CUIDADO DE LA PIEL', 'CUIDADO DEL CABELLO', 'CUIDADO CORPORAL'], unimarc: ['HIGIENE PERSONAL', 'CUIDADO CAPILAR'], pronto: ['HIGIENE Y ASEO'] } }
+  };
+
+  async function loadCategoryHierarchy() {
+    try {
+      const res = await fetch('/api/category-hierarchy');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+          _categoryHierarchy = data;
+          _safeSetItem(CATEGORY_HIERARCHY_KEY, JSON.stringify(data));
+          return _categoryHierarchy;
+        }
+      }
+    } catch {}
+    try {
+      const local = localStorage.getItem(CATEGORY_HIERARCHY_KEY);
+      if (local) _categoryHierarchy = JSON.parse(local);
+    } catch {}
+    return _categoryHierarchy;
+  }
+
+  function getCategoryHierarchy() {
+    return _categoryHierarchy;
+  }
+
+  function saveCategoryHierarchy(hierarchy) {
+    if (!hierarchy || typeof hierarchy !== 'object') return;
+    _categoryHierarchy = hierarchy;
+    _safeSetItem(CATEGORY_HIERARCHY_KEY, JSON.stringify(_categoryHierarchy));
+    fetch('/api/category-hierarchy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(_categoryHierarchy)
+    }).catch(() => {});
+  }
+
+  function autoMapCategory(universalCat, holdingId) {
+    if (!universalCat || !holdingId) return null;
+    const cleanU = String(universalCat).trim().toUpperCase();
+    const normalized = (normalizeUniversalCategory && normalizeUniversalCategory(cleanU)) || cleanU;
+    
+    const node = _categoryHierarchy[normalized] || _categoryHierarchy[cleanU];
+    if (node && node.holdings && node.holdings[holdingId]) {
+      const list = node.holdings[holdingId];
+      if (Array.isArray(list) && list.length > 0) {
+        return list[0]; // Retorna la primera subcategoría asociada
+      }
+    }
+    return null;
+  }
+
+  function applyAutoCategoryMappingToAll() {
+    let updatedCount = 0;
+    const products = getProductsArray();
+    const holdings = getHoldings();
+
+    products.forEach(p => {
+      const uCats = Array.isArray(p.universalCategory) ? p.universalCategory : (p.universalCategory ? [p.universalCategory] : (Array.isArray(p.category) ? p.category : []));
+      const firstUCat = uCats[0];
+      if (!firstUCat) return;
+
+      p.holdings = p.holdings || p.retailers || {};
+      let modified = false;
+
+      holdings.forEach(h => {
+        const hData = p.holdings[h.id] || {};
+        const currentLocalCat = Array.isArray(hData.localCategoryName) ? hData.localCategoryName[0] : (Array.isArray(hData.category) ? hData.category[0] : (hData.localCategoryName || hData.category || ''));
+        
+        // Si no tiene subcategoría asignada o tiene la genérica "General" / "Sin categoría"
+        if (!currentLocalCat || currentLocalCat === 'General' || currentLocalCat === 'Sin categoría') {
+          const suggested = autoMapCategory(firstUCat, h.id);
+          if (suggested) {
+            p.holdings[h.id] = {
+              ...hData,
+              localCategoryName: [suggested],
+              category: [suggested]
+            };
+            modified = true;
+          }
+        }
+      });
+
+      if (modified) updatedCount++;
+    });
+
+    if (updatedCount > 0) {
+      saveProducts(products);
+    }
+    return updatedCount;
+  }
+
   function getCategoryMapping() { return _categoryMapping; }
 
   function addCategoryMapping(ean, visperaCategoryId) {
@@ -1190,7 +1409,12 @@ const DB = (() => {
     // Brands & Producers
     getBrandsProducers,
     addBrandProducer,
-    // Category Mapping
+    // Category Hierarchy & Mapping
+    loadCategoryHierarchy,
+    getCategoryHierarchy,
+    saveCategoryHierarchy,
+    autoMapCategory,
+    applyAutoCategoryMappingToAll,
     getCategoryMapping,
     addCategoryMapping,
     // Recent Matches

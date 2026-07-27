@@ -58,7 +58,10 @@ const UIRetailers = (() => {
     <h1 class="view-title">Holdings</h1>
     <p class="view-sub">${retailers.length} holdings configurados · Holding-Specific SKU Data</p>
   </div>
-  <div class="view-actions">
+  <div class="view-actions" style="display:flex; gap:10px; align-items:center;">
+    <button class="btn-secondary" style="display:flex; align-items:center; gap:6px; font-weight:600; background:var(--surface-el); border:1px solid var(--border);" onclick="UICategoryManager.openModal()" title="Gestionar Jerarquía de Categorías Universales y Subcategorías por Holding">
+      🗂️ Jerarquía de Categorías
+    </button>
     <button class="btn-primary" onclick="UIRetailers.openForm()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Agregar Holding
@@ -97,7 +100,6 @@ const UIRetailers = (() => {
   </div>
 </div>`;
   }
-
 
   function renderCard(r) {
     const s = retailerStats(r.id);
@@ -224,7 +226,7 @@ const UIRetailers = (() => {
 
   <div class="form-group">
     <label>URL del Logo / Banner (Opcional)</label>
-    <input type="text" class="form-input" id="r-logo" value="${esc(r?.logoUrl||'')}" placeholder="ej. copec_logo.png o https://...">
+    <input type="text" class="form-input" id="r-logo" value="${esc(r?.logoUrl||'')}" placeholder="ej. pronto_logo.png o https://...">
     <p class="form-hint">URL o nombre de archivo de la imagen que se usará como cabecera o banner.</p>
   </div>
 

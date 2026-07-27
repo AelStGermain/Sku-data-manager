@@ -75,7 +75,6 @@ for (const asset of ['logo.png', 'jumbo_logo.png', 'tottus_logo.png', 'unimarc_l
   // segments here does not expose arbitrary hidden files.
   app.get(`/${asset}`, (_req, res) => res.sendFile(path.join(__dirname, asset), { dotfiles: 'allow' }));
 }
-
 const dataDir = path.join(__dirname, 'local_data');
 
 if (!fs.existsSync(dataDir)) {
@@ -83,42 +82,89 @@ if (!fs.existsSync(dataDir)) {
 }
 
 // ── Rutas de archivos de datos ──────────────────────────────────────────
-const masterFile    = path.join(dataDir, 'master_catalog.json');
-const retailerFile  = path.join(dataDir, 'retailer_catalog.json');
-const holdingsFile  = path.join(dataDir, 'holdings.json');
-const storesFile    = path.join(dataDir, 'stores.json');
+const masterFile            = path.join(dataDir, 'master_catalog.json');
+const retailerFile          = path.join(dataDir, 'retailer_catalog.json');
+const holdingsFile          = path.join(dataDir, 'holdings.json');
+const storesFile            = path.join(dataDir, 'stores.json');
+const categoryHierarchyFile = path.join(dataDir, 'category_hierarchy.json');
 
 // Holdings por defecto (se usan si no hay archivo aún)
 const DEFAULT_HOLDINGS = [
-  { id: 'tottus',  name: 'Tottus',  color: '#E8001C', logoUrl: 'tottus_logo.png' },
-  { id: 'jumbo',   name: 'Jumbo',   color: '#009A44', logoUrl: 'jumbo_logo.png' },
-  { id: 'unimarc', name: 'Unimarc', color: '#005BAC', logoUrl: 'unimarc_logo.png' }
+  { id: 'tottus',  name: 'Tottus',       color: '#E8001C', logoUrl: 'tottus_logo.png' },
+  { id: 'jumbo',   name: 'Jumbo',        color: '#009A44', logoUrl: 'jumbo_logo.png' },
+  { id: 'unimarc', name: 'Unimarc',      color: '#005BAC', logoUrl: 'unimarc_logo.png' },
+  { id: 'pronto',  name: 'Pronto Copec', color: '#E53935', logoUrl: 'pronto_logo.png' }
 ];
 
 const DEFAULT_STORES = [
-  { storeId: 'tkm_kennedy',         holdingId: 'tottus',  retailerId: 'tottus',  city: 'Santiago', branchName: 'Sucursal Kennedy' },
-  { storeId: 'tottus_nunoa',        holdingId: 'tottus',  retailerId: 'tottus',  city: 'Santiago', branchName: 'Sucursal Ñuñoa' },
-  { storeId: 'jumbo_bilbao',        holdingId: 'jumbo',   retailerId: 'jumbo',   city: 'Santiago', branchName: 'Sucursal Francisco Bilbao' },
-  { storeId: 'jumbo_kennedy',       holdingId: 'jumbo',   retailerId: 'jumbo',   city: 'Santiago', branchName: 'Sucursal Portal La Reina' },
-  { storeId: 'unimarc_los_leones',  holdingId: 'unimarc', retailerId: 'unimarc', city: 'Santiago', branchName: 'Sucursal Los Leones' }
+  { storeId: 'tkm_kennedy',        holdingId: 'tottus',  retailerId: 'tottus',  city: 'Santiago', branchName: 'Sucursal Kennedy' },
+  { storeId: 'tottus_nunoa',       holdingId: 'tottus',  retailerId: 'tottus',  city: 'Santiago', branchName: 'Sucursal Ñuñoa' },
+  { storeId: 'jumbo_bilbao',       holdingId: 'jumbo',   retailerId: 'jumbo',   city: 'Santiago', branchName: 'Sucursal Francisco Bilbao' },
+  { storeId: 'jumbo_kennedy',      holdingId: 'jumbo',   retailerId: 'jumbo',   city: 'Santiago', branchName: 'Sucursal Portal La Reina' },
+  { storeId: 'unimarc_los_leones', holdingId: 'unimarc', retailerId: 'unimarc', city: 'Santiago', branchName: 'Sucursal Los Leones' }
 ];
 
+const DEFAULT_CATEGORY_HIERARCHY = {
+  'GROCERY STORE': { color: '#4CAF50', description: 'Despensa y Abarrotes', holdings: { tottus: ['DESPENSA', 'ABARROTES', 'CONSERVAS'], jumbo: ['ABARROTES', 'ACEITES Y ADEREZOS'], unimarc: ['DESPENSA'], pronto: ['ABARROTES'] } },
+  'SWEET':         { color: '#E91E63', description: 'Confites, Dulces y Chocolates', holdings: { tottus: ['CONFITES', 'CHOCOLATES', 'GALLETAS'], jumbo: ['DULCES Y CHOCOLATES', 'GALLETAS'], unimarc: ['CONFITES Y SNACKS'], pronto: ['DULCES'] } },
+  'ALCOHOL':       { color: '#9C27B0', description: 'Vinos, Cervezas y Licores', holdings: { tottus: ['LICORES', 'VINOS'], jumbo: ['VINOS Y CERVEZAS'], unimarc: ['LICORES'], pronto: ['CERVEZAS'] } },
+  'CLEANING':      { color: '#00BCD4', description: 'Limpieza del Hogar', holdings: { tottus: ['LIMPIEZA'], jumbo: ['LIMPIEZA DEL HOGAR'], unimarc: ['LIMPIEZA'], pronto: ['ASEO'] } },
+  'DAIRYS':        { color: '#FFC107', description: 'Lácteos y Derivados', holdings: { tottus: ['LÁCTEOS', 'QUESOS'], jumbo: ['LÁCTEOS Y HUEVOS'], unimarc: ['LÁCTEOS'], pronto: ['LÁCTEOS'] } },
+  'FROZEN':        { color: '#2196F3', description: 'Alimentos Congelados', holdings: { tottus: ['CONGELADOS'], jumbo: ['PRODUCTOS CONGELADOS'], unimarc: ['CONGELADOS'], pronto: ['CONGELADOS'] } },
+  'BREAKFAST':     { color: '#FF9800', description: 'Desayuno y Cafés', holdings: { tottus: ['DESAYUNO', 'CAFÉ'], jumbo: ['CAFÉ Y TÉ'], unimarc: ['DESAYUNO'], pronto: ['DESAYUNO'] } },
+  'SNACKS':        { color: '#F44336', description: 'Snacks, Papas y Piqueos', holdings: { tottus: ['SNACKS', 'PIQUEOS'], jumbo: ['SNACKS Y PAPAS'], unimarc: ['SNACKS'], pronto: ['SNACKS'] } },
+  'BABY':          { color: '#EC407A', description: 'Cuidado del Bebé', holdings: { tottus: ['BEBÉ', 'PAÑALES'], jumbo: ['MUNDO BEBÉ'], unimarc: ['BEBÉ'], pronto: ['BEBÉ'] } },
+  'PET':           { color: '#8D6E63', description: 'Mascotas', holdings: { tottus: ['MASCOTAS'], jumbo: ['ALIMENTO MASCOTAS'], unimarc: ['MASCOTAS'], pronto: ['MASCOTAS'] } },
+  'DESSERT':       { color: '#AD1457', description: 'Postres y Repostería', holdings: { tottus: ['POSTRES'], jumbo: ['REPOSTERÍA Y POSTRES'], unimarc: ['POSTRES'], pronto: ['POSTRES'] } },
+  'CEREALS':       { color: '#FF7043', description: 'Cereales y Granola', holdings: { tottus: ['CEREALES'], jumbo: ['CEREALES Y BARRAS'], unimarc: ['CEREALES'], pronto: ['CEREALES'] } },
+  'CANNED FOOD':   { color: '#607D8B', description: 'Conservas y Enlatados', holdings: { tottus: ['CONSERVAS'], jumbo: ['ENLATADOS Y CONSERVAS'], unimarc: ['CONSERVAS'], pronto: ['CONSERVAS'] } },
+  'DETERGENTS':    { color: '#26A69A', description: 'Detergentes y Cuidado de Ropa', holdings: { tottus: ['DETERGENTES'], jumbo: ['DETERGENTE Y SUAVIZANTE'], unimarc: ['DETERGENTES'], pronto: ['DETERGENTES'] } },
+  'DRINKS':        { color: '#42A5F5', description: 'Bebidas, Aguas y Jugos', holdings: { tottus: ['BEBIDAS', 'AGUAS', 'JUGOS'], jumbo: ['BEBIDAS Y AGUAS', 'NÉCTARES'], unimarc: ['BEBIDAS'], pronto: ['BEBIDAS'] } },
+  'HEALTHY':       { color: '#66BB6A', description: 'Alimentos Saludables y Orgánicos', holdings: { tottus: ['SALUDABLE'], jumbo: ['MUNDO SALUDABLE'], unimarc: ['SALUDABLE'], pronto: ['SALUDABLE'] } },
+  'PAPER ITEMS':   { color: '#BDBDBD', description: 'Papeles e Higiénicos', holdings: { tottus: ['PAPEL HIGIÉNICO', 'SERVILLETAS'], jumbo: ['PAPELES'], unimarc: ['PAPELES'], pronto: ['PAPELES'] } },
+  'HYGIENE':       { color: '#8E24AA', description: 'Higiene y Cuidado Personal', holdings: { tottus: ['PERFUMERY', 'HAIRCARE', 'SKINCARE'], jumbo: ['CUIDADO DE LA PIEL', 'CUIDADO DEL CABELLO', 'CUIDADO CORPORAL'], unimarc: ['HIGIENE PERSONAL', 'CUIDADO CAPILAR'], pronto: ['HIGIENE Y ASEO'] } }
+};
+
 // ── Inicializar archivos de datos si no existen ───────────────────────────
-if (!fs.existsSync(masterFile))   fs.writeFileSync(masterFile,   '[]');
-if (!fs.existsSync(retailerFile)) fs.writeFileSync(retailerFile, '[]');
-if (!fs.existsSync(holdingsFile)) fs.writeFileSync(holdingsFile, JSON.stringify(DEFAULT_HOLDINGS, null, 2));
-if (!fs.existsSync(storesFile))   fs.writeFileSync(storesFile,   JSON.stringify(DEFAULT_STORES,   null, 2));
+if (!fs.existsSync(masterFile))            fs.writeFileSync(masterFile,            '[]');
+if (!fs.existsSync(retailerFile))          fs.writeFileSync(retailerFile,          '[]');
+if (!fs.existsSync(holdingsFile))          fs.writeFileSync(holdingsFile,          JSON.stringify(DEFAULT_HOLDINGS,           null, 2));
+if (!fs.existsSync(storesFile))            fs.writeFileSync(storesFile,            JSON.stringify(DEFAULT_STORES,             null, 2));
+if (!fs.existsSync(categoryHierarchyFile)) fs.writeFileSync(categoryHierarchyFile, JSON.stringify(DEFAULT_CATEGORY_HIERARCHY, null, 2));
 
 // ── Helpers de lectura/escritura ───────────────────────────────────────────
-function getMaster()   { return JSON.parse(fs.readFileSync(masterFile,   'utf8')); }
-function getRetailer() { return JSON.parse(fs.readFileSync(retailerFile, 'utf8')); }
-function getHoldings() { return JSON.parse(fs.readFileSync(holdingsFile, 'utf8')); }
-function getStores()   { return JSON.parse(fs.readFileSync(storesFile,   'utf8')); }
+function getMaster()            { return consolidateMaster(JSON.parse(fs.readFileSync(masterFile, 'utf8'))); }
+function getRetailer()          { return JSON.parse(fs.readFileSync(retailerFile,          'utf8')); }
+function getHoldings()          { return JSON.parse(fs.readFileSync(holdingsFile,          'utf8')); }
+function getStores()            { return JSON.parse(fs.readFileSync(storesFile,            'utf8')); }
+function getCategoryHierarchy() { return JSON.parse(fs.readFileSync(categoryHierarchyFile, 'utf8')); }
 
 function atomicWriteJson(filePath, data) {
-  const tempPath = `${filePath}.${process.pid}.tmp`;
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
   fs.writeFileSync(tempPath, JSON.stringify(data, null, 2));
-  fs.renameSync(tempPath, filePath);
+  
+  let attempts = 0;
+  while (attempts < 5) {
+    try {
+      fs.renameSync(tempPath, filePath);
+      return;
+    } catch (err) {
+      attempts++;
+      if (err.code === 'EPERM' || err.code === 'EBUSY') {
+        try {
+          fs.copyFileSync(tempPath, filePath);
+          if (fs.existsSync(tempPath)) {
+            try { fs.unlinkSync(tempPath); } catch {}
+          }
+          return;
+        } catch (copyErr) {
+          if (attempts >= 5) throw copyErr;
+        }
+      } else if (attempts >= 5) {
+        throw err;
+      }
+    }
+  }
 }
 
 function saveMaster(data)   { atomicWriteJson(masterFile, data); }
@@ -126,18 +172,47 @@ function saveRetailer(data) { atomicWriteJson(retailerFile, data); }
 function saveHoldings(data) { atomicWriteJson(holdingsFile, data); }
 function saveStores(data)   { atomicWriteJson(storesFile, data); }
 
-function isValidEan(value) {
-  if (typeof value !== 'string' || !/^\d+$/.test(value)) return false;
-  const normalized = value.length === 11 ? `0${value}` : value;
-  if (![8, 12, 13, 14].includes(normalized.length)) return false;
-  const digits = normalized.split('').map(Number);
-  let sum = 0;
-  let weight = 3;
-  for (let i = digits.length - 2; i >= 0; i--) {
-    sum += digits[i] * weight;
-    weight = weight === 3 ? 1 : 3;
+function hasEanKey(val) {
+  return (typeof val === 'string' || typeof val === 'number') && String(val).trim().length > 0;
+}
+
+function normalizeEanKey(val) {
+  const raw = String(val ?? '').trim();
+  return /^[\d\s]+$/.test(raw) ? raw.replace(/\s/g, '') : raw;
+}
+
+function consolidateMaster(rows) {
+  const byEan = new Map();
+  for (const rawRow of rows) {
+    const ean = normalizeEanKey(rawRow.ean);
+    if (!ean) continue;
+    const row = { ...rawRow, ean };
+    const current = byEan.get(ean);
+    if (!current) {
+      byEan.set(ean, row);
+      continue;
+    }
+
+    const merged = { ...current };
+    const conflicts = [...(current.duplicateConflicts || [])];
+    for (const [field, value] of Object.entries(row)) {
+      const currentValue = merged[field];
+      const hasValue = value !== undefined && value !== null && value !== '';
+      if ((currentValue === undefined || currentValue === null || currentValue === '') && hasValue) {
+        merged[field] = value;
+      } else if (hasValue && !['ean', 'created_at', 'updated_at', 'duplicateConflicts'].includes(field) &&
+                 JSON.stringify(currentValue) !== JSON.stringify(value)) {
+        conflicts.push({ field, values: [currentValue, value] });
+        if (row.fromFirebase || row.fromLevantamiento || row.levantamientoMeta) merged[field] = value;
+      }
+    }
+    if (conflicts.length > 0) {
+      merged.duplicateConflicts = conflicts;
+      merged.status = 'review';
+    }
+    byEan.set(ean, merged);
   }
-  return (10 - (sum % 10)) % 10 === digits.at(-1);
+  return [...byEan.values()];
 }
 
 // ── API: Productos (Master Catalog + Holding SKU Catalog) ─────────────────
@@ -149,15 +224,22 @@ app.get('/api/products', (req, res) => {
 
 app.post('/api/products', (req, res) => {
   const { product, holdingRelations } = req.body;
-  if (!product || !isValidEan(product.ean)) {
+  if (!product || !hasEanKey(product.ean)) {
     return res.status(400).json({ success: false, error: 'Producto o EAN inválido' });
   }
   if (holdingRelations !== undefined && !Array.isArray(holdingRelations)) {
     return res.status(400).json({ success: false, error: 'holdingRelations debe ser un array' });
   }
+  product.ean = normalizeEanKey(product.ean);
+  if (holdingRelations) {
+    holdingRelations.forEach(relation => {
+      relation.ean = normalizeEanKey(relation.ean);
+      relation.retailer_id = String(relation.retailer_id || '').toLowerCase();
+    });
+  }
   const master = getMaster();
   
-  const idx = master.findIndex(p => p.ean === product.ean);
+  const idx = master.findIndex(p => normalizeEanKey(p.ean) === product.ean);
   if (idx > -1) {
     // Merge preservando todos los campos, incluyendo status, data_source, etc.
     master[idx] = { ...master[idx], ...product };
@@ -185,16 +267,23 @@ app.post('/api/products', (req, res) => {
 
 app.post('/api/products/bulk', (req, res) => {
   const { products, holdingRelations } = req.body;
-  if (!Array.isArray(products) || products.some(product => !product || !isValidEan(product.ean))) {
+  if (!Array.isArray(products) || products.some(product => !product || !hasEanKey(product.ean))) {
     return res.status(400).json({ success: false, error: 'products debe contener EANs válidos' });
   }
   if (holdingRelations !== undefined && !Array.isArray(holdingRelations)) {
     return res.status(400).json({ success: false, error: 'holdingRelations debe ser un array' });
   }
+  products.forEach(product => { product.ean = normalizeEanKey(product.ean); });
+  if (holdingRelations) {
+    holdingRelations.forEach(relation => {
+      relation.ean = normalizeEanKey(relation.ean);
+      relation.retailer_id = String(relation.retailer_id || '').toLowerCase();
+    });
+  }
   
   const master = getMaster();
   products.forEach(product => {
-    const idx = master.findIndex(p => p.ean === product.ean);
+    const idx = master.findIndex(p => normalizeEanKey(p.ean) === product.ean);
     if (idx > -1) master[idx] = { ...master[idx], ...product };
     else master.push(product);
   });
@@ -218,15 +307,16 @@ app.post('/api/products/bulk', (req, res) => {
 
 app.delete('/api/products', (req, res) => {
   const { eans } = req.body;
-  if (!Array.isArray(eans) || eans.length === 0 || eans.some(ean => !isValidEan(ean))) {
+  if (!Array.isArray(eans) || eans.length === 0 || eans.some(ean => !hasEanKey(ean))) {
     return res.status(400).json({ success: false, error: 'EANs inválidos' });
   }
   
+  const normalizedEans = eans.map(normalizeEanKey);
   let master   = getMaster();
   let retailer = getRetailer();
   
-  master   = master.filter(p   => !eans.includes(p.ean));
-  retailer = retailer.filter(r => !eans.includes(r.ean));
+  master   = master.filter(p   => !normalizedEans.includes(normalizeEanKey(p.ean)));
+  retailer = retailer.filter(r => !normalizedEans.includes(normalizeEanKey(r.ean)));
   
   saveMaster(master);
   saveRetailer(retailer);
@@ -256,6 +346,22 @@ app.delete('/api/holdings/:id', (req, res) => {
   }
   saveHoldings(getHoldings().filter(holding => holding.id !== id));
   saveRetailer(getRetailer().filter(relation => relation.retailer_id !== id));
+  res.json({ success: true });
+});
+
+function saveCategoryHierarchy(data) { atomicWriteJson(categoryHierarchyFile, data); }
+
+// ── API: Category Hierarchy & Taxonomy ────────────────────────────────────
+app.get('/api/category-hierarchy', (req, res) => {
+  res.json(getCategoryHierarchy());
+});
+
+app.post('/api/category-hierarchy', (req, res) => {
+  const hierarchy = req.body;
+  if (!hierarchy || typeof hierarchy !== 'object') {
+    return res.status(400).json({ success: false, error: 'Body debe ser un objeto de jerarquía de categorías' });
+  }
+  saveCategoryHierarchy(hierarchy);
   res.json({ success: true });
 });
 
@@ -547,8 +653,7 @@ app.post('/api/sync-firebase', async (req, res) => {
 
 app.get('/api/last-sync', (req, res) => {
   if (!firebaseSyncEnabled) {
-    console.log('[Startup] Sincronización Firebase deshabilitada por entorno.');
-    return;
+    return res.json({ lastSync: null, enabled: false });
   }
   const lastSyncFile = path.join(dataDir, 'last_fb_sync.json');
   let lastSync = 0;

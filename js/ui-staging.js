@@ -298,6 +298,9 @@ ${_activeTab === 'no-cat' ? renderNoCategory(noCatProducts) : _activeTab === 'or
     <tbody>
       ${paginated.map(item => {
         const hasSuggestion = item.suggestedData ? `<span style="font-size:10px; background:var(--accent); color:#fff; padding:2px 4px; border-radius:4px; margin-left:6px;" title="Datos sugeridos por la API">💡 API</span>` : '';
+        const duplicateBadge = item.duplicateConflicts?.length
+          ? `<span style="font-size:10px; background:var(--warning); color:#111; padding:2px 4px; border-radius:4px; margin-left:6px;" title="${item.duplicateConflicts.length} campos requieren revisión">Duplicado consolidado</span>`
+          : '';
         const holdingId = Object.keys(item.holdings || item.retailers || {})[0];
         const holding = DB.getHoldings().find(h => h.id === holdingId);
         const readiness = UISheet.getVisperaReadiness(item, holdingId);
@@ -307,6 +310,7 @@ ${_activeTab === 'no-cat' ? renderNoCategory(noCatProducts) : _activeTab === 'or
         <td style="font-weight:500;">
           <button type="button" class="link-button" onclick="UIStaging.openProduct('${esc(String(item.ean).trim())}')">${esc(item.name || 'Sin nombre')}</button>
           ${hasSuggestion}
+          ${duplicateBadge}
         </td>
         <td>${(Array.isArray(item.universalCategory) ? item.universalCategory : [item.universalCategory || item.category || '—']).map(c => `<span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[c] : '#888'}">${esc(c)}</span>`).join(' ')}<br><span style="font-size:11px;color:var(--text-sec)">${esc(readiness.subCategory || '—')}</span></td>
         <td style="font-size:12px;">${esc(holding?.name || holdingId || '—')}</td>
@@ -880,7 +884,7 @@ ${paginationControls}`;
       ${paginated.map(p => {
         const catRaw = Array.isArray(p.category) ? p.category.join(', ') : (p.category || 'Sin categoría');
         return `
-          <tr>
+          <tr style="cursor:pointer" onclick="UISheet.open('${esc(p.ean)}')" title="Ver Ficha Técnica">
             <td>
               <div style="width:34px; height:34px; border-radius:6px; background-size:contain; background-repeat:no-repeat; background-position:center; background-image:url('${p.imageUrl || 'logo.png'}'); background-color:var(--surface-el); border:1px solid var(--border);"></div>
             </td>
@@ -892,8 +896,11 @@ ${paginationControls}`;
                 ⚠️ ${esc(catRaw)}
               </span>
             </td>
-            <td>
-              <button class="btn-secondary-sm" style="font-size:11px; padding:4px 8px;" onclick="UIBulk.setErrorFilter('no-cat'); App.navigateTo('bulk');">
+            <td style="display:flex; gap:6px; align-items:center;">
+              <button class="btn-secondary-sm" style="font-size:11px; padding:4px 8px; background:var(--surface-modal); border:1px solid var(--border);" onclick="event.stopPropagation(); UISheet.open('${esc(p.ean)}')">
+                📋 Ficha Técnica
+              </button>
+              <button class="btn-secondary-sm" style="font-size:11px; padding:4px 8px;" onclick="event.stopPropagation(); UIBulk.setErrorFilter('no-cat'); App.navigateTo('bulk');">
                 ✏️ Categorizar en Bulk
               </button>
             </td>

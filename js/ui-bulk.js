@@ -1,6 +1,8 @@
 'use strict';
 
 const UIBulk = (() => {
+  const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
   let _allProducts = [];
   let _filteredProducts = [];
   let _selectedEans = new Set();
@@ -18,6 +20,7 @@ const UIBulk = (() => {
   let _retailerId = 'all';
   let _lastCheckedCheckbox = null;
   let _activeCategoryTarget = 'universal'; // 'universal' or holding id
+  let _searchTimer = null;
 
   function render() {
     const view = document.getElementById('view-bulk');
@@ -106,6 +109,9 @@ const UIBulk = (() => {
             </div>
 
             <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn-secondary-sm" style="font-size:12px; padding:6px 12px; font-weight:600; display:flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border);" onclick="UICategoryManager.openModal()" title="Abrir Gestor de Jerarquía de Categorías Vispera">
+                🗂️ Jerarquía de Categorías
+              </button>
               <select class="form-select" style="width:160px; padding:6px 10px; font-size:12px;" onchange="UIBulk.setRetailer(this.value)">
                 <option value="all" ${_retailerId==='all'?'selected':''}>Todos los Holdings</option>
                 ${DB.getHoldings().map(h => `<option value="${h.id}" ${_retailerId===h.id?'selected':''}>${h.name}</option>`).join('')}
@@ -292,6 +298,72 @@ const UIBulk = (() => {
               </div>
             </div>
 
+            <!-- Accordion 6: Descontinuación Masiva de Holding -->
+            <div class="bulk-accordion-item">
+              <div class="bulk-accordion-header" onclick="UIBulk.toggleAccordion(this)">
+                <span>🚫 Descontinuar de Holding</span>
+                <span>▼</span>
+              </div>
+              <div class="bulk-accordion-body">
+                <p class="bulk-hint">Marca SKUs como descontinuados en un holding. Se preserva el Customer ID y los datos históricos.</p>
+                <div class="form-group">
+                  <label>Holding Objetivo</label>
+                  <select id="bulk-disc-holding" class="form-select">
+                    <option value="">-- Seleccionar Holding --</option>
+                    ${DB.getHoldings().map(h => `<option value="${h.id}">${h.name}</option>`).join('')}
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Modo de Descontinuación</label>
+                  <select id="bulk-disc-mode" class="form-select" onchange="UIBulk.toggleDiscBrandFilter(this.value)">
+                    <option value="selected">Productos seleccionados (${_selectedEans.size})</option>
+                    <option value="brand">Todos los SKUs de una marca</option>
+                  </select>
+                </div>
+
+                <div class="form-group" id="bulk-disc-brand-group" style="display:none;">
+                  <label>Marca a descontinuar</label>
+                  <select id="bulk-disc-brand" class="form-select">
+                    <option value="">-- Seleccionar Marca --</option>
+                    ${[...new Set(DB.getProductsArray().map(p => p.brand).filter(Boolean))].sort()
+                      .map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('')}
+                  </select>
+                </div>
+
+                <button class="btn-danger-sm" style="width:100%; padding:10px;" onclick="UIBulk.applyBulkDiscontinue()">
+                  🚫 Descontinuar de Holding
+                </button>
+              </div>
+            </div>
+
+            <!-- Accordion 7: Gestión de Categorías Universales -->
+            <div class="bulk-accordion-item">
+              <div class="bulk-accordion-header" onclick="UIBulk.toggleAccordion(this)">
+                <span>⚙️ Gestión Categorías Universales</span>
+                <span>▼</span>
+              </div>
+              <div class="bulk-accordion-body">
+                <p class="bulk-hint">Administra las categorías universales Vispera del sistema. Agregar o eliminar afecta el catálogo completo.</p>
+                <div style="max-height:180px; overflow-y:auto; margin-bottom:10px; border:1px solid var(--border); border-radius:8px; padding:6px;">
+                  ${(window.UNIVERSAL_CATEGORIES || []).map(cat => {
+                    const count = DB.getProductsArray().filter(p => {
+                      const uCat = Array.isArray(p.universalCategory) ? p.universalCategory : (p.universalCategory ? [p.universalCategory] : []);
+                      return uCat.includes(cat);
+                    }).length;
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 6px; border-bottom:1px solid var(--border);">
+                      <span style="font-size:12px; font-weight:500;">${esc(cat)} <span style="color:var(--text-muted); font-weight:400;">(${count})</span></span>
+                      <button class="btn-mini" style="color:var(--danger); font-size:10px; padding:2px 6px;" onclick="UIBulk.removeUniversalCategory('${esc(cat)}')" title="Eliminar categoría">✕</button>
+                    </div>`;
+                  }).join('')}
+                </div>
+                <div style="display:flex; gap:6px;">
+                  <input type="text" id="bulk-new-ucat" class="form-input" placeholder="Nueva categoría..." style="flex:1; font-size:12px;">
+                  <button class="btn-primary btn-mini" onclick="UIBulk.addUniversalCategory()" style="white-space:nowrap;">+ Agregar</button>
+                </div>
+              </div>
+            </div>
+
             <hr style="margin:10px 0; border:none; border-top:1px solid var(--border)">
             
             <button class="btn-danger-sm" style="width:100%; padding:10px;" onclick="UIBulk.deleteSelected()" ${_selectedEans.size === 0 ? 'disabled' : ''}>
@@ -306,6 +378,21 @@ const UIBulk = (() => {
     `;
     
     _attachEvents();
+  }
+
+  function toggleAccordion(headerEl) {
+    if (!headerEl) return;
+    const item = headerEl.closest('.bulk-accordion-item');
+    if (item) {
+      item.classList.toggle('open');
+    }
+  }
+
+  function _attachEvents() {
+    const firstItem = document.querySelector('.bulk-accordion-item');
+    if (firstItem && !document.querySelector('.bulk-accordion-item.open')) {
+      firstItem.classList.add('open');
+    }
   }
 
   function _renderSelectionBanner() {
@@ -546,11 +633,25 @@ const UIBulk = (() => {
     return !img || img.length < 5 || img.includes('logo.png');
   }
 
+  function normalizeStr(s) {
+    return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  }
+
   function _applyFilters() {
     _filteredProducts = _allProducts.filter(p => {
-      const q = _filterState.search.toLowerCase();
-      if (q && !(p.name?.toLowerCase().includes(q) || p.ean.includes(q) || p.brand?.toLowerCase().includes(q))) {
-        return false;
+      const q = normalizeStr(_filterState.search);
+      if (q) {
+        const matchName     = normalizeStr(p.name).includes(q);
+        const matchEan      = String(p.ean || '').includes(q);
+        const matchBrand    = normalizeStr(p.brand).includes(q);
+        const matchProducer = normalizeStr(p.producer).includes(q);
+        const matchVispera  = normalizeStr(p.visperaId).includes(q);
+        const matchHoldings = Object.values(p.holdings || p.retailers || {}).some(h => 
+          normalizeStr(h.customerId || h.holdingInternalId || h.localProductName || h.name).includes(q)
+        );
+        if (!matchName && !matchEan && !matchBrand && !matchProducer && !matchVispera && !matchHoldings) {
+          return false;
+        }
       }
       
       if (_filterState.errorFilter === 'no-cat' && !_isNoUniversalCategory(p)) return false;
@@ -651,8 +752,21 @@ const UIBulk = (() => {
       _filterState.search = q;
       _page = 1;
       _selectAllFiltered = false;
-      let timer; clearTimeout(timer);
-      timer = setTimeout(() => render(), 300);
+      clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(() => {
+        const activeId = document.activeElement ? document.activeElement.id : null;
+        const selectionStart = document.activeElement && document.activeElement.selectionStart;
+        render();
+        if (activeId) {
+          const el = document.getElementById(activeId);
+          if (el) {
+            el.focus();
+            if (selectionStart !== null && el.setSelectionRange) {
+              el.setSelectionRange(selectionStart, selectionStart);
+            }
+          }
+        }
+      }, 200);
     },
     setErrorFilter(f) {
       _filterState.errorFilter = f;
@@ -1062,33 +1176,280 @@ const UIBulk = (() => {
       });
     },
 
+    toggleDiscBrandFilter(mode) {
+      const group = document.getElementById('bulk-disc-brand-group');
+      if (group) group.style.display = mode === 'brand' ? '' : 'none';
+    },
+
+    applyBulkDiscontinue() {
+      const hid = document.getElementById('bulk-disc-holding')?.value;
+      if (!hid) { if (App) App.showToast('Selecciona un holding primero', 'warning'); return; }
+      const hInfo = DB.getHoldings().find(h => h.id === hid);
+      const hName = hInfo?.name || hid;
+
+      const mode = document.getElementById('bulk-disc-mode')?.value || 'selected';
+      let targetEans;
+
+      if (mode === 'brand') {
+        const brand = document.getElementById('bulk-disc-brand')?.value;
+        if (!brand) { if (App) App.showToast('Selecciona una marca', 'warning'); return; }
+        targetEans = DB.getProductsArray()
+          .filter(p => p.brand === brand && (p.holdings || {})[hid] && !(p.holdings[hid]).isDiscontinued)
+          .map(p => p.ean);
+        if (targetEans.length === 0) {
+          if (App) App.showToast(`No hay SKUs activos de la marca "${brand}" en ${hName}`, 'info');
+          return;
+        }
+      } else {
+        if (_selectedEans.size === 0) { if (App) App.showToast('Selecciona productos primero', 'warning'); return; }
+        targetEans = [..._selectedEans];
+      }
+
+      const affected = [];
+      const prodsToSave = [];
+
+      targetEans.forEach(ean => {
+        const p = DB.getProduct(ean);
+        if (!p) return;
+        const clone = JSON.parse(JSON.stringify(p));
+        clone.holdings = clone.holdings || {};
+        if (!clone.holdings[hid]) return;
+        if (clone.holdings[hid].isDiscontinued) return; // ya descontinuado
+
+        // Marcar como descontinuado pero PRESERVAR customer_id y holdingInternalId
+        clone.holdings[hid].isDiscontinued = true;
+        clone.holdings[hid].discontinuedAt = new Date().toISOString();
+        clone.holdings[hid].isActiveHolding = false;
+
+        const custId = clone.holdings[hid].customerId || clone.holdings[hid].holdingInternalId || '—';
+        affected.push({
+          ean: p.ean,
+          name: p.name || 'Sin nombre',
+          oldVal: `Activo en ${hName} (ID: ${custId})`,
+          newVal: `Descontinuado en ${hName} (ID preservado: ${custId})`
+        });
+        prodsToSave.push(clone);
+      });
+
+      if (affected.length === 0) {
+        if (App) App.showToast(`No hay SKUs activos para descontinuar en ${hName}`, 'info');
+        return;
+      }
+
+      const brandLabel = mode === 'brand' ? ` de marca "${document.getElementById('bulk-disc-brand')?.value}"` : '';
+      _showSafetyModal({
+        title: `🚫 Descontinuar${brandLabel} de ${hName}`,
+        badgeText: `${affected.length} SKUs`,
+        description: `Se marcarán <strong>${affected.length} SKUs</strong>${brandLabel} como descontinuados en ${hName}. Los Customer IDs se conservarán intactos por si la marca regresa.`,
+        affectedItems: affected,
+        actionType: 'danger',
+        requiresConfirmationKey: affected.length > 10,
+        onConfirm: async () => {
+          await DB.saveProducts(prodsToSave);
+          if (App) App.showToast(`${affected.length} SKUs descontinuados de ${hName}`, 'success');
+          _selectedEans.clear();
+          _selectAllFiltered = false;
+          await DB.fetchProducts();
+          render();
+        }
+      });
+    },
+
+    addUniversalCategory() {
+      const input = document.getElementById('bulk-new-ucat');
+      const name = (input?.value || '').trim().toUpperCase();
+      if (!name) { if (App) App.showToast('Ingresa un nombre para la nueva categoría', 'warning'); return; }
+      if ((window.UNIVERSAL_CATEGORIES || []).includes(name)) {
+        if (App) App.showToast(`La categoría "${name}" ya existe`, 'info');
+        return;
+      }
+      window.UNIVERSAL_CATEGORIES = [...(window.UNIVERSAL_CATEGORIES || []), name].sort();
+      localStorage.setItem('ss_universal_categories', JSON.stringify(window.UNIVERSAL_CATEGORIES));
+      if (App) App.showToast(`Categoría "${name}" agregada al sistema`, 'success');
+      render();
+    },
+
+    removeUniversalCategory(cat) {
+      const affected = DB.getProductsArray().filter(p => {
+        const uCat = Array.isArray(p.universalCategory) ? p.universalCategory : (p.universalCategory ? [p.universalCategory] : []);
+        return uCat.includes(cat);
+      });
+
+      const doRemove = () => {
+        window.UNIVERSAL_CATEGORIES = (window.UNIVERSAL_CATEGORIES || []).filter(c => c !== cat);
+        localStorage.setItem('ss_universal_categories', JSON.stringify(window.UNIVERSAL_CATEGORIES));
+        if (App) App.showToast(`Categoría "${cat}" eliminada del sistema`, 'success');
+        render();
+      };
+
+      if (affected.length === 0) {
+        doRemove();
+        return;
+      }
+
+      _showSafetyModal({
+        title: `⚠️ Eliminar Categoría Universal "${cat}"`,
+        badgeText: `${affected.length} SKUs afectados`,
+        description: `Al eliminar la categoría "<strong>${cat}</strong>", ${affected.length} SKU(s) quedarán sin categoría universal válida y aparecerán en la bandeja de Revisión → Sin Categoría Universal.`,
+        affectedItems: affected.slice(0, 50).map(p => ({
+          ean: p.ean,
+          name: p.name || 'Sin nombre',
+          oldVal: cat,
+          newVal: 'Sin Categoría Universal'
+        })),
+        actionType: 'danger',
+        requiresConfirmationKey: affected.length > 5,
+        onConfirm: doRemove
+      });
+    },
+
     exportExcel() {
       const isSelectionMode = _selectedEans.size > 0;
-      const targetProducts = isSelectionMode
+      const baseProducts = isSelectionMode
         ? _filteredProducts.filter(p => _selectedEans.has(p.ean))
         : _filteredProducts;
 
-      if (!targetProducts || targetProducts.length === 0) {
+      if (!baseProducts || baseProducts.length === 0) {
         if (App) App.showToast('No hay productos para exportar', 'warning');
         return;
       }
 
+      const holdings = DB.getHoldings();
+      const categories = window.UNIVERSAL_CATEGORIES || [];
+
+      const modalHtml = `
+        <div class="modal-backdrop" id="export-modal-backdrop" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:9999;">
+          <div class="modal-card" style="background:var(--surface); border-radius:12px; padding:24px; max-width:520px; width:90%; box-shadow:0 10px 25px rgba(0,0,0,0.2); border:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+              <h3 style="margin:0; font-size:18px; font-weight:700;">📊 Exportación Avanzada a Excel</h3>
+              <button onclick="document.getElementById('export-modal-backdrop').remove()" style="background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted);">✕</button>
+            </div>
+            
+            <p style="font-size:12px; color:var(--text-sec); margin-bottom:16px;">
+              Configura los filtros de exportación sobre los <strong>${baseProducts.length} SKUs</strong> ${isSelectionMode ? 'seleccionados' : 'filtrados'}.
+            </p>
+
+            <div class="form-group" style="margin-bottom:12px;">
+              <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Filtrar por Holding Específico</label>
+              <select id="export-filter-holding" class="form-select" style="width:100%;">
+                <option value="all">Todos los holdings</option>
+                ${holdings.map(h => `<option value="${h.id}">${h.name}</option>`).join('')}
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom:12px;">
+              <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Filtrar por Categoría Universal</label>
+              <select id="export-filter-category" class="form-select" style="width:100%;">
+                <option value="all">Todas las categorías</option>
+                ${categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label style="font-size:12px; font-weight:600; display:block; margin-bottom:4px;">Filtrar por Origen de Datos / Integración</label>
+              <select id="export-filter-origin" class="form-select" style="width:100%;">
+                <option value="all">Todos los orígenes</option>
+                <option value="api">Solo Enriquecidos por API (SoloTodo / OFF / OPF)</option>
+                <option value="levantamiento">Solo Levantamiento en Terreno</option>
+                <option value="manual">Solo Carga Manual</option>
+              </select>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
+              <button class="btn-outline" onclick="document.getElementById('export-modal-backdrop').remove()">Cancelar</button>
+              <button class="btn-primary" onclick="UIBulk._doExportExcel()">📥 Generar Excel</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const existing = document.getElementById('export-modal-backdrop');
+      if (existing) existing.remove();
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
+    _doExportExcel() {
+      const isSelectionMode = _selectedEans.size > 0;
+      let targetProducts = isSelectionMode
+        ? _filteredProducts.filter(p => _selectedEans.has(p.ean))
+        : _filteredProducts;
+
+      const holdingFilter = document.getElementById('export-filter-holding')?.value || 'all';
+      const categoryFilter = document.getElementById('export-filter-category')?.value || 'all';
+      const originFilter = document.getElementById('export-filter-origin')?.value || 'all';
+
+      // Aplicar filtros avanzados del modal
+      if (holdingFilter !== 'all') {
+        targetProducts = targetProducts.filter(p => (p.holdings || p.retailers || {})[holdingFilter]);
+      }
+      if (categoryFilter !== 'all') {
+        targetProducts = targetProducts.filter(p => {
+          const uCat = Array.isArray(p.universalCategory) ? p.universalCategory : (p.universalCategory ? [p.universalCategory] : []);
+          return uCat.includes(categoryFilter);
+        });
+      }
+      if (originFilter !== 'all') {
+        targetProducts = targetProducts.filter(p => {
+          if (originFilter === 'levantamiento') return p.dataSource === 'levantamiento' || p.fromLevantamiento;
+          if (originFilter === 'api') return (p.dataSource && p.dataSource !== 'manual' && p.dataSource !== 'levantamiento') || (p.enrichmentSources && Object.keys(p.enrichmentSources).length > 0);
+          if (originFilter === 'manual') return p.dataSource === 'manual' && (!p.enrichmentSources || Object.keys(p.enrichmentSources).length === 0);
+          return true;
+        });
+      }
+
+      const modal = document.getElementById('export-modal-backdrop');
+      if (modal) modal.remove();
+
+      if (!targetProducts || targetProducts.length === 0) {
+        if (App) App.showToast('No hay productos que coincidan con los filtros seleccionados', 'warning');
+        return;
+      }
+
       const headers = [
-        'EAN', 'Nombre del Producto', 'Marca', 'Categoría Universal Vispera',
-        'Holdings Asignados', 'Customer IDs por Holding', 'Estado Operativo', 'Origen de Datos',
-        'Vispera ID', 'Tipo de Empaque', 'Completitud (%)'
+        'Fecha de Carga',
+        'Barcode / EAN Code',
+        'Vispera ID',
+        'Customer ID',
+        'SKU Name (Nombre)',
+        'Brand (Marca)',
+        'Producer / Manufacturer (Marca Universal)',
+        'Category (Categoría Universal Vispera)',
+        'Sub-Category (Categoría Holding)',
+        'Holdings Asignados',
+        'Size (Peso / Contenido)',
+        'Size Unit (Unidad)',
+        'Number of Units (Unidades)',
+        'Width (Ancho cm)',
+        'Height (Alto cm)',
+        'Depth (Profundidad cm)',
+        'Public Image Link (URL Imagen)',
+        'Tipo de Empaque',
+        'Estado Operativo',
+        'Origen de Datos',
+        'Completitud (%)'
       ];
 
       const rows = targetProducts.map(p => {
-        const catStr = Array.isArray(p.category) ? p.category.join('; ') : (p.category || 'General');
+        const dateStr = p.createdAt || p.updatedAt ? new Date(p.createdAt || p.updatedAt).toLocaleDateString('es-CL') : '—';
         const hData = p.holdings || p.retailers || {};
         const holdingsList = Object.keys(hData);
         const holdingsStr = holdingsList.length > 0 ? holdingsList.join('; ') : 'SIN HOLDING';
         
         const custIdsStr = holdingsList.map(hId => {
           const item = hData[hId];
-          return `${hId}: ${item?.customerId || item?.holdingInternalId || 'Sin ID'}`;
-        }).join('; ');
+          const cid = item?.customerId || item?.holdingInternalId;
+          return cid ? `${hId}: ${cid}` : null;
+        }).filter(Boolean).join('; ') || 'Ninguno';
+
+        const localCatsStr = holdingsList.map(hId => {
+          const item = hData[hId];
+          const lcat = Array.isArray(item?.localCategoryName) ? item.localCategoryName.join(', ') : (item?.localCategoryName || item?.category);
+          return lcat ? `${hId}: ${lcat}` : null;
+        }).filter(Boolean).join('; ') || (Array.isArray(p.category) ? p.category.join('; ') : (p.category || 'General'));
+
+        const uCatStr = Array.isArray(p.universalCategory) 
+          ? p.universalCategory.join('; ') 
+          : (p.universalCategory || p.masterCategory || 'General');
 
         const statusMap = { active: 'Activo', new: 'Nuevo Lanzamiento', review: 'En Revisión', discontinued: 'Discontinuado' };
         const statusStr = statusMap[p.status] || 'Activo';
@@ -1101,24 +1462,32 @@ const UIBulk = (() => {
         const pkgLabel = pkgObj ? pkgObj.label : (p.packageType || 'N/A');
 
         return [
-          p.ean,
+          dateStr,
+          p.ean || '',
+          p.visperaId || 'Sin ID',
+          custIdsStr,
           p.name || '',
           p.brand || '',
-          catStr,
+          p.producer || '',
+          uCatStr,
+          localCatsStr,
           holdingsStr,
-          custIdsStr || 'Ninguno',
+          p.weight_g !== null && p.weight_g !== undefined ? p.weight_g : '',
+          p.weight_unit || (p.weight_g ? 'g' : ''),
+          p.numberOfUnits || 1,
+          p.width_cm !== null && p.width_cm !== undefined ? p.width_cm : '',
+          p.height_cm !== null && p.height_cm !== undefined ? p.height_cm : '',
+          p.depth_cm !== null && p.depth_cm !== undefined ? p.depth_cm : '',
+          p.imageUrl || '',
+          pkgLabel,
           statusStr,
           originStr,
-          p.visperaId ? `ID: ${p.visperaId}` : (p.is_ready_for_vispera ? 'En Ticket' : 'Sin ID'),
-          pkgLabel,
           `${DB.computeCompleteness(p)}%`
         ];
       });
 
       const dateStr = new Date().toISOString().slice(0, 10);
-      const filename = isSelectionMode
-        ? `sku-audit-seleccionados-${targetProducts.length}-${dateStr}.xlsx`
-        : `sku-audit-filtrados-${targetProducts.length}-${dateStr}.xlsx`;
+      const filename = `sku-audit-export-${targetProducts.length}-${dateStr}.xlsx`;
 
       if (typeof XLSX !== 'undefined') {
         const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
@@ -1127,7 +1496,6 @@ const UIBulk = (() => {
         XLSX.writeFile(wb, filename);
         if (App) App.showToast(`✓ Exportados ${targetProducts.length} SKUs a Excel (.xlsx)`, 'success');
       } else {
-        // Fallback to CSV if XLSX CDN is offline
         const csvRows = [headers, ...rows].map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','));
         const csvContent = csvRows.join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1183,6 +1551,8 @@ const UIBulk = (() => {
         if (App) App.showToast('Base de datos sincronizada', 'success');
         render();
       });
-    }
+    },
+
+    toggleAccordion
   };
 })();

@@ -29,6 +29,27 @@ const App = {
     }, type === 'error' ? 5000 : 3000);
   },
 
+  // ── export helpers ─────────────────────────
+  exportCSV() {
+    if (typeof UIBulk !== 'undefined' && UIBulk.exportExcel) {
+      UIBulk.exportExcel();
+    } else {
+      this.showToast('Módulo de exportación no disponible', 'error');
+    }
+  },
+
+  exportRetailerCSV(holdingId) {
+    if (typeof UIBulk !== 'undefined' && UIBulk.exportExcel) {
+      UIBulk.exportExcel();
+      setTimeout(() => {
+        const sel = document.getElementById('export-filter-holding');
+        if (sel) sel.value = holdingId;
+      }, 50);
+    } else {
+      this.showToast('Módulo de exportación no disponible', 'error');
+    }
+  },
+
   // Data refresh callback (used by DB after saves)
   refreshData() {
     const hash = window.location.hash.replace('#', '');

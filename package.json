@@ -21,5 +21,9 @@
     "firebase-admin": "^14.2.0",
     "pg": "^8.20.0",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^4.4.168"
   }
 }

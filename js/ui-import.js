@@ -19,6 +19,7 @@ const UIImport = (() => {
     { key: 'ean',         label: 'EAN / Barcode',        required: true  },
     { key: 'name',        label: 'Nombre del producto',  required: false },
     { key: 'brand',       label: 'Marca',                required: false },
+    { key: 'producer',    label: 'Marca Universal',      required: false },
     { key: 'packageType', label: 'Tipo de paquete',      required: false },
     { key: 'weight',      label: 'Peso (g)',             required: false },
     { key: 'width',       label: 'Ancho (cm)',           required: false },
@@ -29,8 +30,6 @@ const UIImport = (() => {
     { key: 'customerId',    label: 'ID interno del retailer (Customer ID)' },
     { key: 'retailerName',  label: 'Nombre en ese retailer'                },
     { key: 'category',      label: 'Categoría'                             },
-    { key: 'dmu',           label: 'DMU / Pasillo'                         },
-    { key: 'position',      label: 'Posición en góndola'                   },
     { key: 'retailerImage', label: 'URL imagen oficial'                    },
   ];
 

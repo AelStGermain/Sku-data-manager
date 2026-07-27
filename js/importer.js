@@ -14,13 +14,13 @@ const Importer = (() => {
 
   function findColumn(headers, ...candidates) {
     const norms = candidates.map(normalize);
+    // 1. Coincidencia exacta primero
+    const exact = headers.find(h => norms.includes(normalize(h)));
+    if (exact) return exact;
+    // 2. Coincidencia parcial si la candidata tiene suficiente especificidad
     return headers.find(h => {
       const nh = normalize(h);
-      return norms.some(c =>
-        nh === c ||
-        nh.includes(c) ||
-        (c.length > 3 && c.includes(nh))
-      );
+      return norms.some(c => c.length > 3 && nh.includes(c));
     }) || '';
   }
 
@@ -32,22 +32,19 @@ const Importer = (() => {
     return {
       ean:          f('ean','barcode','codigo','codigobarra','codigobarras','codbar','codbarra','barras','gtin','upc','ean13','ean14','dun14','isbn'),
       name:         f('nombre','name','descripcion','description','producto','nom','desc','nombreproducto','nombredescripcion','nombrecomercial','articulo','item','titulo'),
-      brand:        f('marca','brand','fabricante','proveedor','maker','manufacturer','lab','laboratorio'),
-      packageType:  f('paquete','package','tipo','empaque','envase','presentacion','formato','tipoenvase','tipopaquete','tipoformato'),
-      weight:       f('peso','weight','gramaje','gramos','g','kg','pesoneto','pesog','pesokge','contenido','neto','ml','litro'),
-      width:        f('ancho','width','anchura','dim_ancho','dimw'),
-      height:       f('alto','height','altura','dim_alto','dimh','long'),
-      depth:        f('profundidad','depth','largo','fondo','din_prof','dimd'),
-      customerId:   f('idretailer','retailerid','sku','idinterno','codinterno','codigointerno','skuinterno','articuloid','itemid','productid','customerid','codigocomercial','codcomercial','skucentral','codigocliente','idcliente','skuproveedor'),
+      brand:        f('marca','brand','fabricante','maker','manufacturer','lab','laboratorio'),
+      producer:     f('producer_name','producername','producer','productor','marca_universal','universalbrand'),
+      packageType:  '',
+      weight:       '',
+      width:        '',
+      height:       '',
+      depth:        '',
+      customerId:   f('customer_id','customerid','idretailer','retailerid','sku','idinterno','codinterno','codigointerno','skuinterno','articuloid','itemid','productid','codigocomercial','codcomercial','skucentral','codigocliente','idcliente','skuproveedor'),
       retailerName: f('nombreretailer','descripcionretailer','nombresupermercado','nombretienda','desctienda'),
-      category:     f('categoria','category','departamento','department','seccion','rubro','linea','familia','sub','subcategoria','cat','depto'),
-      retailerImage:f('imagen','image','foto','photo','url','imageurl','imgurl','fotoproducto','imagenproducto','fotofleje'),
-      dmu:          f('dmu','pasillo','aisle','gondola','gondolas','seccion','pasillo','sector','nave'),
-      position:     f('posicion','position','orden','order','lugar','pos','nro','numero','fila','columna'),
+      category:     f('sub_category_name','subcategoryname','categoria','category','departamento','department','seccion','rubro','linea','familia','sub','subcategoria','cat','depto'),
+      retailerImage:'',
     };
   }
-
-
 
   // How many fields were auto-detected (excluding required ean)
   function detectSummary(mapping, headers) {
@@ -115,6 +112,7 @@ const Importer = (() => {
           ean,
           name:        get(row, mapping.name)        || null,
           brand:       get(row, mapping.brand)       || null,
+          producer:    get(row, mapping.producer)    || null,
           packageType: get(row, mapping.packageType) || null,
           width_cm:    num(get(row, mapping.width)),
           height_cm:   num(get(row, mapping.height)),
@@ -156,8 +154,6 @@ const Importer = (() => {
             localProductName: rName,
             category:    get(row, mapping.category)      || null,
             localCategoryName: get(row, mapping.category) || null,
-            dmu:         get(row, mapping.dmu)           || null,
-            position:    num(get(row, mapping.position)) || null,
             stockStatus: true,
             isActiveHolding: true,
             imageUrl:    rImgUrl,
@@ -192,7 +188,7 @@ const Importer = (() => {
     if (mode === 'skip') return null;  // caller checks for null → skip
 
     const merged = { ...existing };
-    const masterFields = ['name','brand','packageType','width_cm','height_cm','depth_cm','weight_g','imageUrl'];
+    const masterFields = ['name','brand','producer','packageType','width_cm','height_cm','depth_cm','weight_g','imageUrl'];
 
     if (mode === 'overwrite') {
       masterFields.forEach(f => {
