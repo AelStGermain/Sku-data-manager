@@ -236,7 +236,7 @@ export class FirebaseService {
             holdingRaw.toLowerCase();
           const dmu = record.dmu || record.pasillo || record.categoria || "";
 
-          if (!ean || ean.length < 8) {
+          if (!ean) {
             withoutEan.push(
               this.#mapWithoutEan(record, { holding, dmu, timestamp }),
             );

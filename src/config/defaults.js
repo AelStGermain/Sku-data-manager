@@ -3,20 +3,17 @@ export const DEFAULT_HOLDINGS = [
     id: "tottus",
     name: "Tottus",
     color: "#E8001C",
-    logoUrl: "tottus_logo.png",
   },
-  { id: "jumbo", name: "Jumbo", color: "#009A44", logoUrl: "jumbo_logo.png" },
+  { id: "jumbo", name: "Jumbo", color: "#009A44" },
   {
     id: "unimarc",
     name: "Unimarc",
     color: "#005BAC",
-    logoUrl: "unimarc_logo.png",
   },
   {
     id: "pronto",
     name: "Pronto Copec",
     color: "#E53935",
-    logoUrl: "pronto_logo.png",
   },
 ];
 

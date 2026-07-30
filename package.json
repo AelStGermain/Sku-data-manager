@@ -7,11 +7,18 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "check": "node scripts/check-syntax.js",
-    "lint": "eslint src server.js eslint.config.js",
-    "lint:fix": "eslint src server.js eslint.config.js --fix",
+    "lint": "eslint src tests server.js eslint.config.js jest.config.cjs playwright.config.js",
+    "lint:fix": "eslint src tests server.js eslint.config.js jest.config.cjs playwright.config.js --fix",
     "format": "prettier --write \"src/**/*.js\" \"server.js\" \"tests/**/*.js\" \"*.md\"",
     "format:check": "prettier --check \"src/**/*.js\" \"server.js\"",
-    "test": "npm run check && npm run lint && node --test",
+    "test": "npm run check && npm run lint && npm run test:jest && npm run test:e2e",
+    "test:jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:unit": "npm run test:jest -- tests/unit",
+    "test:api": "npm run test:jest -- tests/integration",
+    "test:coverage": "npm run test:jest -- --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:install-browsers": "playwright install chromium",
     "enrich": "node scripts/enrich-cron.js",
     "import": "node scripts/import-excel.js"
   },
@@ -27,12 +34,15 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.0",
     "@supabase/supabase-js": "^2.50.0",
     "eslint": "^10.8.0",
     "globals": "^17.8.0",
+    "jest": "^30.4.2",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^4.4.168",
     "prettier": "^3.9.6",
+    "supertest": "^7.2.2",
     "xlsx": "^0.18.5"
   }
 }

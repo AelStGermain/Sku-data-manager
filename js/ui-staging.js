@@ -189,7 +189,7 @@ ${_activeTab === 'no-cat' ? renderNoCategory(noCatProducts) : _activeTab === 'or
           <span style="color:var(--text-muted)">${new Date(item.timestamp).toLocaleString('es-CL')}</span>
         </td>
         <td>
-          <input type="text" id="noean-input-${esc(item.id)}" class="form-input" placeholder="Ingresar EAN (13 dígitos)..." style="width:180px; padding:6px; font-family:monospace;">
+          <input type="text" inputmode="numeric" pattern="[0-9]*" id="noean-input-${esc(item.id)}" class="form-input" placeholder="Ingresar EAN numérico..." style="width:180px; padding:6px; font-family:monospace;">
         </td>
         <td style="display:flex; gap:6px;">
           <button class="btn-primary btn-mini" onclick="UIStaging.identifyEan('${esc(item.id)}')">Asignar EAN</button>
@@ -681,6 +681,7 @@ ${paginationControls}`;
       dmu: item.dmu,
       category: item.category,
       auditor: item.auditor,
+      customerId: item.customerId || item.customer_id || '',
       firebaseName: item.firebaseName || item.source,
       status: 'PENDING'
     });

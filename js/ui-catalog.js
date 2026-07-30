@@ -61,6 +61,12 @@ const UICatalog = (() => {
   function normalizeStr(s) {
     return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   }
+  function relationCategories(relation) {
+    const value = relation?.localCategoryName ?? relation?.category;
+    return (Array.isArray(value) ? value : [value])
+      .map(category => String(category || '').trim())
+      .filter(Boolean);
+  }
   function sortProducts(arr) {
     const dir = _sortDir === 'asc' ? 1 : -1;
     return [...arr].sort((a,b) => {
@@ -256,10 +262,14 @@ const UICatalog = (() => {
     if (_localCategory !== 'all') {
       filtered = filtered.filter(p => {
         const h = p.holdings || p.retailers || {};
-        return Object.values(h).some(r => {
-          const rCats = Array.isArray(r.localCategoryName) ? r.localCategoryName : (Array.isArray(r.category) ? r.category : [r.localCategoryName || r.category]);
-          return rCats.includes(_localCategory);
-        });
+        const relations = _retailer === 'all'
+          ? Object.values(h)
+          : [h[_retailer]].filter(Boolean);
+        return relations.some(relation =>
+          relationCategories(relation).some(
+            category => normalizeStr(category) === normalizeStr(_localCategory)
+          )
+        );
       });
     }
     if (_source !== 'all') filtered = filtered.filter(p => p.dataSource === _source);
@@ -283,11 +293,22 @@ const UICatalog = (() => {
     filtered = sortProducts(filtered);
     const page = filtered.slice(_page * PAGE_SIZE, (_page + 1) * PAGE_SIZE);
 
-    let productsForCats = all;
-    if (_retailer !== 'all') productsForCats = all.filter(p => { const h = p.holdings || p.retailers || {}; return h[_retailer]; });
-    const holdingCats = [...new Set(productsForCats.flatMap(p => { const h = p.holdings || p.retailers || {}; return Object.values(h).flatMap(r => Array.isArray(r.localCategoryName) ? r.localCategoryName : (Array.isArray(r.category) ? r.category : [r.localCategoryName || r.category])).filter(Boolean); }))].sort();
-    
-    const visperaCats = Object.keys(window.VISPERA_CATEGORY_COLORS || {}).sort();
+    const hierarchy = DB.getCategoryHierarchy?.() || {};
+    const visperaCats = Object.keys(hierarchy);
+    const selectedHierarchy = hierarchy[_universalCategory];
+    const visibleHoldings = _retailer === 'all'
+      ? retailers
+      : retailers.filter(holding => holding.id === _retailer);
+    const holdingCategoryGroups = _universalCategory === 'all'
+      ? []
+      : visibleHoldings
+        .map(holding => ({
+          holding,
+          categories: [
+            ...new Set(selectedHierarchy?.holdings?.[holding.id] || [])
+          ]
+        }))
+        .filter(group => group.categories.length > 0);
 
     el.innerHTML = `
 <header class="view-header">
@@ -369,13 +390,18 @@ const UICatalog = (() => {
     <svg class="search-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input id="cat-search" class="search-inp" type="text" placeholder="Buscar por nombre, marca o EAN…" value="${esc(_search)}" oninput="UICatalog.setSearch(this.value)">
   </div>
-  <select class="filter-sel" onchange="UICatalog.setUniversalCategory(this.value)">
+  <select id="cat-filter-universal" class="filter-sel" onchange="UICatalog.setUniversalCategory(this.value)">
     <option value="all" ${_universalCategory==='all'?'selected':''}>Categoría Vispera</option>
     ${visperaCats.map(c=>`<option value="${esc(c)}" ${_universalCategory===c?'selected':''}>${esc(c)}</option>`).join('')}
   </select>
-  <select class="filter-sel" onchange="UICatalog.setLocalCategory(this.value)">
-    <option value="all" ${_localCategory==='all'?'selected':''}>Categoría Holding</option>
-    ${holdingCats.map(c=>`<option value="${esc(c)}" ${_localCategory===c?'selected':''}>${esc(c)}</option>`).join('')}
+  <select id="cat-filter-holding-category" class="filter-sel" onchange="UICatalog.setLocalCategory(this.value)" ${_universalCategory==='all'?'disabled':''}>
+    <option value="all" ${_localCategory==='all'?'selected':''}>${_universalCategory === 'all' ? 'Primero elige Categoría Vispera' : `Todas las categorías Holding de ${esc(_universalCategory)}`}</option>
+    ${holdingCategoryGroups.map(({holding, categories}) => `
+      <optgroup label="${esc(holding.name)}">
+        ${categories.map(category => `<option value="${esc(category)}" ${_localCategory===category?'selected':''}>${esc(category)}</option>`).join('')}
+      </optgroup>
+    `).join('')}
+    ${_universalCategory !== 'all' && holdingCategoryGroups.length === 0 ? '<option value="" disabled>Sin categorías configuradas en la jerarquía</option>' : ''}
   </select>
   <select class="filter-sel" onchange="UICatalog.setSource(this.value)">
     <option value="all" ${_source==='all'?'selected':''}>Todas las fuentes</option>
@@ -429,7 +455,12 @@ ${renderPagination(filtered.length)}`;
   }
 
   function setRetailer(v)      { _retailer      = v;   _page = 0; render(); }
-  function setUniversalCategory(v) { _universalCategory = v; _page = 0; render(); }
+  function setUniversalCategory(v) {
+    _universalCategory = v;
+    _localCategory = 'all';
+    _page = 0;
+    render();
+  }
   function setLocalCategory(v) { _localCategory = v; _page = 0; render(); }
   function setSource(v)        { _source        = v;   _page = 0; render(); }
   function setStatusFilter(v)  { _statusFilter  = v;   _page = 0; render(); }

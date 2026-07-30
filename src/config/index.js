@@ -102,12 +102,7 @@ export const config = Object.freeze({
     cssDir: path.join(projectRoot, "css"),
     jsDir: path.join(projectRoot, "js"),
     indexFile: path.join(projectRoot, "index.html"),
-    assets: [
-      "logo.png",
-      "jumbo_logo.png",
-      "tottus_logo.png",
-      "unimarc_logo.png",
-    ],
+    assets: ["logo.png"],
   }),
   http: Object.freeze({
     corsOrigins: env.CORS_ORIGINS.split(",")

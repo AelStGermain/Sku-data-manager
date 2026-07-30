@@ -112,7 +112,8 @@ const UISheet = (() => {
       _data.holdings[item.holdingId] = {
         holdingProductId: `mock_${Date.now()}`,
         masterProductId: '',
-        holdingInternalId: '', customerId: item.customerId || '',
+        holdingInternalId: item.customerId || item.customer_id || '',
+        customerId: item.customerId || item.customer_id || '',
         localProductName: _data.name, name: _data.name, 
         localCategoryName: item.dmuCategory || null, category: item.dmuCategory || null,
         stockStatus: true, isActiveHolding: true, imageUrl: item.imageUrl || null,
@@ -183,6 +184,7 @@ const UISheet = (() => {
       if (document.getElementById('fd-dmu')) document.getElementById('fd-dmu').value = item.dmu || '';
       if (document.getElementById('fd-aisle')) document.getElementById('fd-aisle').value = item.aisle || item.dmuName || '';
       if (document.getElementById('fd-holding')) document.getElementById('fd-holding').value = item.holdingId || '';
+      if (document.getElementById('fd-customer-id')) document.getElementById('fd-customer-id').value = item.customerId || item.customer_id || '';
     }, 50);
   }
 
@@ -191,6 +193,7 @@ const UISheet = (() => {
     _ean = realEan;
     _isCreate = false;
     _createMode = 'master';
+    const customerId = String(item.customerId || item.customer_id || '').trim();
     
     // Check if realEan already exists
     const existing = DB.getProduct(realEan);
@@ -201,11 +204,17 @@ const UISheet = (() => {
       if (!_data.images) _data.images = [];
       if (item.imageUrl && !_data.images.includes(item.imageUrl)) _data.images.unshift(item.imageUrl);
       
-      // Ensure holding is added if it didn't exist
-      if (item.holdingId && !_data.holdings?.[item.holdingId]) {
-        _data.holdings = _data.holdings || {};
+      // Ensure holding data and the captured Customer ID survive resolution.
+      if (item.holdingId) {
+        _data.holdings = _data.holdings || { ...(_data.retailers || {}) };
         _data.holdings[item.holdingId] = {
-          holdingInternalId: item.customerId || '',
+          ...(_data.holdings[item.holdingId] || {}),
+          holdingInternalId:
+            customerId ||
+            _data.holdings[item.holdingId]?.holdingInternalId ||
+            '',
+          customerId:
+            customerId || _data.holdings[item.holdingId]?.customerId || '',
           localProductName: existing.name || item.description || '',
           dmu: item.dmu ? [item.dmu] : [],
           stockStatus: true,
@@ -228,7 +237,8 @@ const UISheet = (() => {
       };
       if (item.holdingId) {
         _data.holdings[item.holdingId] = {
-          holdingInternalId: item.customerId || '',
+          holdingInternalId: customerId,
+          customerId,
           localProductName: _data.name,
           dmu: item.dmu ? [item.dmu] : [],
           stockStatus: true,
@@ -876,6 +886,10 @@ const UISheet = (() => {
                 <label>Holding</label>
                 <select id="fd-holding" class="form-select"><option value="">-- Seleccionar --</option>${holdings.map(h => `<option value="${h.id}" ${_holding===h.id?'selected':''}>${h.name}</option>`).join('')}</select>
               </div>
+              <div class="form-group">
+                <label>Customer ID</label>
+                <input type="text" id="fd-customer-id" class="form-input" placeholder="ID del producto en el holding">
+              </div>
             </div>
             <div class="fd-alert-notice" style="margin-top:24px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -982,12 +996,12 @@ ${tabsHtml}
         <div class="form-group">
           <label>GTIN / master_product_id</label>
           <div style="position:relative;">
-            <input type="text" class="form-input ${_isCreate ? '' : 'readonly-inp'}" id="sheet-ean-inp" value="${esc(_data.ean)}" ${_isCreate ? 'maxlength="14" oninput="UISheet.validateEANInput(this.value)"' : 'readonly'} oninput="UISheet.updateField('ean', this.value)">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-input ${_isCreate ? '' : 'readonly-inp'}" id="sheet-ean-inp" value="${esc(_data.ean)}" ${_isCreate ? 'oninput="this.value=this.value.replace(/[^0-9]/g, \'\');UISheet.validateEANInput(this.value)"' : 'readonly'}>
             ${_isCreate ? `<span id="ean-validation-badge" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;"></span>` : ''}
           </div>
           ${_isCreate
-            ? '<p class="form-hint" id="ean-hint">Introduce el EAN para validar el dígito de control.</p>'
-            : (gtinValidation.legacy ? `<p class="form-hint" style="color:var(--warning)">Código heredado de Excel. Se exportará como ${esc(gtinValidation.normalized)}.</p>` : '')}
+            ? '<p class="form-hint" id="ean-hint">Ingresa un identificador compuesto sólo por números.</p>'
+            : ''}
         </div>
         <div class="form-group">
           <label>Vispera ID</label>
@@ -1142,16 +1156,16 @@ ${tabsHtml}
     const badge = document.getElementById('ean-validation-badge');
     const hint  = document.getElementById('ean-hint');
     if (!badge) return;
-    if (!ean || ean.length < 8) {
+    if (!ean) {
       badge.textContent = '';
-      if (hint) hint.textContent = 'Introduce el EAN para validar el dígito de control.';
+      if (hint) hint.textContent = 'Ingresa un identificador compuesto sólo por números.';
       return;
     }
     const v = DB.validateEAN(ean);
     if (v.valid) {
       badge.textContent = '✓ Válido';
       badge.style.color = 'var(--success, #4ac99b)';
-      if (hint) hint.textContent = 'EAN válido.';
+      if (hint) hint.textContent = 'EAN numérico válido.';
     } else {
       badge.textContent = '✗ Inválido';
       badge.style.color = 'var(--danger, #e55)';
@@ -1218,7 +1232,7 @@ ${tabsHtml}
   function _fdValidateEAN(val) {
     const badge = document.getElementById('fd-ean-badge');
     if (!badge) return;
-    if (!val || val.length < 8) { badge.textContent = ''; return; }
+    if (!val) { badge.textContent = ''; return; }
     const v = DB.validateEAN(val);
     badge.textContent = v.valid ? '✓ Válido' : '✗ Inválido';
     badge.style.color  = v.valid ? 'var(--success, #4ac99b)' : 'var(--danger, #e55)';
@@ -1232,6 +1246,15 @@ ${tabsHtml}
     const aisle = document.getElementById('fd-aisle')?.value.trim() || null;
     const holding = document.getElementById('fd-holding')?.value || null;
     const dmu     = document.getElementById('fd-dmu')?.value.trim() || null;
+    const customerId =
+      document.getElementById('fd-customer-id')?.value.trim() || '';
+    if (customerId && !holding) {
+      App.showToast(
+        'Selecciona un holding para asociar el Customer ID',
+        'error'
+      );
+      return;
+    }
 
     const btn = document.getElementById('fd-submit-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
@@ -1257,6 +1280,7 @@ ${tabsHtml}
       dmuName: aisle, // for backward compatibility if needed
       dmu,
       holdingId: holding,
+      customerId,
       imageUrl,
       apiRawName: desc,
       timestamp: _data?.timestamp || new Date().toISOString(),

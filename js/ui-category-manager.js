@@ -46,7 +46,7 @@ const UICategoryManager = (() => {
                 <span>🗂️</span> Gestor de Jerarquía de Categorías Vispera
               </h2>
               <p style="margin:4px 0 0 0; font-size:12px; color:var(--text-sec);">
-                Asocia las Categorías Universales Máster con las Subcategorías locales de cada Holding (Tottus, Jumbo, Unimarc, Pronto).
+                Asocia las Categorías Universales Máster con las subcategorías locales de cada holding configurado.
               </p>
             </div>
             <button class="btn-icon" onclick="UICategoryManager.closeModal()" style="font-size:18px; padding:6px 12px; background:transparent; border:none; color:var(--text-muted); cursor:pointer;">✕</button>

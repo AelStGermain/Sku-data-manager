@@ -47,7 +47,7 @@ export const openApiDocument = {
                   eans: {
                     type: "array",
                     minItems: 1,
-                    items: { type: ["string", "number"] },
+                    items: { $ref: "#/components/schemas/Ean" },
                   },
                 },
               },
@@ -174,8 +174,16 @@ export const openApiDocument = {
       Product: {
         type: "object",
         required: ["ean"],
-        properties: { ean: { type: ["string", "number"] } },
+        properties: { ean: { $ref: "#/components/schemas/Ean" } },
         additionalProperties: true,
+      },
+      Ean: {
+        description:
+          "Identificador numérico flexible. No requiere un largo ni checksum GTIN específico.",
+        oneOf: [
+          { type: "string", pattern: "^\\d+$" },
+          { type: "integer", minimum: 0 },
+        ],
       },
       ProductMutation: {
         type: "object",

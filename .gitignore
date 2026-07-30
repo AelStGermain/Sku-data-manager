@@ -8,3 +8,9 @@ node_modules/
 
 # Pero ignorar estrictamente la clave privada de Firebase por seguridad
 local_data/firebase-key.json
+
+# Artefactos de pruebas automatizadas
+coverage/
+playwright-report/
+test-results/
+tests/.tmp/

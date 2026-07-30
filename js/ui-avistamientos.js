@@ -130,15 +130,18 @@ const UIAvistamientos = (() => {
                   <div><strong>Pasillo / Góndola:</strong> ${esc(item.aisle || '—')}</div>
                   <div><strong>DMU:</strong> ${esc(item.dmu || '—')}</div>
                   <div><strong>ID Temp:</strong> <span class="mono" style="font-size:11px;">${esc(item.ean)}</span></div>
+                  <div><strong>Customer ID:</strong> ${esc(item.customerId || item.customer_id || '—')}</div>
                   <div><strong>Nombre DMU:</strong> ${esc(item.dmuName || '—')}</div>
                   <div><strong>Fecha:</strong> ${new Date(item.timestamp || item.createdAt).toLocaleDateString('es-CL')}</div>
                 </div>
               </div>
               
               <div class="avis-action" onclick="event.stopPropagation()">
+                <label>CUSTOMER ID DEL HOLDING:</label>
+                <input type="text" id="inline-customer-${esc(item.ean)}" class="form-input" value="${esc(item.customerId || item.customer_id || '')}" style="width:100%; padding:8px; margin-bottom:12px; font-size:13px;" placeholder="Ej: JUM-44921">
                 <label>ASIGNAR EAN DEFINITIVO:</label>
                 <div style="display:flex; gap:6px; margin-bottom:12px;">
-                  <input type="text" id="inline-ean-${esc(item.ean)}" class="form-input" style="flex:1; padding:8px; font-family:monospace; font-size:13px;" placeholder="Ej: 7801234...">
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" id="inline-ean-${esc(item.ean)}" class="form-input" style="flex:1; padding:8px; font-family:monospace; font-size:13px;" placeholder="EAN numérico">
                   <button class="btn-primary" style="padding:8px 14px;" onclick="UIAvistamientos.resolveInline('${esc(item.ean)}')">OK</button>
                 </div>
                 <button class="btn-clear" style="width:100%; color:var(--danger); font-size:12px; padding:4px;" onclick="UIAvistamientos.deleteItem('${esc(item.ean)}')">
@@ -183,16 +186,30 @@ const UIAvistamientos = (() => {
     if (!eanInput) return;
     const realEan = eanInput.value.trim();
     if (!realEan) { App.showToast('Ingresa un EAN', 'error'); return; }
+    const customerId =
+      document.getElementById(`inline-customer-${tempId}`)?.value.trim() || '';
 
     const v = DB.validateEAN(realEan);
-    if (!v.valid && !confirm('El EAN parece inválido. ¿Continuar de todos modos?')) return;
+    if (!v.valid) {
+      App.showToast(v.reason, 'error');
+      return;
+    }
 
     const items = DB.getStagingUnmatched() || [];
     const item = items.find(i => i.ean === tempId);
     if (!item) return;
+    if (customerId && !item.holdingId) {
+      App.showToast(
+        "Edita el avistamiento y selecciona un holding para asociar el Customer ID",
+        "error",
+      );
+      return;
+    }
+    const resolvedItem = { ...item, customerId };
+    if (item.id) DB.updateStagingUnmatched(item.id, { customerId });
 
     if (typeof UISheet !== 'undefined') {
-      UISheet.resolveAvistamiento(item, realEan);
+      UISheet.resolveAvistamiento(resolvedItem, v.normalized);
     }
   }
 

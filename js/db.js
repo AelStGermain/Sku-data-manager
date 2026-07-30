@@ -145,9 +145,9 @@ const DB = (() => {
   const RECENT_MATCHES_KEY = 'ss_recent_matches';
 
   const DEFAULT_HOLDINGS = [
-    { id: 'tottus',  name: 'Tottus',  color: '#E8001C', logoUrl: 'tottus_logo.png' },
-    { id: 'jumbo',   name: 'Jumbo',   color: '#009A44', logoUrl: 'jumbo_logo.png' },
-    { id: 'unimarc', name: 'Unimarc', color: '#005BAC', logoUrl: 'unimarc_logo.png' }
+    { id: 'tottus',  name: 'Tottus',  color: '#E8001C' },
+    { id: 'jumbo',   name: 'Jumbo',   color: '#009A44' },
+    { id: 'unimarc', name: 'Unimarc', color: '#005BAC' }
   ];
 
   const DEFAULT_STORES = [
@@ -623,31 +623,17 @@ const DB = (() => {
     return Math.min(score, 100);
   }
 
-  // ── EAN-13 checksum validation ─────────────
+  // El EAN funciona como identificador numérico flexible. Se conserva como
+  // string para no perder ceros iniciales y no se exige largo/checksum GTIN.
   function validateEAN(ean) {
-    const raw = String(ean || '').trim();
-    if (!/^\d+$/.test(raw)) return { valid: false, reason: 'El GTIN debe contener solo dígitos' };
-    let s = raw;
-    let legacy = false;
-    if (s.length === 11) {
-      s = `0${s}`;
-      legacy = true;
+    const normalized = String(ean ?? '').replace(/\s/g, '');
+    if (!normalized) {
+      return { valid: false, reason: 'El EAN es obligatorio' };
     }
-    if (![8, 12, 13, 14].includes(s.length)) {
-      return { valid: false, reason: 'El GTIN debe tener 8, 12, 13 o 14 dígitos' };
+    if (!/^\d+$/.test(normalized)) {
+      return { valid: false, reason: 'El EAN debe contener solo números' };
     }
-    const digits = s.split('').map(Number);
-    const len = digits.length;
-    let sum = 0;
-    for (let i = 0; i < len - 1; i++) {
-      const distanceFromRight = len - 1 - i;
-      sum += digits[i] * (distanceFromRight % 2 === 1 ? 3 : 1);
-    }
-    const checkDigit = (10 - (sum % 10)) % 10;
-    if (checkDigit !== digits[len - 1]) {
-      return { valid: false, reason: `Dígito de control incorrecto (esperado ${checkDigit})` };
-    }
-    return { valid: true, reason: null, normalized: s, legacy };
+    return { valid: true, reason: null, normalized, legacy: false };
   }
 
   async function deleteProduct(ean, skipUndo = false) {

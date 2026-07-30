@@ -62,9 +62,7 @@ const UILevantamiento = (() => {
 
   // ── Helpers ─────────────────────────────────
 
-  function _resolveHolding(reg) {
-    // Campo confirmado en Firestore: `holding` (puede ser nombre o id)
-    const raw = reg.holding || reg.holdingId || '';
+  function _canonicalHolding(raw) {
     if (!raw) return null;
     const holdings = DB.getHoldings();
     const rawLower = String(raw).toLowerCase().trim();
@@ -73,6 +71,37 @@ const UILevantamiento = (() => {
     match = holdings.find(h => h.name.toLowerCase() === rawLower);
     if (match) return match.id;
     return rawLower; // fallback: usar el valor raw como id provisional
+  }
+
+  function _resolveHolding(reg) {
+    // Campo confirmado en Firestore: `holding` (puede ser nombre o id)
+    return _canonicalHolding(reg.holding || reg.holdingId || '');
+  }
+
+  function _productHoldingIds(product) {
+    const ids = new Set();
+    const add = value => {
+      const normalized = _canonicalHolding(value);
+      if (normalized) ids.add(normalized);
+    };
+    add(product.levantamientoMeta?.holdingId);
+    add(product.levantamientoMeta?.holding);
+    add(product.holdingId);
+    add(product.retailerId);
+    [product.holdings, product.retailers].forEach(relations => {
+      Object.entries(relations || {}).forEach(([key, relation]) => {
+        add(key);
+        add(relation?.holdingId);
+        add(relation?.retailerId);
+        add(relation?.retailer_id);
+      });
+    });
+    return [...ids];
+  }
+
+  function matchesHolding(product, holdingId) {
+    if (!holdingId) return true;
+    return _productHoldingIds(product).includes(_canonicalHolding(holdingId));
   }
 
   function _parseTimestamp(reg) {
@@ -171,7 +200,7 @@ const UILevantamiento = (() => {
       });
     }
     if (_filterHolding) {
-      productos = productos.filter(p => p.levantamientoMeta?.holdingId === _filterHolding || Object.keys(p.holdings || {}).includes(_filterHolding));
+      productos = productos.filter(p => matchesHolding(p, _filterHolding));
     }
     if (_filterDateFrom) {
       productos = productos.filter(p => (p.levantamientoMeta?.timestamp || p.updatedAt || '').substring(0, 10) >= _filterDateFrom);
@@ -247,7 +276,7 @@ const UILevantamiento = (() => {
               const statusBg    = p.visperaId ? 'rgba(40,167,69,0.06)' : (p.status === 'review' ? 'rgba(255,193,7,0.06)' : 'rgba(79,110,247,0.05)');
               const statusLabel = p.visperaId ? '✔ Vispera OK' : (p.status === 'review' ? '⚠ Sin Vispera ID' : '⊕ Nuevo');
               const statusTextColor = p.status === 'review' && !p.visperaId ? '#856404' : '#fff';
-              const holdingId = meta.holdingId || Object.keys(p.holdings || {})[0] || '—';
+              const holdingId = _productHoldingIds(p)[0] || '—';
 
               return `
               <tr style="background:${statusBg}; cursor:pointer;" onclick="App.openSheet('${esc(p.ean)}')">
@@ -297,7 +326,7 @@ const UILevantamiento = (() => {
 
     const holdings = DB.getHoldings();
     const holdingOpts = holdings.map(h => `<option value="${esc(h.id)}">${esc(h.name)}</option>`).join('');
-    const holdingFilterOpts = `<option value="">Todos los Holdings</option>` + holdings.map(h => `<option value="${esc(h.id)}">${esc(h.name)}</option>`).join('');
+    const holdingFilterOpts = `<option value="">Todos los Holdings</option>` + holdings.map(h => `<option value="${esc(h.id)}" ${_filterHolding === h.id ? 'selected' : ''}>${esc(h.name)}</option>`).join('');
     const catOpts = UNIVERSAL_CATEGORIES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
 
     const todoLev = DB.getProductsArray().filter(p =>
@@ -594,10 +623,11 @@ const UILevantamiento = (() => {
       _clearForm();
       return;
     }
-    if (ean.length < 6) { App.showToast('EAN debe tener al menos 6 dígitos', 'error'); return; }
-
     const check = DB.validateEAN(ean);
-    if (!check.valid) App.showToast(`⚠️ EAN ${ean}: ${check.reason}`, 'warning');
+    if (!check.valid) {
+      App.showToast(check.reason, 'error');
+      return;
+    }
 
     App.showToast(`Buscando EAN ${ean}...`, 'info');
     
@@ -675,6 +705,7 @@ const UILevantamiento = (() => {
     showAll,
     addEntry,
     syncFirebase,
+    matchesHolding,
     // Alias legacy por compatibilidad
     removeEntry: () => {},
     clearStaging: () => {

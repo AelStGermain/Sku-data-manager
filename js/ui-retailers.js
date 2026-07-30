@@ -3,8 +3,7 @@
 const UIRetailers = (() => {
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-  let _editId   = null;   // retailer being edited (null = new)
-  let _editCats = [];     // working copy of categories list
+  let _editId = null; // retailer being edited (null = new)
 
   let _activeRetailerId = null;
   let _activeStoreId = null;
@@ -18,8 +17,10 @@ const UIRetailers = (() => {
   const _categoryKey = value => String(value || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
   function holdingCategoryInventory(holdingId) {
-    const holding = DB.getHoldings().find(item => item.id === holdingId);
-    const declared = holding?.categories || [];
+    const hierarchy = DB.getCategoryHierarchy?.() || {};
+    const declared = Object.values(hierarchy).flatMap(
+      node => node?.holdings?.[holdingId] || []
+    );
     const inventory = new Map(declared.map(name => [_categoryKey(name), { name, status: 'confirmed', count: 0 }]));
     DB.getProductsArray().forEach(product => {
       _relationCategories((product.holdings || product.retailers || {})[holdingId]).forEach(name => {
@@ -108,11 +109,10 @@ const UIRetailers = (() => {
     const observedCount = categoryInventory.filter(category => category.status === 'observed').length;
     return `
 <div class="retailer-card">
-  ${r.logoUrl ? `<div class="retailer-card-banner" style="background-image: url('${esc(r.logoUrl)}');"></div>` : ''}
   <div class="retailer-card-header">
-    ${!r.logoUrl ? `<div class="retailer-logo-circle" style="background:${esc(r.color)}20;color:${esc(r.color)}">
+    <div class="retailer-logo-circle" style="background:${esc(r.color)}20;color:${esc(r.color)}">
       ${esc(r.name[0])}
-    </div>` : ''}
+    </div>
     <div class="retailer-card-info">
       <h3 style="color:${esc(r.color)}">${esc(r.name)}</h3>
       <span class="retailer-id-badge">ID: ${esc(r.id)}</span>
@@ -172,7 +172,6 @@ const UIRetailers = (() => {
   function openForm(rid) {
     _editId = rid || null;
     const r = rid ? DB.getRetailers().find(x => x.id === rid) : null;
-    _editCats = r?.categories ? [...r.categories] : [];
     _renderForm(r);
     const overlay = document.getElementById('retailer-overlay');
     overlay.classList.remove('hidden');
@@ -224,22 +223,16 @@ const UIRetailers = (() => {
     </div>
   </div>
 
-  <div class="form-group">
-    <label>URL del Logo / Banner (Opcional)</label>
-    <input type="text" class="form-input" id="r-logo" value="${esc(r?.logoUrl||'')}" placeholder="ej. pronto_logo.png o https://...">
-    <p class="form-hint">URL o nombre de archivo de la imagen que se usará como cabecera o banner.</p>
-  </div>
-
-  <div class="form-group">
-    <label>Categorías oficiales declaradas</label>
-    <div style="display:flex; gap:8px; margin-bottom:8px;">
-      <input type="text" class="form-input" id="cat-new-input" placeholder="ej. Cuidado Personal" onkeydown="if(event.key==='Enter') { event.preventDefault(); UIRetailers.addCat(); }">
-      <button class="btn-outline" onclick="UIRetailers.addCat()">Agregar</button>
-    </div>
-    <div class="cats-manager" id="cats-manager">
-      ${_renderCatTags()}
-    </div>
-    <p class="form-hint">Sólo agrega aquí categorías confirmadas por el holding. Son independientes de las categorías universales de Vispera.</p>
+  <div class="form-group" style="padding:14px; border:1px solid var(--border); border-radius:8px; background:var(--surface-el);">
+    <label>Jerarquía de Categorías</label>
+    <p class="form-hint" style="margin-bottom:${isEdit ? '10px' : '0'}">
+      Las categorías locales de cada holding se administran únicamente desde la Jerarquía de Categorías, asociadas a su categoría universal.
+    </p>
+    ${isEdit ? `
+      <button type="button" class="btn-outline" onclick="UIRetailers.openCategoryHierarchy()">
+        Abrir Jerarquía de Categorías
+      </button>
+    ` : '<p class="form-hint">Al crear el holding se abrirá automáticamente esa herramienta.</p>'}
   </div>
   ${isEdit ? _renderObservedCategories(r?.id) : ''}
 </div>
@@ -247,7 +240,7 @@ const UIRetailers = (() => {
 <div class="form-modal-footer">
   <button class="btn-outline" onclick="UIRetailers.closeForm()">Cancelar</button>
   <button class="btn-primary" onclick="UIRetailers.saveForm()">
-    ${isEdit ? 'Guardar cambios' : 'Agregar Holding'}
+    ${isEdit ? 'Guardar cambios' : 'Agregar y configurar categorías'}
   </button>
 </div>`;
 
@@ -270,42 +263,24 @@ const UIRetailers = (() => {
     </div>`;
   }
 
-  function _renderCatTags() {
-    if (_editCats.length === 0) return '<p class="cats-empty">Sin categorías aún.</p>';
-    return _editCats.map((c, i) => `
-      <div class="cat-tag">
-        <span>${esc(c)}</span>
-        <button onclick="UIRetailers.removeCat(${i})" title="Eliminar">×</button>
-      </div>`).join('');
-  }
-
-  function addCat() {
-    const inp = document.getElementById('cat-new-input');
-    if (!inp) return;
-    const val = inp.value.trim();
-    if (!val || _editCats.some(category => _categoryKey(category) === _categoryKey(val))) { inp.focus(); return; }
-    _editCats.push(val);
-    inp.value = '';
-    const mgr = document.getElementById('cats-manager');
-    if (mgr) mgr.innerHTML = _renderCatTags();
-    inp.focus();
-  }
-
-  function removeCat(i) {
-    _editCats.splice(i, 1);
-    const mgr = document.getElementById('cats-manager');
-    if (mgr) mgr.innerHTML = _renderCatTags();
+  function openCategoryHierarchy() {
+    closeForm();
+    setTimeout(() => UICategoryManager.openModal(), 280);
   }
 
   function saveForm() {
     const name  = document.getElementById('r-name')?.value.trim();
     const color = document.getElementById('r-color')?.value || '#4F6EF7';
-    const logoUrl = document.getElementById('r-logo')?.value.trim() || null;
+    const isNew = !_editId;
 
     if (!name) { App.showToast('El nombre es obligatorio', 'error'); return; }
 
     if (_editId) {
-      DB.updateRetailer(_editId, { name, color, logoUrl, categories: _editCats });
+      DB.saveRetailers(
+        DB.getRetailers().map(holding =>
+          holding.id === _editId ? { id: holding.id, name, color } : holding
+        )
+      );
       App.showToast(`${name} actualizado correctamente`, 'success');
     } else {
       const idInput = document.getElementById('r-id')?.value.trim().toLowerCase().replace(/\s+/g,'-');
@@ -313,13 +288,14 @@ const UIRetailers = (() => {
       if (!/^[a-z0-9_-]+$/.test(idInput)) { App.showToast('El ID solo puede contener letras, números, guiones y guion bajo', 'error'); return; }
       const exists = DB.getRetailers().find(r => r.id === idInput);
       if (exists) { App.showToast(`Ya existe un Holding con ID "${idInput}"`, 'error'); return; }
-      DB.addRetailer({ id: idInput, name, color, logoUrl, categories: _editCats });
+      DB.addRetailer({ id: idInput, name, color });
       App.showToast(`${name} agregado correctamente`, 'success');
     }
 
     closeForm();
     render();
     App.renderSidebar();
+    if (isNew) setTimeout(() => UICategoryManager.openModal(), 280);
   }
 
   async function deleteRetailer(rid) {
@@ -801,8 +777,7 @@ const UIRetailers = (() => {
     openForm, 
     closeForm, 
     saveForm, 
-    addCat, 
-    removeCat, 
+    openCategoryHierarchy,
     deleteRetailer, 
     openHomologate, 
     closeHomologate, 

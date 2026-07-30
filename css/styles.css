@@ -1111,18 +1111,7 @@ img { display: block; }
 /* ════════════════════════════════════════════
    RETAILER CATEGORY MANAGER
    ════════════════════════════════════════════ */
-.cats-manager { display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; margin-bottom: 8px; }
 .cats-empty { font-size: 12px; color: var(--text-muted); font-style: italic; }
-.cat-tag {
-  display: flex; align-items: center; gap: 5px;
-  background: var(--surface-el); border: 1px solid var(--border);
-  border-radius: 99px; padding: 3px 10px 3px 12px;
-  font-size: 12px; color: var(--text-sec);
-}
-.cat-tag button { color: var(--text-muted); font-size: 14px; line-height: 1; transition: color var(--transition); }
-.cat-tag button:hover { color: var(--danger); }
-.cat-add-row { display: flex; gap: 8px; align-items: center; }
-.cat-add-row .form-input { flex: 1; }
 
 /* Retailer card categories preview */
 .retailer-cats-preview { border-top: 1px solid var(--border); padding: 14px 18px 18px 18px; margin-top: -6px; }
@@ -1333,19 +1322,6 @@ html[data-theme="dark"] .sidebar { background: var(--surface); }
   .sheet-modal { position: static !important; width: 100% !important; height: auto !important; box-shadow: none !important; }
   .sheet-body  { grid-template-columns: 180px 1fr 1fr !important; }
   * { color: #111 !important; }
-}
-
-/* ═══════════════════════════════════════════
-   RETAILER CARD BANNER
-   ═══════════════════════════════════════════ */
-.retailer-card-banner {
-  height: 60px;
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-color: #ffffff; /* Typically logos look best on white, even in dark mode */
-  border-bottom: 1px solid var(--border);
-  margin-bottom: -4px; /* compensate for gap */
 }
 
 /* ═══════════════════════════════════════════

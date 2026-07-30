@@ -1,7 +1,13 @@
 import { z } from "zod";
 
 const jsonObject = z.object({}).passthrough();
-const ean = z.union([z.string().trim().min(1), z.number().finite()]);
+const ean = z.union([
+  z
+    .string()
+    .transform((value) => value.replace(/\s/g, ""))
+    .pipe(z.string().regex(/^\d+$/, "El EAN debe contener solo números")),
+  z.number().int().nonnegative(),
+]);
 
 export const createSchemas = (limits) => ({
   productMutation: z.object({

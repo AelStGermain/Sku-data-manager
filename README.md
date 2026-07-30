@@ -186,10 +186,18 @@ periódicamente. Nunca incluya Excel en el volumen.
 ## Calidad y operación
 
 ```bash
-npm test          # sintaxis, ESLint y pruebas
+npm run test:install-browsers # una vez: instala Chromium para Playwright
+npm test          # sintaxis, ESLint, Jest/Supertest y Playwright
+npm run test:jest # sólo pruebas unitarias, integración API y regresión
+npm run test:e2e  # sólo recorridos End-to-End en Chromium
 npm run format    # Prettier
 npm run dev       # reinicio automático local
 ```
+
+Las pruebas no usan `local_data/`: Jest crea directorios temporales y Playwright
+levanta un backend aislado en el puerto `4173`, desactiva Firebase y elimina sus
+datos al terminar. Consulte [TESTING.md](TESTING.md) para ver todos los scripts,
+la organización de la suite, cobertura, ejecución headed y solución de problemas.
 
 La aplicación registra JSON estructurado por stdout. En producción use el recolector
 de Docker/journald y no archivos internos de log. `SIGTERM` y `SIGINT` detienen nuevas
