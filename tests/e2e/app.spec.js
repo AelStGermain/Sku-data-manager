@@ -247,12 +247,12 @@ test("transfiere Customer ID desde Avistamientos a la ficha técnica", async ({
   try {
     await page.locator("#nav-avistamientos").click();
     await page.locator("#inline-customer-TERRENO-QA").fill("CUSTOMER-QA-77");
-    await page.locator("#inline-ean-TERRENO-QA").fill("123");
+    await page.locator("#inline-ean-TERRENO-QA").fill("1234");
     await page.getByRole("button", { name: "OK", exact: true }).click();
 
     await expect(page.locator("#sheet-overlay")).not.toHaveClass(/hidden/);
     await expect(
-      page.locator('#sheet-content input[value="123"]'),
+      page.locator('#sheet-content input[value="1234"]'),
     ).toBeVisible();
     await expect(
       page.locator('#sheet-content input[value="CUSTOMER-QA-77"]'),
@@ -266,12 +266,12 @@ test("transfiere Customer ID desde Avistamientos a la ficha técnica", async ({
         const payload = await response.json();
         return payload.data.retailer_catalog.find(
           (relation) =>
-            relation.ean === "123" && relation.retailer_id === "jumbo",
+            relation.ean === "1234" && relation.retailer_id === "jumbo",
         )?.internal_sku_id;
       })
       .toBe("CUSTOMER-QA-77");
   } finally {
-    await request.delete("/api/products", { data: { eans: ["123"] } });
+    await request.delete("/api/products", { data: { eans: ["1234"] } });
     await request.post("/api/staging/ss_staging_unmatched", { data: [] });
   }
 });

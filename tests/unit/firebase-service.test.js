@@ -133,7 +133,7 @@ describe("FirebaseService", () => {
       {
         id: "doc-valid",
         data: () => ({
-          ean: "123",
+          ean: "1234",
           fecha: {
             toDate: () => new Date("2026-07-01T10:00:00.000Z"),
           },
@@ -186,7 +186,7 @@ describe("FirebaseService", () => {
       updated: 0,
     });
     expect(storage.state.catalog[0]).toMatchObject({
-      ean: "123",
+      ean: "1234",
       name: "Producto enriquecido",
       brand: "Marca API",
       universalCategory: "SWEET",
@@ -205,7 +205,7 @@ describe("FirebaseService", () => {
     expect(storage.state.checkpoint).toBe(
       Date.parse("2026-07-02T11:00:00.000Z"),
     );
-    expect(externalCatalog.fetchEnrichment).toHaveBeenCalledWith("123");
+    expect(externalCatalog.fetchEnrichment).toHaveBeenCalledWith("1234");
   });
 
   test("expone un diagnóstico cuando la consulta de Firestore falla", async () => {

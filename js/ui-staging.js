@@ -75,26 +75,27 @@ const UIStaging = (() => {
     const batchEans = new Set(visperaBatch.map(b => b.ean));
     let inReview = DB.getProductsArray().filter(p => !p.visperaId && p.status !== 'discontinued' && !batchEans.has(p.ean));
 
-    // Tab 2: Tickets Vispera
-    let inTickets = visperaBatch.filter(item => item.status !== 'AWAITING_VISPERA_ID');
+    // Tab 2: Tickets Vispera (contains all batch items)
+    let inTickets = visperaBatch;
 
     // Tab 1.5: SKUs cuyas categorías NO coinciden con las 18 categorías universales de Vispera
     let noCatProducts = DB.getProductsArray().filter(p => _isNoUniversalCategory(p));
 
-    // Tab 3: SKUs que TIENEN al menos un holding pero a ese holding le falta customerId
+    // Tab 3: SKUs que no tienen holdings asignados, o que tienen algún holding sin customerId
     const orphans = DB.getProductsArray().filter(p => {
       const hData = p.holdings || p.retailers || {};
       const hKeys = Object.keys(hData);
-      if (hKeys.length === 0) return false;
+      if (hKeys.length === 0) return true; // Incluir SKUs sin holdings asignados
       return hKeys.some(k => {
         const h = hData[k];
         const hasData = h && (h.name || h.localProductName || h.dmu || h.category || h.relationStatus === 'pending');
-        return hasData && !h.customerId && !h.holdingInternalId;
+        return !hasData || (!h.customerId && !h.holdingInternalId);
       });
     });
 
-    // Tab 4: tickets ya exportados, a la espera del ID asignado por Vispera
-    let inHistory = visperaBatch.filter(item => item.status === 'AWAITING_VISPERA_ID');
+    // Tab 5: Registros de terreno sin EAN (Staging)
+    const stagingNoEan = DB.getStagingNoEan() || [];
+    let filteredStagingNoEan = stagingNoEan;
 
     // Obtener todos los auditores únicos
     const allAuditors = [...new Set(DB.getProductsArray().map(p => p.levantamientoMeta?.auditor).filter(Boolean))].sort();
@@ -107,7 +108,7 @@ const UIStaging = (() => {
         const p = DB.getProduct(b.ean) || {};
         return p.levantamientoMeta?.auditor === _auditorFilter;
       });
-      inHistory = inHistory.filter(item => DB.getProduct(item.ean)?.levantamientoMeta?.auditor === _auditorFilter);
+      filteredStagingNoEan = stagingNoEan.filter(p => p.auditor === _auditorFilter);
     }
 
     el.innerHTML = `
@@ -127,13 +128,13 @@ const UIStaging = (() => {
       Sin Categoría Universal
       <span class="staging-tab-count">${noCatProducts.length}</span>
     </button>
+    <button class="staging-tab ${_activeTab === 'no-ean' ? 'active' : ''}" onclick="UIStaging.setTab('no-ean')">
+      Sin EAN
+      <span class="staging-tab-count">${filteredStagingNoEan.length}</span>
+    </button>
     <button class="staging-tab ${_activeTab === 'tickets' ? 'active' : ''}" onclick="UIStaging.setTab('tickets')">
       Tickets Vispera
       <span class="staging-tab-count">${inTickets.length}</span>
-    </button>
-    <button class="staging-tab ${_activeTab === 'history' ? 'active' : ''}" onclick="UIStaging.setTab('history')">
-      Nuevos ID Vispera
-      <span class="staging-tab-count">${inHistory.length}</span>
     </button>
     <button class="staging-tab ${_activeTab === 'orphans' ? 'active' : ''}" onclick="UIStaging.setTab('orphans')">
       Falta Customer ID
@@ -142,63 +143,100 @@ const UIStaging = (() => {
   </div>
 </div>
 
-${_activeTab === 'no-cat' ? renderNoCategory(noCatProducts) : _activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ? renderTickets(inTickets) : _activeTab === 'history' ? renderHistory(inHistory) : renderReview(inReview)}
+${_activeTab === 'no-cat' ? renderNoCategory(noCatProducts) : _activeTab === 'orphans' ? renderOrphans(orphans) : _activeTab === 'tickets' ? renderTickets(inTickets) : _activeTab === 'no-ean' ? renderNoEan(filteredStagingNoEan) : renderReview(inReview)}
 `;
   }
 
   function renderNoEan(items) {
-    if (items.length === 0) {
-      return `
+    let filtered = items;
+    if (_reviewSearch) {
+      filtered = filtered.filter(item => {
+        return (item.firebaseName || '').toLowerCase().includes(_reviewSearch) ||
+               (item.source || '').toLowerCase().includes(_reviewSearch) ||
+               (item.holdingId || '').toLowerCase().includes(_reviewSearch) ||
+               (item.auditor || '').toLowerCase().includes(_reviewSearch) ||
+               (String(item.dmu) || '').toLowerCase().includes(_reviewSearch);
+      });
+    }
+
+    filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const totalPages = Math.ceil(filtered.length / _itemsPerPage) || 1;
+    if (_reviewPage > totalPages) _reviewPage = totalPages;
+    if (_reviewPage < 1) _reviewPage = 1;
+
+    const start = (_reviewPage - 1) * _itemsPerPage;
+    const paginated = filtered.slice(start, start + _itemsPerPage);
+
+    const paginationControls = totalPages > 1 ? `
+      <div class="pagination" style="margin-top:16px;">
+        <span class="page-info">${filtered.length} productos &middot; Página ${_reviewPage} de ${totalPages}</span>
+        <div class="page-controls">
+          <button class="page-btn" ${_reviewPage === 1 ? 'disabled' : ''} onclick="UIStaging.setReviewPage(${_reviewPage - 1})">Anterior</button>
+          <button class="page-btn" ${_reviewPage === totalPages ? 'disabled' : ''} onclick="UIStaging.setReviewPage(${_reviewPage + 1})">Siguiente</button>
+        </div>
+      </div>
+    ` : '';
+
+    const searchBar = `
+      <div class="staging-info-bar" style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="staging-info-left" style="display:flex; align-items:center; gap:16px;">
+          <span class="staging-info-label">Productos sin EAN: <strong>${filtered.length}</strong> ${items.length !== filtered.length ? `(de ${items.length})` : ''}</span>
+          <button class="btn-clear" onclick="UIStaging.clearNoEan()">Limpiar todo</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <input type="text" class="form-input" placeholder="Buscar por Nombre, Holding..." value="${esc(_reviewSearch)}" oninput="UIStaging.handleSearchInput(this.value)" style="width: 260px;">
+        </div>
+      </div>
+      <p class="highlight-text">
+        <em>Registros de terreno sin EAN identificado. Haz clic en el nombre de un producto para abrir la Ficha Técnica y asignarle un EAN real.</em>
+      </p>
+    `;
+
+    if (filtered.length === 0) {
+      return searchBar + `
 <div class="empty-state" style="padding:40px;">
   <div class="empty-icon">✅</div>
-  <h3>Bandeja Limpia</h3>
-  <p>No hay productos pendientes de identificar.</p>
+  <h3>No se encontraron resultados</h3>
+  <p>Prueba ajustando la búsqueda o filtros.</p>
 </div>`;
     }
 
-    return `
-<div class="staging-info-bar">
-  <div class="staging-info-left">
-    <span class="staging-info-label">Total: <strong>${items.length}</strong> productos sin EAN</span>
-  </div>
-  <button class="btn-primary" onclick="UIStaging.exportToExcel('no_ean')">Exportar a Excel</button>
-  <button class="btn-clear" onclick="UIStaging.clearNoEan()">Limpiar todo</button>
-</div>
-
+    return searchBar + `
 <div class="preview-table-wrap" style="max-height:60vh;">
   <table class="preview-table">
     <thead>
       <tr>
         <th>Holding / DMU</th>
-        <th>Nombre Reportado</th>
+        <th>Nombre Reportado (Click para identificar)</th>
         <th>Auditor / Fecha</th>
-        <th>Identificar EAN</th>
         <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
-      ${items.map(item => `
+      ${paginated.map(item => {
+        return `
       <tr>
         <td>
           <span class="holding-badge-sm">${esc(item.holdingId || '—')}</span><br>
           <span style="font-size:12px; color:var(--text-sec)">DMU: ${esc(Array.isArray(item.dmu) ? item.dmu.join(', ') : (item.dmu || '—'))}</span>
         </td>
-        <td style="font-weight:500;">${esc(item.firebaseName || item.source)}</td>
+        <td style="font-weight:500;">
+          <a href="javascript:void(0)" onclick="UIStaging.openNoEanSheet('${esc(item.id)}')" style="text-decoration: underline; color: var(--accent);">${esc(item.firebaseName || item.source || 'Sin nombre')}</a>
+        </td>
         <td style="font-size:12px;">
-          ${esc(item.auditor)}<br>
+          ${esc(item.auditor || '—')}<br>
           <span style="color:var(--text-muted)">${new Date(item.timestamp).toLocaleString('es-CL')}</span>
         </td>
         <td>
-          <input type="text" inputmode="numeric" pattern="[0-9]*" id="noean-input-${esc(item.id)}" class="form-input" placeholder="Ingresar EAN numérico..." style="width:180px; padding:6px; font-family:monospace;">
+          <button class="btn-clear" style="padding: 4px 8px; color: var(--danger); font-weight: bold;" onclick="UIStaging.removeNoEan('${esc(item.id)}')" title="Eliminar registro">✕</button>
         </td>
-        <td style="display:flex; gap:6px;">
-          <button class="btn-primary btn-mini" onclick="UIStaging.identifyEan('${esc(item.id)}')">Asignar EAN</button>
-          <button class="btn-mini" style="color:var(--danger)" onclick="UIStaging.removeNoEan('${esc(item.id)}')">✕</button>
-        </td>
-      </tr>`).join('')}
+      </tr>`;
+      }).join('')}
     </tbody>
   </table>
-</div>`;
+</div>
+${paginationControls}`;
   }
 
   function renderReview(items) {
@@ -317,7 +355,12 @@ ${_activeTab === 'no-cat' ? renderNoCategory(noCatProducts) : _activeTab === 'or
         <td style="font-size:12px;">${esc(item.levantamientoMeta?.auditor || '—')}</td>
         <td style="font-size:12px; color:var(--text-sec)">${new Date(item.levantamientoMeta?.timestamp || item.createdAt || item.updatedAt || Date.now()).toLocaleDateString('es-CL')}</td>
         <td style="display:flex; gap:6px;">
-          <button type="button" class="btn-mini" onclick="UIStaging.openProduct('${esc(String(item.ean).trim())}')">${readiness.ready ? 'Revisar y confirmar' : `Completar (${readiness.missing.length})`}</button>
+          ${readiness.ready ? `
+            <button type="button" class="btn-teal btn-mini" style="background-color: var(--teal); color: white; border: none;" onclick="event.stopPropagation(); UIStaging.sendToVisperaDirect('${esc(String(item.ean).trim())}', '${esc(holdingId)}')">Revisar y confirmar</button>
+            <button type="button" class="btn-outline btn-mini" onclick="event.stopPropagation(); UIStaging.openProduct('${esc(String(item.ean).trim())}')">Ver Ficha</button>
+          ` : `
+            <button type="button" class="btn-mini" onclick="event.stopPropagation(); UIStaging.openProduct('${esc(String(item.ean).trim())}')">Completar (${readiness.missing.length})</button>
+          `}
         </td>
       </tr>`}).join('')}
     </tbody>
@@ -344,7 +387,7 @@ ${paginationControls}`;
   <button class="btn-primary" onclick="UIStaging.exportToExcel('tickets')">Exportar a Excel</button>
 </div>
 <p class="highlight-text">
-  <em>Lista de espera para exportar a Excel y enviar al equipo de Vispera. Aquí <strong>nada es editable</strong>. Si notas un error, haz clic en "Volver a Revisión" para corregir los datos.</em>
+  <em>Lista de espera para exportar a Excel y registrar el ID entregado por Vispera. Escribe el ID y haz clic en "Listo" para guardar. Una vez guardado el ID, haz clic en "×" para cerrar el ticket.</em>
 </p>
 
 <div class="preview-table-wrap" style="max-height:60vh;">
@@ -356,26 +399,35 @@ ${paginationControls}`;
         <th>Categoría</th>
         <th>Holding</th>
         <th>Auditor / Fecha</th>
+        <th>Vispera ID</th>
         <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
       ${items.map(item => {
         const p = DB.getProduct(item.ean) || {};
+        const currentVisperaId = p.visperaId || p.vispera_id || '';
+        const canCloseTicket = String(currentVisperaId).trim() !== '';
         return `
       <tr>
         <td class="mono">${esc(item.ean)}</td>
         <td style="font-weight:500;">
-          ${esc(item.name || 'Sin nombre')}
+          <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(item.name || p.name || 'Sin nombre')}</a>
         </td>
-        <td>${esc(item.category || '—')}<br><span style="font-size:11px;color:var(--text-sec)">${esc(item.subCategory || '—')}</span></td>
+        <td>${esc(item.category || p.universalCategory || '—')}<br><span style="font-size:11px;color:var(--text-sec)">${esc(item.subCategory || '—')}</span></td>
         <td>${esc(DB.getHoldings().find(h => h.id === item.holdingId)?.name || item.holdingId || '—')}</td>
         <td style="font-size:12px;">
           ${esc(p.levantamientoMeta?.auditor || 'Desconocido')}<br>
           <span style="color:var(--text-sec)">${new Date(item.createdAt).toLocaleDateString('es-CL')}</span>
         </td>
-        <td style="display:flex; gap:6px;">
-          <button class="btn-mini" style="color:var(--danger)" onclick="UIStaging.rejectBatch('${esc(item.batchId)}')">Volver a Revisión</button>
+        <td>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <input type="text" id="vispera-edit-${esc(item.batchId)}" value="${esc(currentVisperaId)}" class="form-input" style="width:120px; padding:4px;" placeholder="ID Vispera">
+            <button class="btn-teal btn-mini" style="background-color: var(--teal); color: white; border: none;" onclick="UIStaging.actualizarVisperaId('${esc(item.batchId)}', '${esc(item.ean)}')">Listo</button>
+          </div>
+        </td>
+        <td>
+          <button class="btn-clear" style="padding: 4px 8px; color: var(--danger); font-weight: bold; font-size: 16px; border: 1px solid var(--border); border-radius: 4px;" onclick="UIStaging.closeVisperaTicket('${esc(item.batchId)}', '${esc(item.ean)}')" title="${canCloseTicket ? 'Cerrar ticket y sacar de la lista' : 'Primero guarda el ID Vispera'}" aria-label="Cerrar ticket" ${canCloseTicket ? '' : 'disabled'}>×</button>
         </td>
       </tr>`}).join('')}
     </tbody>
@@ -444,62 +496,8 @@ ${paginationControls}`;
 </div>`;
   }
 
-  function renderHistory(items) {
-    if (items.length === 0) {
-      return `
-<div class="empty-state" style="padding:40px;">
-  <div class="empty-icon">✅</div>
-  <h3>No hay IDs pendientes</h3>
-  <p>Los tickets exportados aparecerán aquí hasta que registres el ID entregado por Vispera.</p>
-</div>`;
-    }
-
-    return `
-<div class="staging-info-bar" style="display:flex; justify-content:space-between; align-items:center;">
-  <div class="staging-info-left">
-    <span class="staging-info-label">Nuevos ID Vispera: <strong>${items.length}</strong></span>
-  </div>
-</div>
-<p class="highlight-text">
-  <em>Estos SKUs ya fueron exportados. Ingresa el ID entregado por Vispera para cerrar el ticket y marcarlos como Nuevo lanzamiento.</em>
-</p>
-
-<div class="preview-table-wrap" style="max-height:60vh;">
-  <table class="preview-table">
-    <thead>
-      <tr>
-        <th>Fecha Levantamiento</th>
-        <th>EAN</th>
-        <th>Nombre Master</th>
-        <th>Categoría Vispera</th>
-        <th>Vispera ID Asignado</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${items.map(item => { const p = DB.getProduct(item.ean) || {}; return `
-      <tr>
-        <td style="font-size:12px; color:var(--text-sec)">${new Date(p.levantamientoMeta?.timestamp || p.createdAt || item.createdAt || Date.now()).toLocaleString('es-CL')}</td>
-        <td class="mono">${esc(item.ean)}</td>
-        <td style="font-weight:500;">
-          <a href="javascript:void(0)" onclick="UISheet.open('${esc(item.ean)}')">${esc(p.name || item.name || 'Sin nombre')}</a>
-        </td>
-        <td>
-          <span class="vispera-cat-badge" style="--cat-color:${window.VISPERA_CATEGORY_COLORS ? window.VISPERA_CATEGORY_COLORS[p.universalCategory] : '#888'}">${esc(p.universalCategory || item.category || '—')}</span>
-        </td>
-        <td>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <input type="text" id="vispera-edit-${esc(item.ean)}" value="" class="form-input" style="width:120px; padding:4px;" placeholder="ID Vispera">
-            <button class="btn-outline btn-mini" onclick="UIStaging.actualizarVisperaId('${esc(item.ean)}')">Actualizar</button>
-          </div>
-        </td>
-      </tr>`; }).join('')}
-    </tbody>
-  </table>
-</div>`;
-  }
-
-  async function actualizarVisperaId(ean) {
-    const input = document.getElementById(`vispera-edit-${ean}`);
+  async function actualizarVisperaId(batchId, ean) {
+    const input = document.getElementById('vispera-edit-' + batchId);
     const vId = input ? input.value.trim() : '';
     if (!vId) {
       App.showToast('Vispera ID no puede estar vacío. Si deseas quitarlo, hazlo desde la ficha.', 'error');
@@ -513,12 +511,10 @@ ${paginationControls}`;
       p.visperaAssignedAt = new Date().toISOString();
       const persisted = await DB.saveProduct(p);
       if (!persisted) {
-        App.showToast('El ID quedó guardado localmente, pero el servidor no lo confirmó. El ticket seguirá pendiente.', 'warning');
+        App.showToast('El ID quedó guardado localmente, pero el servidor no lo confirmó.', 'warning');
         render();
         return;
       }
-      const ticket = DB.getVisperaBatch().find(item => item.ean === ean);
-      if (ticket) DB.removeVisperaBatchItem(ticket.batchId);
       App.showToast('ID registrado. SKU marcado como Nuevo lanzamiento.', 'success');
       render();
     }
@@ -711,12 +707,22 @@ ${paginationControls}`;
     render();
   }
 
-  function rejectBatch(batchId) {
-    if (confirm('¿Deshacer este cambio y devolver el SKU a la cola de Revisión?')) {
-      DB.removeVisperaBatchItem(batchId);
-      App.showToast('SKU devuelto a Revisión', 'info');
-      render();
+  async function closeVisperaTicket(batchId, ean) {
+    const product = DB.getProduct(ean);
+    const visperaId = String(product?.visperaId || product?.vispera_id || '').trim();
+    if (!visperaId) {
+      App.showToast('Primero guarda el ID Vispera antes de cerrar el ticket.', 'warning');
+      return;
     }
+
+    const persisted = await DB.removeVisperaBatchItem(batchId);
+    if (!persisted) {
+      App.showToast('El ticket se quitó localmente, pero el servidor no confirmó el cierre.', 'warning');
+      render();
+      return;
+    }
+    App.showToast(`Ticket cerrado. El ID Vispera ${visperaId} permanece asignado al SKU.`, 'success');
+    render();
   }
 
   function clearMatches() {
@@ -758,13 +764,19 @@ ${paginationControls}`;
         App.showToast('Librería Excel no cargada', 'error');
         return;
       }
-      const items = DB.getVisperaBatch().filter(item => item.status !== 'AWAITING_VISPERA_ID');
+      let items = DB.getVisperaBatch();
+      if (_auditorFilter !== 'all') {
+        items = items.filter(b => {
+          const p = DB.getProduct(b.ean) || {};
+          return p.levantamientoMeta?.auditor === _auditorFilter;
+        });
+      }
       if (items.length === 0) {
         App.showToast('No hay datos para exportar', 'warning');
         return;
       }
       const rows = [
-        ['Fecha Levantamiento', 'Auditor', 'Pasillo', 'Customer ID', 'Producer / Manufacturer', 'Brand', 'Sub-Brand', 'SKU name', 'Category', 'Sub-Category', 'Barcode / EAN Code (must be unique)', 'Existe en Master Data?', 'Size', 'Size unit', 'Number of units inside (if multi-pack)', 'Width', 'Height', 'Depth', 'Public image link']
+        ['Fecha Levantamiento', 'Auditor', 'Pasillo', 'Customer ID', 'Producer / Manufacturer', 'Brand', 'Sub-Brand', 'SKU name', 'Category', 'Sub-Category', 'Barcode / EAN Code (must be unique)', 'Existe en Master Data?', 'Size', 'Size unit', 'Number of units inside (if multi-pack)', 'Width', 'Height', 'Depth', 'Public image link', 'ID vispera']
       ];
       const invalid = items.find(item => {
         const product = DB.getProduct(item.ean);
@@ -805,7 +817,8 @@ ${paginationControls}`;
           p.width_cm || '',
           p.height_cm || '',
           p.depth_cm || '',
-          p.imageUrl || ''
+          p.imageUrl || '',
+          p.visperaId || p.vispera_id || ''
         ]);
       });
       const wb = XLSX.utils.book_new();
@@ -814,8 +827,8 @@ ${paginationControls}`;
       XLSX.writeFile(wb, `Tickets_Vispera_${new Date().toISOString().slice(0,10)}.xlsx`);
       const exportedAt = new Date().toISOString();
       items.forEach(item => DB.updateVisperaBatchItem(item.batchId, { status: 'AWAITING_VISPERA_ID', exportedAt }));
-      App.showToast(`${items.length} ticket${items.length === 1 ? '' : 's'} exportado${items.length === 1 ? '' : 's'}; ahora esperan ID Vispera.`, 'success');
-      setTab('history');
+      App.showToast(`${items.length} ticket${items.length === 1 ? '' : 's'} exportado${items.length === 1 ? '' : 's'} a Excel.`, 'success');
+      render();
       return;
     }
 
@@ -837,6 +850,15 @@ ${paginationControls}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  function openNoEanSheet(id) {
+    const item = DB.getStagingNoEan().find(i => i.id === id);
+    if (item) {
+      UISheet.openCreateWithPrefill(item);
+    } else {
+      App.showToast('Registro no encontrado', 'error');
+    }
   }
 
   function renderNoCategory(items) {
@@ -941,6 +963,36 @@ ${totalPages > 1 ? `
     }
   }
 
+  async function sendToVisperaDirect(ean, holdingId) {
+    const product = DB.getProduct(ean);
+    if (!product) return;
+    const readiness = UISheet.getVisperaReadiness(product, holdingId);
+    if (!readiness.ready) {
+      App.showToast(`Faltan campos obligatorios: ${readiness.missing.join(', ')}`, 'error');
+      return;
+    }
+    const existing = DB.getVisperaBatch().find(item => item.ean === ean);
+    if (existing) {
+      App.showToast('Este SKU ya está dentro del flujo Vispera', 'info');
+      return;
+    }
+    const holdingName = DB.getHoldings().find(item => item.id === holdingId)?.name || holdingId;
+    if (!confirm(`¿Confirmar la revisión y enviar este SKU a Tickets Vispera para ${holdingName}?`)) return;
+
+    DB.addVisperaBatchItem({
+      ean: product.ean,
+      name: product.name,
+      category: product.universalCategory,
+      subCategory: readiness.subCategory,
+      holdingId: holdingId,
+      reason: 'NEW_SKU_NO_VISPERA_ID',
+      status: 'PENDING_EXPORT',
+      createdAt: new Date().toISOString()
+    });
+    App.showToast('SKU confirmado y enviado a Tickets Vispera', 'success');
+    render();
+  }
+
   return {
     render,
     setTab,
@@ -950,7 +1002,7 @@ ${totalPages > 1 ? `
     openProduct,
     exportToExcel,
     actualizarVisperaId,
-    rejectBatch,
+    closeVisperaTicket,
     clearBatch,
     enrichAll,
     cruzarDatos,
@@ -959,6 +1011,8 @@ ${totalPages > 1 ? `
     removeNoEan,
     clearNoEan,
     renderNoCategory,
-    assignUniversalCategory
+    assignUniversalCategory,
+    sendToVisperaDirect,
+    openNoEanSheet
   };
 })();

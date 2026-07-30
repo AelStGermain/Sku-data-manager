@@ -93,35 +93,46 @@ const UISheet = (() => {
 
   function openCreateWithPrefill(item) {
     _ean = null;
-    _stagingId = item.ean; // Temporary ID (TERRENO-...)
+    _stagingId = item.ean || item.id; // Temporary ID (TERRENO-...) or no-EAN ID (UUID)
     _isCreate = true;
+
+    // Detect item type
+    const isNoEan = !item.ean || !item.ean.startsWith('TERRENO-');
+    const name = isNoEan ? (item.firebaseName || item.source || '') : (item.description || item.apiRawName || '');
+    const cat = isNoEan ? (item.category || null) : (item.dmuCategory || null);
+    const catVal = Array.isArray(cat) ? cat[0] : cat;
+
     _data = {
-      ean: '', name: item.description || item.apiRawName || '', brand: '', packageType: 'other', 
-      status: 'active', nameSource: 'manual', 
-      masterCategory: Array.isArray(item.dmuCategory) ? item.dmuCategory[0] : (item.dmuCategory || null), 
-      universalCategory: Array.isArray(item.dmuCategory) ? item.dmuCategory[0] : (item.dmuCategory || null),
+      ean: '', name: name, brand: '', packageType: 'other',
+      status: 'active', nameSource: 'manual',
+      masterCategory: catVal,
+      universalCategory: catVal,
       offAttempted: false, width_cm: null, height_cm: null, depth_cm: null,
-      weight_g: null, weight_unit: 'g', producer: '', 
-      imageUrl: item.imageUrl || null, images: item.imageUrl ? [item.imageUrl] : [], 
-      dataSource: 'levantamiento', history: [], 
+      weight_g: null, weight_unit: 'g', producer: '',
+      imageUrl: item.imageUrl || null, images: item.imageUrl ? [item.imageUrl] : [],
+      dataSource: isNoEan ? 'firebase' : 'levantamiento', history: [],
       planogram: {}, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       holdings: {}
     };
 
     if (item.holdingId) {
-      _data.holdings[item.holdingId] = {
+      // Lowercase holding ID if config holding matches
+      const configuredHoldings = DB.getHoldings();
+      const canonicalHoldingId = configuredHoldings.find(h => h.id.toLowerCase() === item.holdingId.toLowerCase() || h.name.toLowerCase() === item.holdingId.toLowerCase())?.id || item.holdingId.toLowerCase();
+
+      _data.holdings[canonicalHoldingId] = {
         holdingProductId: `mock_${Date.now()}`,
         masterProductId: '',
         holdingInternalId: item.customerId || item.customer_id || '',
         customerId: item.customerId || item.customer_id || '',
         localProductName: _data.name, name: _data.name, 
-        localCategoryName: item.dmuCategory || null, category: item.dmuCategory || null,
+        localCategoryName: cat, category: cat,
         stockStatus: true, isActiveHolding: true, imageUrl: item.imageUrl || null,
-        dmu: item.dmu ? [item.dmu] : [],
+        dmu: item.dmu ? (Array.isArray(item.dmu) ? item.dmu : [item.dmu]) : [],
         aisle: item.aisle || null,
         updatedAt: new Date().toISOString()
       };
-      _holding = item.holdingId;
+      _holding = canonicalHoldingId;
     } else {
       const holdings = DB.getHoldings();
       _holding = holdings.length > 0 ? holdings[0].id : null;
@@ -493,7 +504,11 @@ const UISheet = (() => {
     if (btn) btn.classList.remove('has-changes');
     
     if (_stagingId) {
-      DB.removeStagingUnmatched(_stagingId);
+      if (typeof _stagingId === 'string' && _stagingId.startsWith('TERRENO-')) {
+        DB.removeStagingUnmatched(_stagingId);
+      } else {
+        DB.removeStagingNoEan(_stagingId);
+      }
       _stagingId = null;
       if (typeof UIAvistamientos !== 'undefined' && document.getElementById('view-avistamientos')?.classList.contains('active')) {
         UIAvistamientos.render();
@@ -1319,7 +1334,7 @@ ${tabsHtml}
   function setRetailer(rid) { setHolding(rid); }
 
   return {
-    open, openCreate, close, save, discard, syncOFF, changeImage, changeImageUrl, setActiveImage, setAsMainImage,
+    open, openCreate, openCreateWithPrefill, close, save, discard, syncOFF, changeImage, changeImageUrl, setActiveImage, setAsMainImage,
     updateField, applyApiCandidate, updateHoldingField, updateVisperaMeta, toggleStock,
     setHolding, addToHolding, removeFromHolding,
     validateEANInput,

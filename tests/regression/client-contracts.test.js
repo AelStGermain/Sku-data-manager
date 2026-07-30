@@ -56,7 +56,10 @@ describe("contratos críticos del cliente", () => {
     expect(sheet).toMatch(/function confirmToVispera\(\)/);
     expect(staging).toMatch(/AWAITING_VISPERA_ID/);
     expect(staging).toMatch(/p\.status = 'new'/);
-    expect(staging).toMatch(/removeVisperaBatchItem\(ticket\.batchId\)/);
+    expect(staging).toMatch(/async function closeVisperaTicket\(batchId, ean\)/);
+    expect(staging).toMatch(/DB\.removeVisperaBatchItem\(batchId\)/);
+    expect(staging).not.toMatch(/function rejectBatch\(/);
+    expect(staging).not.toMatch(/SKU devuelto a Revisión/);
   });
 
   test("el servidor no expone el repositorio y staging no duplica rutas", () => {

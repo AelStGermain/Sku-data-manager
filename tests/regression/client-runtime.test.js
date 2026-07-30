@@ -111,7 +111,6 @@ describe("runtime clásico del navegador", () => {
     const db = loadDb();
 
     for (const code of [
-      "1",
       "123456",
       "78895710922",
       "96385074",
@@ -127,7 +126,17 @@ describe("runtime clásico del navegador", () => {
       legacy: false,
       normalized: "1234",
     });
-    for (const code of ["", "ABC12345", "12-34"]) {
+    // Alphanumeric codes that normalize to >= 4 digits should now be valid
+    expect(db.validateEAN("ABC12345")).toMatchObject({
+      valid: true,
+      normalized: "12345",
+    });
+    expect(db.validateEAN("12-34")).toMatchObject({
+      valid: true,
+      normalized: "1234",
+    });
+    // Placeholder digits, empty codes, or codes with < 4 digits should be invalid
+    for (const code of ["", "abc", "123", "0000", "111111", "1"]) {
       expect(db.validateEAN(code)).toMatchObject({ valid: false });
     }
   });
@@ -172,6 +181,37 @@ describe("runtime clásico del navegador", () => {
     });
   });
 
+  test("guardar un ID Vispera lo persiste y confirma el POST del servidor", async () => {
+    let sentBody;
+    const db = loadDb(async (url, options = {}) => {
+      if (url === "/api/products" && options.method === "POST") {
+        sentBody = JSON.parse(options.body);
+        return { ok: true };
+      }
+      return { ok: false };
+    });
+    const assignedAt = "2026-07-30T18:45:00.000Z";
+
+    const persisted = await db.saveProduct({
+      ean: "7791234567890",
+      name: "Bebida",
+      visperaId: "1234",
+      visperaAssignedAt: assignedAt,
+      is_ready_for_vispera: true,
+      status: "new",
+      holdings: {},
+    });
+
+    expect(persisted).toBe(true);
+    expect(sentBody.product).toMatchObject({
+      ean: "7791234567890",
+      vispera_id: "1234",
+      vispera_assigned_at: assignedAt,
+      is_ready_for_vispera: true,
+      status: "new",
+    });
+  });
+
   test("la ficha técnica renderiza productos provenientes de Firebase", () => {
     const product = {
       ean: "7804675731015",
@@ -193,6 +233,7 @@ describe("runtime clásico del navegador", () => {
         getHoldings: () => [{ id: "tottus", name: "Tottus", color: "#e00" }],
         getProduct: (ean) => (ean === product.ean ? product : null),
         getVisperaBatch: () => [],
+        getCategoryHierarchy: () => ({}),
         validateEAN: () => ({
           valid: true,
           normalized: product.ean,

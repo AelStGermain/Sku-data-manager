@@ -126,12 +126,19 @@ const DB = (() => {
       'ss_vispera_batch', 'ss_brands_producers', 'ss_category_mapping', 'ss_recent_matches'
     ];
     if (STAGING_KEYS.includes(key)) {
-      fetch(`/api/staging/${key}`, {
+      return fetch(`/api/staging/${key}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: value
-      }).catch(() => console.warn(`Offline: ${key} saved locally only`));
+      }).then(response => {
+        if (!response.ok) throw new Error(`Servidor respondió HTTP ${response.status}`);
+        return true;
+      }).catch(() => {
+        console.warn(`Offline: ${key} saved locally only`);
+        return false;
+      });
     }
+    return Promise.resolve(true);
   }
   const HOLDINGS_KEY = 'ss_holdings';
   const STORES_KEY = 'ss_physical_stores';
@@ -372,7 +379,8 @@ const DB = (() => {
         _memoryProducts[p.ean] = {
           ean: p.ean,
           masterProductId: p.ean, // master_product_id = ean as PK
-          visperaId: p.vispera_id || p.visperaId || local.visperaId || null,
+          visperaId: p.vispera_id ?? p.visperaId ?? local.visperaId ?? null,
+          visperaAssignedAt: p.vispera_assigned_at ?? p.visperaAssignedAt ?? local.visperaAssignedAt ?? null,
           // Servidor puede guardar 'name' (Firebase sync) o 'product_name' (Supabase conv.)
           name: p.product_name || p.name || local.name || '',
           brand: p.brand || local.brand || 'N/A',
@@ -461,7 +469,7 @@ const DB = (() => {
   }
 
   async function saveProduct(product, skipUndo = false) {
-    if (!product.ean) return;
+    if (!product.ean) return false;
     product.ean = _normalizeEanKey(product.ean);
     
     // Undo stack push
@@ -491,6 +499,8 @@ const DB = (() => {
       producer: product.producer || '',
       category_master: Array.isArray(product.universalCategory) ? product.universalCategory.join(', ') : (Array.isArray(product.category) ? product.category.join(', ') : 'GROCERY STORE'),
       image_url: product.imageUrl || null,
+      vispera_id: product.visperaId ?? product.vispera_id ?? null,
+      vispera_assigned_at: product.visperaAssignedAt ?? product.vispera_assigned_at ?? null,
       // ── Campos siempre incluidos para persistencia correcta ──
       status: product.status || 'active',
       data_source: product.dataSource || 'manual',
@@ -516,6 +526,7 @@ const DB = (() => {
     if (_availableColumns.has('data_source')) payload.data_source = product.dataSource || 'manual';
     if (_availableColumns.has('off_attempted')) payload.off_attempted = product.offAttempted || false;
 
+    let persisted = false;
     try {
       // Upsert product and relations to Local Server
       const holdingRelations = [];
@@ -544,6 +555,7 @@ const DB = (() => {
           body: JSON.stringify({ product: payload, holdingRelations })
         });
         if (!response.ok) throw new Error(`Servidor respondió HTTP ${response.status}`);
+        persisted = true;
       } catch (err) {
         console.warn('Servidor local apagado. Cambios guardados solo en LocalStorage.');
       }
@@ -552,6 +564,7 @@ const DB = (() => {
     }
 
     if (window.App && window.App.refreshData) window.App.refreshData();
+    return persisted;
   }
 
   // Legacy alias
@@ -625,15 +638,20 @@ const DB = (() => {
 
   // El EAN funciona como identificador numérico flexible. Se conserva como
   // string para no perder ceros iniciales y no se exige largo/checksum GTIN.
+  // Es inválido (Sin EAN) si está vacío, tiene menos de 4 números o consta de dígitos repetidos (ej. 0000).
   function validateEAN(ean) {
-    const normalized = String(ean ?? '').replace(/\s/g, '');
-    if (!normalized) {
+    const raw = String(ean ?? '').replace(/\s/g, '');
+    if (!raw) {
       return { valid: false, reason: 'El EAN es obligatorio' };
     }
-    if (!/^\d+$/.test(normalized)) {
-      return { valid: false, reason: 'El EAN debe contener solo números' };
+    const digitsOnly = raw.replace(/\D/g, '');
+    if (digitsOnly.length < 4) {
+      return { valid: false, reason: 'El EAN debe contener al menos 4 números' };
     }
-    return { valid: true, reason: null, normalized, legacy: false };
+    if (/^(\d)\1+$/.test(digitsOnly)) {
+      return { valid: false, reason: 'El EAN no puede constar de números repetidos (ej. 0000, 1111)' };
+    }
+    return { valid: true, reason: null, normalized: digitsOnly, legacy: false };
   }
 
   async function deleteProduct(ean, skipUndo = false) {
@@ -910,7 +928,7 @@ const DB = (() => {
 
   function removeVisperaBatchItem(batchId) {
     _visperaBatch = _visperaBatch.filter(b => b.batchId !== batchId);
-    _safeSetItem(VISPERA_BATCH_KEY, JSON.stringify(_visperaBatch));
+    return _safeSetItem(VISPERA_BATCH_KEY, JSON.stringify(_visperaBatch));
   }
 
   // ── Brands & Producers ──────────────────────
